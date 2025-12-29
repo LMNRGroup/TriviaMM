@@ -1,1 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TriviaApp</title>
+  <style>
+    :root{
+      --bg:#0b0f1a;
+      --panel:#111a2e;
+      --panel2:#0f1630;
+      --text:#e9eefc;
+      --muted:#9fb0df;
+      --accent:#6aa6ff;
 
+      --good:#23c55e;
+      --bad:#ef4444;
+      --warn:#f59e0b;
+
+      --btnA:#2b4bff22;
+      --btnB:#00d5cf22;
+      --btnC:#ff4bd822;
+      --btnD:#ffd34b22;
+
+      --stroke:#233055;
+      --shadow: 0 18px 60px rgba(0,0,0,.45);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color: var(--text); background: radial-gradient(1200px 800px at 50% 20%, #14204a 0%, var(--bg) 60%); }
+    button { font: inherit; }
+
+    .wrap {
+      min-height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 32px;
+    }
+
+    .card {
+      width: min(1100px, 96vw);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding: 18px 22px;
+      background: linear-gradient(90deg, rgba(106,166,255,.16), rgba(0,0,0,0));
+      border-bottom: 1px solid var(--stroke);
+      gap: 14px;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .dot{
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 6px rgba(106,166,255,.14);
+      flex: 0 0 auto;
+    }
+    .title{
+      font-weight: 800;
+      letter-spacing: .4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .status{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      color: var(--muted);
+      font-weight: 600;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      text-align:right;
+    }
+    .pill{
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      font-weight: 700;
+    }
+    .pill.muted{
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .pill.good{ border-color: rgba(35,197,94,.4); background: rgba(35,197,94,.1); }
+    .pill.bad{ border-color: rgba(239,68,68,.4); background: rgba(239,68,68,.1); }
+    .pill.warn{ border-color: rgba(245,158,11,.4); background: rgba(245,158,11,.1); }
+
+    .content{
+      padding: 26px 26px 28px;
+    }
+
+    /* Splash */
+    .splash{
+      display:grid;
+      gap: 18px;
+      text-align:center;
+      padding: 40px 20px 18px;
+    }
+    .splash h1{
+      margin:0;
+      font-size: clamp(34px, 4vw, 54px);
+      letter-spacing: .6px;
+    }
+    .splash p{
+      margin:0 auto;
+      max-width: 780px;
+      color: var(--muted);
+      line-height: 1.4;
+      font-size: clamp(16px, 1.5vw, 18px);
+    }
+    .bigCode{
+      display:flex;
+      flex-direction: column;
+      align-items:center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .codeBox{
+      font-size: clamp(44px, 7vw, 86px);
+      font-weight: 900;
+      letter-spacing: 10px;
+      padding: 14px 20px;
+      border-radius: 18px;
+      border: 1px solid var(--stroke);
+      background: rgba(0,0,0,.24);
+      min-width: min(520px, 92vw);
+      text-align:center;
+    }
+    .hint{
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing: .3px;
+    }
+    .row{
+      display:flex;
+      gap: 12px;
+      justify-content:center;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .btn{
+      appearance: none;
+      border: 1px solid var(--stroke);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      padding: 14px 18px;
+      border-radius: 16px;
+      font-weight: 800;
+      letter-spacing:.2px;
+      cursor:pointer;
+      transition: transform .08s ease, filter .08s ease, background .15s ease;
+      min-width: 160px;
+    }
+    .btn:hover{ filter: brightness(1.08); }
+    .btn:active{ transform: translateY(1px); }
+    .btn.primary{
+      background: rgba(106,166,255,.18);
+      border-color: rgba(106,166,255,.35);
+    }
+    .btn.danger{
+      background: rgba(239,68,68,.12);
+      border-color: rgba(239,68,68,.3);
+    }
+
+    /* Game */
+    .game{
+      display:grid;
+      gap: 16px;
+      padding: 8px 2px 0;
+    }
+    .qHeader{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .qMeta{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items:center;
+    }
+    .question{
+      margin: 6px 0 2px;
+      font-size: clamp(24px, 3vw, 40px);
+      font-weight: 900;
+      line-height: 1.08;
+      letter-spacing: .2px;
+    }
+    .sub{
+      color: var(--muted);
+      font-weight: 700;
+      margin:0;
+    }
+
+    .answers{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 6px;
+    }
+
+    .answer{
+      border-radius: 18px;
+      border: 1px solid var(--stroke);
+      background: rgba(0,0,0,.18);
+      padding: 18px 18px;
+      min-height: 110px;
+      display:flex;
+      gap: 14px;
+      align-items:center;
+      box-shadow: 0 10px 30px rgba(0,0,0,.2);
+      position: relative;
+      overflow:hidden;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease, filter .12s ease;
+    }
+
+    .answer .label{
+      width: 54px;
+      height: 54px;
+      border-radius: 16px;
+      display:grid;
+      place-items:center;
+      font-weight: 1000;
+      font-size: 26px;
+      border: 1px solid var(--stroke);
+      flex: 0 0 auto;
+      background: rgba(255,255,255,.05);
+    }
+    .answer .text{
+      font-size: clamp(16px, 1.6vw, 22px);
+      font-weight: 850;
+      line-height: 1.2;
+    }
+    .answer .tag{
+      position:absolute;
+      top: 12px;
+      right: 12px;
+      font-weight: 900;
+      letter-spacing: .3px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+      background: rgba(0,0,0,.18);
+      color: var(--muted);
+      display:none;
+    }
+
+    .answer.A{ background: linear-gradient(180deg, var(--btnA), rgba(0,0,0,.18)); }
+    .answer.B{ background: linear-gradient(180deg, var(--btnB), rgba(0,0,0,.18)); }
+    .answer.C{ background: linear-gradient(180deg, var(--btnC), rgba(0,0,0,.18)); }
+    .answer.D{ background: linear-gradient(180deg, var(--btnD), rgba(0,0,0,.18)); }
+
+    .answer.selected{
+      border-color: rgba(106,166,255,.55);
+      box-shadow: 0 18px 40px rgba(106,166,255,.12);
+      transform: translateY(-1px);
+      filter: brightness(1.06);
+    }
+
+    .answer.correct{
+      border-color: rgba(35,197,94,.65);
+      background: rgba(35,197,94,.14);
+    }
+    .answer.correct .tag{ display:block; color: rgba(35,197,94,.95); border-color: rgba(35,197,94,.45); background: rgba(35,197,94,.12); }
+    .answer.correct .tag::before{ content:"CORRECT"; }
+
+    .answer.wrong{
+      border-color: rgba(239,68,68,.65);
+      background: rgba(239,68,68,.12);
+    }
+    .answer.wrong .tag{ display:block; color: rgba(239,68,68,.95); border-color: rgba(239,68,68,.45); background: rgba(239,68,68,.10); }
+    .answer.wrong .tag::before{ content:"WRONG"; }
+
+    .centerBig{
+      display:grid;
+      place-items:center;
+      padding: 44px 8px 22px;
+      text-align:center;
+    }
+    .countdown{
+      font-size: clamp(72px, 14vw, 150px);
+      font-weight: 1000;
+      letter-spacing: 2px;
+      margin: 0;
+      line-height: 1;
+      text-shadow: 0 18px 50px rgba(0,0,0,.35);
+    }
+    .smallText{
+      margin-top: 12px;
+      color: var(--muted);
+      font-weight: 800;
+      letter-spacing:.4px;
+    }
+
+    .footerRow{
+      margin-top: 10px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-top: 14px;
+      border-top: 1px solid var(--stroke);
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .toast{
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,.6);
+      border: 1px solid var(--stroke);
+      padding: 10px 14px;
+      border-radius: 14px;
+      color: var(--text);
+      font-weight: 800;
+      letter-spacing: .2px;
+      box-shadow: 0 18px 50px rgba(0,0,0,.45);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .16s ease, transform .16s ease;
+      max-width: min(820px, 92vw);
+      text-align:center;
+    }
+    .toast.show{
+      opacity: 1;
+      transform: translateX(-50%) translateY(-4px);
+    }
+
+    @media (max-width: 760px){
+      .answers{ grid-template-columns: 1fr; }
+      .answer{ min-height: 92px; }
+      .codeBox{ letter-spacing: 6px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="topbar">
+        <div class="brand">
+          <div class="dot"></div>
+          <div class="title">TriviaApp · Main Screen</div>
+        </div>
+        <div class="status">
+          <span class="pill muted" id="connPill">Connecting…</span>
+          <span class="pill muted" id="roomPill">Room: —</span>
+          <span class="pill" id="scorePill">Score: 0</span>
+          <span class="pill muted" id="qPill">Q: —</span>
+        </div>
+      </div>
+
+      <div class="content" id="root"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Socket.IO CDN (expects your server to serve /socket.io/) -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+  <script>
+    /******************************************************************
+     * MAIN SCREEN (Big Display) — paste-ready.
+     *
+     * Pairing / lock:
+     * - Big screen generates a 6-char room code (e.g., A7K2Q9)
+     * - User app must "join" this room code
+     * - Only accepts the FIRST answer per question, then advances
+     *
+     * You will need a tiny server (Node/Vercel) that:
+     * - hosts Socket.IO
+     * - allows clients to join rooms
+     * - relays 'user_answer' from phones to the room
+     *
+     * Events used:
+     *   Big screen emits:
+     *     - "host_create_room" { roomCode }
+     *     - "host_state" { roomCode, stateSnapshot }
+     *     - "host_next_question" { roomCode, qIndex }
+     *
+     *   Server emits to host:
+     *     - "room_created" { roomCode }
+     *     - "room_joined" { roomCode, userId? }
+     *     - "user_answer" { roomCode, choice: "A"|"B"|"C"|"D", userId? }
+     *
+     * If your server uses different names, just rename below.
+     ******************************************************************/
+
+    // 20 dumb sample questions
+    const QUESTIONS = [
+      { q: "What color is the sky on a clear day?", a: ["Blue","Green","Orange","Purple"], correct: "A" },
+      { q: "How many days are in a week?", a: ["5","6","7","9"], correct: "C" },
+      { q: "Which animal says 'meow'?", a: ["Dog","Cat","Cow","Duck"], correct: "B" },
+      { q: "2 + 2 equals…", a: ["3","4","5","22"], correct: "B" },
+      { q: "Which one is a fruit?", a: ["Carrot","Potato","Apple","Onion"], correct: "C" },
+      { q: "What do you use to write on paper?", a: ["Spoon","Pencil","Shoe","Fork"], correct: "B" },
+      { q: "Which month comes after June?", a: ["May","July","August","January"], correct: "B" },
+      { q: "What does water turn into when frozen?", a: ["Steam","Ice","Sand","Glass"], correct: "B" },
+      { q: "Which one is a planet?", a: ["Mars","Pluto (debate)","Moon","Sun"], correct: "A" },
+      { q: "What do bees make?", a: ["Milk","Honey","Bread","Cheese"], correct: "B" },
+      { q: "Which one is a primary color?", a: ["Pink","Red","Brown","Gray"], correct: "B" },
+      { q: "What do you call a baby cat?", a: ["Puppy","Kitten","Calf","Chick"], correct: "B" },
+      { q: "Which tool is used to cut paper?", a: ["Scissors","Hammer","Broom","Wrench"], correct: "A" },
+      { q: "What is the opposite of 'hot'?", a: ["Warm","Cold","Spicy","Bright"], correct: "B" },
+      { q: "Which one can you drink?", a: ["Juice","Rock","Chair","Dust"], correct: "A" },
+      { q: "How many wheels does a typical bicycle have?", a: ["1","2","3","4"], correct: "B" },
+      { q: "What do you wear on your feet?", a: ["Gloves","Hat","Shoes","Scarf"], correct: "C" },
+      { q: "Which one is a shape?", a: ["Circle","Banana","Loud","Sleepy"], correct: "A" },
+      { q: "What do you call the star in our solar system?", a: ["Moon","Sun","Mars","Polaris"], correct: "B" },
+      { q: "Which one is used to call someone?", a: ["Phone","Plate","Pillow","Plant"], correct: "A" },
+    ];
+
+    const root = document.getElementById("root");
+    const connPill = document.getElementById("connPill");
+    const roomPill = document.getElementById("roomPill");
+    const scorePill = document.getElementById("scorePill");
+    const qPill = document.getElementById("qPill");
+    const toast = document.getElementById("toast");
+
+    const state = {
+      phase: "splash", // splash | countdown | question | finished
+      roomCode: null,
+      connected: false,
+
+      qIndex: 0,
+      score: 0,
+
+      locked: false,            // lock after first answer this question
+      lastChoice: null,         // "A"|"B"|"C"|"D"
+      lastCorrect: null,        // true/false
+    };
+
+    function randRoomCode(len = 6){
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no confusing O/0 I/1
+      let out = "";
+      for(let i=0;i<len;i++) out += chars[Math.floor(Math.random()*chars.length)];
+      return out;
+    }
+
+    function setToast(msg, ms=1400){
+      toast.textContent = msg;
+      toast.classList.add("show");
+      window.clearTimeout(setToast._t);
+      setToast._t = window.setTimeout(()=>toast.classList.remove("show"), ms);
+    }
+
+    function setPills(){
+      connPill.textContent = state.connected ? "Connected" : "Connecting…";
+      connPill.className = "pill " + (state.connected ? "good" : "warn");
+
+      roomPill.textContent = state.roomCode ? `Room: ${state.roomCode}` : "Room: —";
+      qPill.textContent = state.phase === "question" || state.phase === "finished"
+        ? `Q: ${Math.min(state.qIndex+1, QUESTIONS.length)}/${QUESTIONS.length}`
+        : "Q: —";
+
+      scorePill.textContent = `Score: ${state.score}`;
+    }
+
+    function render(){
+      setPills();
+
+      if(state.phase === "splash"){
+        const code = state.roomCode || "------";
+        root.innerHTML = `
+          <div class="splash">
+            <h1>TriviaApp</h1>
+            <p>
+              Pair a phone to this screen using the room code.
+              Once paired, hit <b>Ready</b> here to begin the countdown.
+            </p>
+
+            <div class="bigCode">
+              <div class="hint">ROOM CODE</div>
+              <div class="codeBox" id="codeBox">${code}</div>
+              <div class="hint" style="opacity:.9;">Open the User App → enter code → join</div>
+            </div>
+
+            <div class="row">
+              <button class="btn primary" id="readyBtn" ${state.connected && state.roomCode ? "" : "disabled"}>Ready</button>
+              <button class="btn" id="newCodeBtn" ${state.connected ? "" : "disabled"}>New Code</button>
+              <button class="btn danger" id="resetBtn" ${state.connected ? "" : "disabled"}>Reset Game</button>
+            </div>
+          </div>
+        `;
+
+        document.getElementById("readyBtn").onclick = () => startCountdown();
+        document.getElementById("newCodeBtn").onclick = () => createRoom(true);
+        document.getElementById("resetBtn").onclick = () => resetGame(true);
+        return;
+      }
+
+      if(state.phase === "countdown"){
+        root.innerHTML = `
+          <div class="centerBig">
+            <div class="countdown" id="countNum">3</div>
+            <div class="smallText">Get ready…</div>
+          </div>
+        `;
+        return;
+      }
+
+      if(state.phase === "question"){
+        const qObj = QUESTIONS[state.qIndex];
+        const labels = ["A","B","C","D"];
+        const cards = labels.map((L, idx) => {
+          const text = qObj.a[idx];
+          return `
+            <div class="answer ${L}" data-letter="${L}">
+              <div class="label">${L}</div>
+              <div class="text">${escapeHtml(text)}</div>
+              <div class="tag"></div>
+            </div>
+          `;
+        }).join("");
+
+        root.innerHTML = `
+          <div class="game">
+            <div class="qHeader">
+              <div>
+                <p class="sub">Question ${state.qIndex+1} of ${QUESTIONS.length}</p>
+                <div class="question">${escapeHtml(qObj.q)}</div>
+              </div>
+              <div class="qMeta">
+                <span class="pill muted">Room: <b>${state.roomCode || "—"}</b></span>
+                <span class="pill">Score: <b>${state.score}</b></span>
+              </div>
+            </div>
+
+            <div class="answers" id="answersGrid">
+              ${cards}
+            </div>
+
+            <div class="footerRow">
+              <div>Waiting for phone answer…</div>
+              <div>${state.locked ? "Locked (answer received)" : "Unlocked"}</div>
+            </div>
+          </div>
+        `;
+
+        // Apply visual state if we already received an answer
+        if(state.lastChoice){
+          markSelection(state.lastChoice, state.lastCorrect, QUESTIONS[state.qIndex].correct);
+        }
+        return;
+      }
+
+      if(state.phase === "finished"){
+        root.innerHTML = `
+          <div class="centerBig">
+            <div style="font-size: clamp(34px, 4vw, 54px); font-weight: 1000; letter-spacing:.4px;">
+              Game Over
+            </div>
+            <div style="margin-top:10px; color: var(--muted); font-weight:800;">
+              Final Score
+            </div>
+            <div class="countdown" style="font-size: clamp(74px, 12vw, 150px); margin-top: 6px;">
+              ${state.score}
+            </div>
+
+            <div class="row" style="margin-top: 18px;">
+              <button class="btn primary" id="playAgainBtn">Play Again</button>
+              <button class="btn" id="backSplashBtn">Back to Splash</button>
+            </div>
+          </div>
+        `;
+        document.getElementById("playAgainBtn").onclick = () => resetGame(false, true);
+        document.getElementById("backSplashBtn").onclick = () => {
+          resetGame(false, false);
+          state.phase = "splash";
+          render();
+          broadcastState();
+        };
+        return;
+      }
+    }
+
+    function escapeHtml(s){
+      return String(s)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function markSelection(choice, wasCorrect, correctLetter){
+      const grid = document.getElementById("answersGrid");
+      if(!grid) return;
+
+      [...grid.querySelectorAll(".answer")].forEach(el => {
+        el.classList.remove("selected","correct","wrong");
+      });
+
+      const picked = grid.querySelector(`.answer[data-letter="${choice}"]`);
+      if(picked) picked.classList.add("selected");
+
+      if(picked){
+        picked.classList.add(wasCorrect ? "correct" : "wrong");
+      }
+
+      // Optional: also mark the actual correct answer if user got it wrong (comment out if you don't want it)
+      if(!wasCorrect){
+        const correctEl = grid.querySelector(`.answer[data-letter="${correctLetter}"]`);
+        if(correctEl) correctEl.classList.add("correct");
+      }
+    }
+
+    function resetPerQuestion(){
+      state.locked = false;
+      state.lastChoice = null;
+      state.lastCorrect = null;
+    }
+
+    function resetGame(keepSplash = true, autoStart = false){
+      state.qIndex = 0;
+      state.score = 0;
+      resetPerQuestion();
+      state.phase = keepSplash ? "splash" : "question";
+      render();
+      broadcastState();
+
+      if(autoStart){
+        startCountdown();
+      }
+    }
+
+    async function startCountdown(){
+      if(!state.roomCode) return;
+
+      state.phase = "countdown";
+      render();
+      broadcastState();
+
+      const numEl = () => document.getElementById("countNum");
+      const steps = ["3","2","1","GO!"];
+      for(let i=0;i<steps.length;i++){
+        if(numEl()) numEl().textContent = steps[i];
+        await sleep(i === steps.length-1 ? 500 : 850);
+      }
+
+      state.phase = "question";
+      state.qIndex = 0;
+      resetPerQuestion();
+      render();
+      broadcastState();
+      emitNextQuestion();
+    }
+
+    function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+    function nextQuestion(){
+      state.qIndex += 1;
+      resetPerQuestion();
+
+      if(state.qIndex >= QUESTIONS.length){
+        state.phase = "finished";
+        render();
+        broadcastState();
+        return;
+      }
+
+      state.phase = "question";
+      render();
+      broadcastState();
+      emitNextQuestion();
+    }
+
+    /*********************** Socket.IO wiring *************************/
+    // By default this connects to same-origin. If your socket server is elsewhere:
+    // const socket = io("https://your-socket-domain.com", { transports:["websocket"] });
+    const socket = io({
+      transports: ["websocket", "polling"]
+    });
+
+    socket.on("connect", () => {
+      state.connected = true;
+      render();
+      createRoom(false);
+    });
+
+    socket.on("disconnect", () => {
+      state.connected = false;
+      render();
+    });
+
+    // Server confirms room created (optional)
+    socket.on("room_created", (payload) => {
+      if(payload && payload.roomCode) {
+        state.roomCode = payload.roomCode;
+        setToast(`Room created: ${state.roomCode}`);
+        render();
+        broadcastState();
+      }
+    });
+
+    // Phone joined (optional)
+    socket.on("room_joined", (payload) => {
+      if(payload && payload.roomCode === state.roomCode){
+        setToast("Phone paired ✅");
+      }
+    });
+
+    // Receive answer from phone
+    socket.on("user_answer", (payload) => {
+      if(!payload || payload.roomCode !== state.roomCode) return;
+      if(state.phase !== "question") return;
+      if(state.locked) return; // first answer wins
+
+      const choice = payload.choice;
+      if(!["A","B","C","D"].includes(choice)) return;
+
+      state.locked = true;
+      state.lastChoice = choice;
+
+      const correctLetter = QUESTIONS[state.qIndex].correct;
+      const isCorrect = (choice === correctLetter);
+      state.lastCorrect = isCorrect;
+
+      if(isCorrect) state.score += 1;
+
+      render();
+      markSelection(choice, isCorrect, correctLetter);
+      broadcastState();
+
+      // Move on no matter what
+      setTimeout(() => nextQuestion(), 1100);
+    });
+
+    function createRoom(forceNew){
+      if(!state.connected) return;
+
+      const newCode = randRoomCode(6);
+      if(forceNew || !state.roomCode){
+        state.roomCode = newCode;
+        state.phase = "splash";
+        resetGame(true);
+      }
+
+      // Ask server to create/join as host
+      socket.emit("host_create_room", { roomCode: state.roomCode });
+      render();
+      broadcastState();
+    }
+
+    function emitNextQuestion(){
+      if(!state.roomCode) return;
+      socket.emit("host_next_question", { roomCode: state.roomCode, qIndex: state.qIndex });
+    }
+
+    function broadcastState(){
+      if(!state.roomCode) return;
+
+      // Send a minimal snapshot for the user app (optional but helpful)
+      const snap = {
+        phase: state.phase,
+        qIndex: state.qIndex,
+        score: state.score,
+        roomCode: state.roomCode,
+        question: state.phase === "question" ? {
+          text: QUESTIONS[state.qIndex].q,
+          answers: {
+            A: QUESTIONS[state.qIndex].a[0],
+            B: QUESTIONS[state.qIndex].a[1],
+            C: QUESTIONS[state.qIndex].a[2],
+            D: QUESTIONS[state.qIndex].a[3],
+          }
+        } : null,
+        // after answer:
+        locked: state.locked,
+        lastChoice: state.lastChoice,
+        lastCorrect: state.lastCorrect
+      };
+
+      socket.emit("host_state", { roomCode: state.roomCode, state: snap });
+    }
+
+    // Initial paint
+    render();
+  </script>
+</body>
+</html>
