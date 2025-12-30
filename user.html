@@ -941,12 +941,9 @@ document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive:f
 document.addEventListener('gesturechange', (e) => e.preventDefault(), { passive:false });
 document.addEventListener('gestureend', (e) => e.preventDefault(), { passive:false });
 
-/* ✅ Force numeric-only input (strip non-digits) */
+/* ✅ IMPORTANT FIX:
+   DO NOT strip characters. Your passkey must be sent EXACTLY as typed. */
 const passkeyEl = document.getElementById("passkey");
-passkeyEl.addEventListener("input", () => {
-  const cleaned = passkeyEl.value.replace(/[^\d]/g, "");
-  if (passkeyEl.value !== cleaned) passkeyEl.value = cleaned;
-});
 
 const ROOM_CODE = "ACTIVE";
 const QUESTION_SECONDS = 30;
@@ -1056,7 +1053,9 @@ function hideFinalOverlay(){
 }
 
 async function validateAndJoin(){
+  // ✅ FIX: send EXACT string, no forced numeric, no uppercase transforms in JS
   const pk = passkeyEl.value.trim();
+
   if (!pk){
     errEl.textContent = "Escribe la contraseña para comenzar.";
     return;
@@ -1093,6 +1092,7 @@ async function validateAndJoin(){
     controllerToken = jd.controllerToken;
     localStorage.setItem(CTRL_TOKEN_KEY, controllerToken);
 
+    // Start signal
     try{
       await fetch("/api/answer",{
         method:"POST",
@@ -1177,6 +1177,7 @@ function renderFromState(st){
 
   scoreEl.textContent = String(score);
 
+  // FINISHED
   if (st.phase === "finished"){
     qLabel.textContent = "FINALIZADO";
     qLabel2.textContent = "FINALIZADO";
@@ -1196,6 +1197,7 @@ function renderFromState(st){
 
   hideFinalOverlay();
 
+  // Between questions
   if (st.phase === "splash"){
     qLabel.textContent = "CARGANDO…";
     qLabel2.textContent = "CARGANDO…";
@@ -1217,6 +1219,7 @@ function renderFromState(st){
     return;
   }
 
+  // LIVE / FEEDBACK
   hideLoading();
   setLivePill(st.phase === "feedback" ? "RESULTADO" : "EN VIVO", st.phase === "feedback" ? "bad" : "good");
 
@@ -1267,6 +1270,7 @@ async function stateLoop(){
   const st = await getState();
   if (!st) return;
 
+  // unlock choices only when a NEW live question arrives
   if (st.phase === "live" && typeof st.qIndex === "number"){
     if (lastQIndexSeen !== st.qIndex){
       lastQIndexSeen = st.qIndex;
