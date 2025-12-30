@@ -1,0 +1,13 @@
+{
+  "name": "vercel-triviaapp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vercel-only TriviaApp (index.html big screen + user.html controller) using Vercel KV + serverless /api",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@vercel/kv": "^2.0.0"
+  }
+}
