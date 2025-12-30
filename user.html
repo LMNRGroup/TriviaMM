@@ -30,8 +30,8 @@
       justify-content:center;
       padding:14px 12px;
       background:
-        radial-gradient(circle at top, rgba(212,175,55,0.10), transparent 45%),
-        radial-gradient(circle at 20% 20%, rgba(16,185,129,0.08), transparent 40%),
+        radial-gradient(circle at top, rgba(212,175,55,0.12), transparent 45%),
+        radial-gradient(circle at 20% 20%, rgba(16,185,129,0.09), transparent 40%),
         radial-gradient(circle at top, #0f172a, var(--navy));
       overflow:hidden; /* no horizontal scroll */
     }
@@ -43,6 +43,7 @@
       flex-direction:column;
       gap:12px;
       min-height:100vh;
+      position:relative;
     }
 
     /* header */
@@ -60,7 +61,7 @@
     }
     .brand{
       font-size:14px;
-      letter-spacing:0.18em;
+      letter-spacing:0.22em;
       text-transform:uppercase;
       color: var(--gold);
       white-space:nowrap;
@@ -93,6 +94,7 @@
       gap:14px;
       min-height:0;
       position:relative;
+      overflow:hidden;
     }
 
     /* ===== SHAKE (feedback) ===== */
@@ -107,108 +109,156 @@
       90%{ transform: translateX(5px); }
     }
 
-    /* ===== LOCK SCREEN (game-like) ===== */
+    /* ===== LOCK SCREEN (more TV trivia vibes) ===== */
     .lockCenter{
       display:flex;
       flex-direction:column;
       gap:12px;
-      padding:10px 2px 2px;
+      padding:8px 2px 2px;
     }
-    .lockBadge{
-      margin:0 auto;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      width:74px;
-      height:74px;
-      border-radius:22px;
-      border:1px solid rgba(212,175,55,0.55);
-      background: radial-gradient(circle at top, rgba(10,25,47,0.92), rgba(2,6,23,0.78));
-      box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+
+    .marquee{
       position:relative;
+      border-radius:18px;
+      padding:16px 14px 14px;
+      border:1px solid rgba(212,175,55,0.32);
+      background: linear-gradient(180deg, rgba(2,6,23,0.70), rgba(2,6,23,0.52));
+      box-shadow: 0 18px 45px rgba(0,0,0,0.55);
       overflow:hidden;
+      text-align:center;
     }
-    .lockBadge::before{
+    .marquee::before{
       content:"";
       position:absolute;
       inset:-2px;
-      border-radius:24px;
+      border-radius:20px;
       pointer-events:none;
-      opacity:0.65;
+      opacity:0.8;
       background:
-        radial-gradient(circle at 22% 18%, rgba(212,175,55,0.90) 0 3px, transparent 4px),
-        radial-gradient(circle at 76% 22%, rgba(212,175,55,0.90) 0 3px, transparent 4px),
-        radial-gradient(circle at 30% 86%, rgba(212,175,55,0.90) 0 3px, transparent 4px),
-        radial-gradient(circle at 70% 82%, rgba(212,175,55,0.90) 0 3px, transparent 4px);
-      animation: bulbs 1.2s ease-in-out infinite;
-      filter: drop-shadow(0 0 6px rgba(212,175,55,0.35));
+        radial-gradient(circle at 8% 18%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 18% 10%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 30% 16%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 70% 16%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 82% 10%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 92% 18%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 12% 88%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 24% 94%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 36% 90%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 64% 90%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 76% 94%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 88% 88%, rgba(212,175,55,0.95) 0 3px, transparent 4px);
+      animation: bulbs 1.15s ease-in-out infinite;
+      filter: drop-shadow(0 0 8px rgba(212,175,55,0.35));
+    }
+    @keyframes bulbs{ 0%,100%{ opacity:0.35; } 50%{ opacity:0.85; } }
+
+    .lockBadge{
+      margin:0 auto 2px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:86px;
+      height:86px;
+      border-radius:26px;
+      border:2px solid rgba(212,175,55,0.55);
+      background: radial-gradient(circle at top, rgba(10,25,47,0.92), rgba(2,6,23,0.78));
+      box-shadow: 0 18px 45px rgba(0,0,0,0.55);
+      position:relative;
+      overflow:hidden;
     }
     .lockBadge span{
-      font-size:28px;
+      font-size:32px;
       font-weight:1000;
       color: var(--gold);
-      letter-spacing:0.08em;
+      letter-spacing:0.14em;
       position:relative;
       z-index:1;
+      text-shadow: 0 12px 24px rgba(0,0,0,0.55);
     }
 
     .lockTitle{
       text-align:center;
       font-size:18px;
       font-weight:1000;
-      letter-spacing:0.12em;
+      letter-spacing:0.18em;
       text-transform:uppercase;
       color: var(--gold);
-      margin:0;
+      margin:6px 0 0;
     }
     .lockSub{
       text-align:center;
       font-size:12px;
-      color: var(--muted);
+      color: rgba(229,231,235,0.88);
       line-height:1.45;
       margin:0;
     }
+
+    /* code-strip look (still one input) */
+    .codeStrip{
+      display:flex;
+      gap:10px;
+      justify-content:center;
+      margin-top:6px;
+      flex-wrap:wrap;
+    }
+    .codeBox{
+      width:44px;
+      height:50px;
+      border-radius:14px;
+      border:1px solid rgba(212,175,55,0.28);
+      background: rgba(2,6,23,0.62);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+      opacity:0.9;
+    }
+
     .input{
       width:100%;
-      border-radius:999px;
-      border:1px solid rgba(55,65,81,0.95);
-      background: rgba(2,6,23,0.78);
-      padding:13px 16px;
+      border-radius:18px;
+      border:1px solid rgba(212,175,55,0.35);
+      background: rgba(2,6,23,0.70);
+      padding:16px 16px;
       color:#e5e7eb;
-      font-size:18px;
-      letter-spacing:0.28em;
+      font-size:20px;
+      letter-spacing:0.38em;
       outline:none;
       text-align:center;
+      text-transform:uppercase;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.35);
     }
     .input::placeholder{
-      font-size:13px;
-      letter-spacing:0.10em;
-      color:#4b5563;
+      font-size:12px;
+      letter-spacing:0.16em;
+      color:#64748b;
+      text-transform:none;
     }
     .input:focus{
-      border-color: rgba(16,185,129,0.95);
-      box-shadow: 0 0 0 1px rgba(16,185,129,0.45);
+      border-color: rgba(212,175,55,0.75);
+      box-shadow: 0 0 0 2px rgba(212,175,55,0.18), 0 12px 30px rgba(0,0,0,0.35);
     }
+
     .btn{
       width:100%;
-      border-radius:999px;
+      border-radius:18px;
       border:none;
-      background: var(--success);
+      background: linear-gradient(180deg, #34d399, #10b981);
       color:#022c22;
       font-size:13px;
-      font-weight:900;
-      padding:12px 14px;
+      font-weight:1000;
+      padding:14px 14px;
       cursor:pointer;
       text-transform:uppercase;
-      letter-spacing:0.14em;
-      box-shadow: 0 10px 26px rgba(0,0,0,0.30);
+      letter-spacing:0.18em;
+      box-shadow: 0 14px 30px rgba(0,0,0,0.35);
     }
+    .btn:active{ transform: scale(0.99); }
     .btn:disabled{ opacity:0.6; cursor:default; }
+
     .err{
       min-height:16px;
       text-align:center;
       font-size:11px;
       color: var(--danger);
+      letter-spacing:0.04em;
     }
 
     /* ===== GAME HUD ===== */
@@ -344,10 +394,10 @@
         radial-gradient(circle at 64% 88%, rgba(212,175,55,0.85) 0 3px, transparent 4px),
         radial-gradient(circle at 78% 92%, rgba(212,175,55,0.85) 0 3px, transparent 4px),
         radial-gradient(circle at 90% 86%, rgba(212,175,55,0.85) 0 3px, transparent 4px);
-      animation: bulbs 1.2s ease-in-out infinite;
+      animation: bulbs2 1.2s ease-in-out infinite;
       filter: drop-shadow(0 0 6px rgba(212,175,55,0.35));
     }
-    @keyframes bulbs{
+    @keyframes bulbs2{
       0%,100%{ opacity:0.35; }
       50%{ opacity:0.75; }
     }
@@ -461,11 +511,105 @@
       text-wrap:balance;
     }
 
+    /* ===== FINAL OVERLAY (BIG score) ===== */
+    .finalOverlay{
+      position:absolute;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:50;
+      background:
+        radial-gradient(circle at 50% 30%, rgba(212,175,55,0.18), transparent 55%),
+        radial-gradient(circle at 50% 60%, rgba(16,185,129,0.10), transparent 55%),
+        rgba(2,11,27,0.75);
+      backdrop-filter: blur(2px);
+    }
+    .finalOverlay.show{ display:flex; }
+
+    .finalCard{
+      width:100%;
+      border-radius:22px;
+      border:1px solid rgba(212,175,55,0.35);
+      background: linear-gradient(180deg, rgba(2,6,23,0.78), rgba(2,11,27,0.88));
+      box-shadow: 0 22px 60px rgba(0,0,0,0.70);
+      padding:18px 16px 16px;
+      text-align:center;
+      position:relative;
+      overflow:hidden;
+    }
+    .finalCard::before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      border-radius:24px;
+      pointer-events:none;
+      opacity:0.65;
+      background:
+        radial-gradient(circle at 8% 18%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 18% 10%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 30% 16%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 70% 16%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 82% 10%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 92% 18%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 12% 88%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 24% 94%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 36% 90%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 64% 90%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 76% 94%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
+        radial-gradient(circle at 88% 88%, rgba(212,175,55,0.95) 0 3px, transparent 4px);
+      animation: bulbs 1.15s ease-in-out infinite;
+      filter: drop-shadow(0 0 10px rgba(212,175,55,0.35));
+    }
+
+    .finalLabel{
+      position:relative;
+      z-index:1;
+      font-size:12px;
+      letter-spacing:0.24em;
+      text-transform:uppercase;
+      color: var(--gold);
+      margin:6px 0 6px;
+    }
+
+    .finalScoreBig{
+      position:relative;
+      z-index:1;
+      font-size:84px;
+      font-weight:1000;
+      letter-spacing:0.06em;
+      line-height:1;
+      margin:6px 0 6px;
+      color: #f9fafb;
+      text-shadow: 0 22px 55px rgba(0,0,0,0.65);
+    }
+
+    .finalSub{
+      position:relative;
+      z-index:1;
+      margin:0;
+      font-size:14px;
+      color: rgba(229,231,235,0.9);
+      letter-spacing:0.04em;
+    }
+
+    .finalHint{
+      position:relative;
+      z-index:1;
+      margin:10px 0 0;
+      font-size:11px;
+      color: rgba(156,163,175,0.95);
+      letter-spacing:0.10em;
+      text-transform:uppercase;
+    }
+
     @media (max-width: 520px){
       .hudRow{ grid-template-columns: 1fr; }
       .hudSpacer{ display:none; }
       .timerNum{ font-size:56px; }
       .choiceTxt{ font-size:13px; }
+      .finalScoreBig{ font-size:72px; }
     }
   </style>
 </head>
@@ -479,11 +623,18 @@
     <!-- LOCK -->
     <div class="card" id="lockCard">
       <div class="lockCenter">
-        <div class="lockBadge" aria-hidden="true"><span>GO</span></div>
-        <h2 class="lockTitle">Ingresa el código</h2>
-        <p class="lockSub">Para comenzar el juego en la pantalla grande.</p>
-        <input id="passkey" class="input" type="password" placeholder="CÓDIGO" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-        <button id="enterBtn" class="btn">Comenzar</button>
+        <div class="marquee">
+          <div class="lockBadge" aria-hidden="true"><span>GO</span></div>
+          <h2 class="lockTitle">ENTER THE CODE</h2>
+          <p class="lockSub">Type the passkey and get ready — look at the big screen.</p>
+          <div class="codeStrip" aria-hidden="true">
+            <div class="codeBox"></div><div class="codeBox"></div><div class="codeBox"></div>
+            <div class="codeBox"></div><div class="codeBox"></div><div class="codeBox"></div>
+          </div>
+        </div>
+
+        <input id="passkey" class="input" type="password" placeholder="PASSKEY" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+        <button id="enterBtn" class="btn">START GAME</button>
         <div id="err" class="err"></div>
       </div>
     </div>
@@ -545,6 +696,16 @@
       LuminarApps © 2025 · All rights reserved.<br/>
       Municipio de Mayagüez
     </div>
+
+    <!-- FINAL OVERLAY -->
+    <div class="finalOverlay" id="finalOverlay" aria-live="polite">
+      <div class="finalCard">
+        <div class="finalLabel">FINAL SCORE</div>
+        <div class="finalScoreBig" id="finalScoreBig">0 / 20</div>
+        <p class="finalSub" id="finalSub">Nice run 🔥</p>
+        <p class="finalHint">Waiting for the next player…</p>
+      </div>
+    </div>
   </div>
 
 <script>
@@ -553,7 +714,6 @@
  * - Sends "__START__" ONCE after successful join (big screen listens for it)
  * - Shows real question + answers
  * - Locks after tap; unlocks on next qIndex (robust with lastQIndexSeen)
- * - Shakes on timeout + optional incorrect (if backend sends lastResult)
  */
 
 const ROOM_CODE = "ACTIVE";
@@ -582,6 +742,10 @@ const txtD = document.getElementById("txtD");
 
 const timerFill = document.getElementById("timerFill");
 const timerNum = document.getElementById("timerNum");
+
+const finalOverlay = document.getElementById("finalOverlay");
+const finalScoreBig = document.getElementById("finalScoreBig");
+const finalSub = document.getElementById("finalSub");
 
 const SESSION_ID_KEY = "trivia_controller_sessionId";
 const CTRL_TOKEN_KEY = "trivia_controller_token";
@@ -614,7 +778,6 @@ let lastQIndexSeen = -1;
 
 // prevent repeated shakes
 let shakenTimeoutForQ = -1;
-let shakenIncorrectForQ = -1;
 
 function disableChoices(disabled){
   [btnA,btnB,btnC,btnD].forEach(b => b.disabled = !!disabled);
@@ -627,10 +790,29 @@ function shakeGame(){
   setTimeout(()=> gameCard.classList.remove("shake"), 520);
 }
 
+function showFinalOverlay(score, total){
+  finalScoreBig.textContent = `${score} / ${total}`;
+
+  // small flavor line
+  const pct = total > 0 ? (score/total) : 0;
+  let msg = "GG 🔥";
+  if (pct >= 0.9) msg = "LEGENDARY 🏆";
+  else if (pct >= 0.7) msg = "STRONG RUN 💪";
+  else if (pct >= 0.4) msg = "NOT BAD 😄";
+  else msg = "YOU’LL GET IT NEXT TIME 😎";
+  finalSub.textContent = msg;
+
+  finalOverlay.classList.add("show");
+}
+
+function hideFinalOverlay(){
+  finalOverlay.classList.remove("show");
+}
+
 async function validateAndJoin(){
   const pk = passkeyEl.value.trim();
   if (!pk){
-    errEl.textContent = "Entra el código para comenzar.";
+    errEl.textContent = "Enter the passkey to start.";
     return;
   }
   errEl.textContent = "";
@@ -667,14 +849,14 @@ async function validateAndJoin(){
     controllerToken = jd.controllerToken;
     localStorage.setItem(CTRL_TOKEN_KEY, controllerToken);
 
-    // ✅ AUTO-START: send ONCE (big screen listens for "__START__")
+    // AUTO-START ping
     try{
       await fetch("/api/answer",{
         method:"POST",
         headers:{ "Content-Type":"application/json" },
         body: JSON.stringify({
           roomCode: ROOM_CODE,
-          controllerToken: jd.controllerToken, // fresh token
+          controllerToken: jd.controllerToken,
           sessionId,
           choice: "__START__"
         })
@@ -684,23 +866,23 @@ async function validateAndJoin(){
     // show game UI
     lockCard.style.display = "none";
     gameCard.style.display = "flex";
-    setPill("ESTADO: CONECTADO", "good");
+    setPill("STATUS: CONNECTED", "good");
+    hideFinalOverlay();
 
     passkeyEl.value = "";
     lockedAnswer = false;
     lastQIndexSeen = -1;
     shakenTimeoutForQ = -1;
-    shakenIncorrectForQ = -1;
 
     startLoops();
   }catch(err){
     const code = String(err.message || err);
     if (code === "controller_taken"){
-      errEl.textContent = "Otro teléfono ya está controlando este trivia.";
+      errEl.textContent = "Another phone is already controlling this trivia.";
     } else {
-      errEl.textContent = "Acceso denegado. Verifica el código.";
+      errEl.textContent = "Access denied. Check the passkey.";
     }
-    setPill("ESTADO: BLOQUEADO", "bad");
+    setPill("STATUS: LOCKED", "bad");
   }finally{
     enterBtn.disabled = false;
   }
@@ -731,10 +913,11 @@ async function getState(){
       controllerToken = "";
       localStorage.removeItem(CTRL_TOKEN_KEY);
       stopLoops();
+      hideFinalOverlay();
       lockCard.style.display = "flex";
       gameCard.style.display = "none";
-      setPill("ESTADO: BLOQUEADO", "bad");
-      errEl.textContent = "Sesión terminada. El próximo invitado puede comenzar.";
+      setPill("STATUS: LOCKED", "bad");
+      errEl.textContent = "Session ended. Next player can start.";
     }
     return null;
   }
@@ -751,8 +934,8 @@ function renderFromState(st){
   scoreEl.textContent = String(score);
 
   if (st.phase === "splash"){
-    qLabel.textContent = "ESPERANDO…";
-    qText.textContent = "Mira la pantalla grande.";
+    qLabel.textContent = "WAITING…";
+    qText.textContent = "Look at the big screen.";
     disableChoices(true);
     lockedAnswer = false;
 
@@ -767,13 +950,14 @@ function renderFromState(st){
 
     lastQIndexSeen = -1;
     shakenTimeoutForQ = -1;
-    shakenIncorrectForQ = -1;
+
+    hideFinalOverlay();
     return;
   }
 
   if (st.phase === "finished"){
-    qLabel.textContent = "LISTO";
-    qText.textContent = `Puntuación final: ${score}/${total}`;
+    qLabel.textContent = "DONE";
+    qText.textContent = "Game finished on the big screen.";
     disableChoices(true);
     lockedAnswer = true;
 
@@ -782,17 +966,21 @@ function renderFromState(st){
     timerNum.classList.remove("warn","danger");
 
     lastQIndexSeen = -1;
+
+    // ✅ BIG FINAL SCORE ON PHONE TOO
+    showFinalOverlay(score, total);
     return;
   }
 
   // live
+  hideFinalOverlay();
+
   const n = Math.min(total, qIndex + 1);
-  qLabel.textContent = `PREGUNTA ${n} / ${total}`;
+  qLabel.textContent = `QUESTION ${n} / ${total}`;
 
-  // show the real question
-  qText.textContent = st.questionText || st.q || st.question || "—";
+  // show question if backend provides it, else keep instruction
+  qText.textContent = st.questionText || st.q || st.question || "Look at the big screen.";
 
-  // answers inside tiles
   if (st.answers){
     txtA.textContent = st.answers.A || "—";
     txtB.textContent = st.answers.B || "—";
@@ -803,14 +991,6 @@ function renderFromState(st){
     txtB.textContent = "B";
     txtC.textContent = "C";
     txtD.textContent = "D";
-  }
-
-  // optional: shake once on incorrect if backend sends lastResult
-  if (st.lastResult && typeof st.lastResult.qIndex === "number" && st.lastResult.correct === false){
-    if (shakenIncorrectForQ !== st.lastResult.qIndex){
-      shakenIncorrectForQ = st.lastResult.qIndex;
-      shakeGame();
-    }
   }
 }
 
@@ -904,7 +1084,7 @@ function stopLoops(){
   if (controllerToken){
     lockCard.style.display = "none";
     gameCard.style.display = "flex";
-    setPill("ESTADO: REANUDANDO…");
+    setPill("STATUS: RESUMING…");
     startLoops();
   }
 })();
