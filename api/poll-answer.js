@@ -1,7 +1,6 @@
 const { kv } = require("@vercel/kv");
 
 const ROOM_CODE_FIXED = "ACTIVE";
-const TTL_SECONDS = 60 * 60 * 2; // 2h
 
 function json(res, status, payload) {
   res.status(status).setHeader("Content-Type", "application/json");
@@ -30,10 +29,8 @@ module.exports = async (req, res) => {
       return json(res, 200, { ok: true, seq: afterSeq, answer: null });
     }
 
-    // Keep answer stored (no delete) so host can't miss it between polls
+    // ✅ No kv.expire() here (that was extra commands)
     if (ans.seq > afterSeq) {
-      // refresh TTL so the answer doesn't vanish mid-game
-      await kv.expire(answerKey, TTL_SECONDS);
       return json(res, 200, { ok: true, seq: ans.seq, answer: ans });
     }
 
