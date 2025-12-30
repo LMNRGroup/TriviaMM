@@ -24,7 +24,6 @@ module.exports = async (req, res) => {
     const controllerKey = `trivia:controller:${roomCode}`;
     const ctrl = await kv.get(controllerKey);
 
-    // controller must still be the active one
     if (!ctrl || !ctrl.controllerToken) {
       return json(res, 403, { ok: false, error: "controller_lost", errorCode: "controller_lost" });
     }
@@ -32,14 +31,18 @@ module.exports = async (req, res) => {
       return json(res, 403, { ok: false, error: "controller_lost", errorCode: "controller_lost" });
     }
 
+    // ✅ Heartbeat / lease refresh
+    await kv.set(
+      controllerKey,
+      { ...ctrl, lastSeen: Date.now() },
+      { ex: TTL_SECONDS }
+    );
+
     const stateKey = `trivia:state:${roomCode}`;
     const st = await kv.get(stateKey);
 
-    // keep TTL alive while game runs
-    await kv.expire(controllerKey, TTL_SECONDS);
     if (st) await kv.expire(stateKey, TTL_SECONDS);
 
-    // default fallback
     const state =
       st && typeof st === "object"
         ? st
