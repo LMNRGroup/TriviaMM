@@ -12,9 +12,7 @@ function json(res, status, payload) {
 }
 
 module.exports = async (req, res) => {
-  if (req.method !== "POST") {
-    return json(res, 405, { ok: false, error: "method_not_allowed" });
-  }
+  if (req.method !== "POST") return json(res, 405, { ok: false, error: "method_not_allowed" });
 
   try {
     const { controllerToken, sessionId, choice } = req.body || {};
@@ -24,9 +22,7 @@ module.exports = async (req, res) => {
 
     if (!ct) return json(res, 400, { ok: false, error: "missing_controllerToken" });
     if (!sid) return json(res, 400, { ok: false, error: "missing_sessionId" });
-    if (!ALLOWED_CHOICES.has(ch)) {
-      return json(res, 400, { ok: false, error: "invalid_choice" });
-    }
+    if (!ALLOWED_CHOICES.has(ch)) return json(res, 400, { ok: false, error: "invalid_choice" });
 
     const roomCode = ROOM_CODE_FIXED;
 
@@ -40,7 +36,14 @@ module.exports = async (req, res) => {
       return json(res, 403, { ok: false, error: "invalid_controllerToken", errorCode: "controller_lost" });
     }
 
-    // Increment seq and store last "answer" (including control commands)
+    // ✅ Heartbeat / lease refresh
+    await kv.set(
+      controllerKey,
+      { ...ctrl, lastSeen: Date.now() },
+      { ex: TTL_SECONDS }
+    );
+
+    // Increment seq and store last "answer" (including commands)
     const seqKey = `trivia:seq:${roomCode}`;
     const answerKey = `trivia:answer:${roomCode}`;
 
@@ -52,7 +55,7 @@ module.exports = async (req, res) => {
       choice: ch,
       sessionId: sid,
       ts: Date.now(),
-      kind: (ch === "A" || ch === "B" || ch === "C" || ch === "D") ? "answer" : "command",
+      kind: ["A", "B", "C", "D"].includes(ch) ? "answer" : "command",
     };
 
     await kv.set(answerKey, payload, { ex: TTL_SECONDS });
