@@ -8,722 +8,594 @@
     :root{
       --navy:#0A192F;
       --gold:#D4AF37;
-      --dark:#020617;
-      --panel:#020b1b;
-      --light:#F4F4F4;
-      --muted:#9CA3AF;
       --danger:#F97373;
       --success:#10B981;
-      --line:rgba(212,175,55,0.35);
-      --line2:rgba(55,65,81,0.75);
-      --shadow:0 18px 45px rgba(0,0,0,0.75);
+      --muted:#9CA3AF;
+      --panel:#020b1b;
+      --panel2:#020617;
+      --border:rgba(212,175,55,0.35);
+      --text:#F4F4F4;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-      color: var(--light);
+      color: var(--text);
       background: var(--navy);
     }
-
     *{ box-sizing:border-box; }
-    html, body { height:100%; }
     body{
       margin:0;
       min-height:100vh;
       display:flex;
       align-items:stretch;
       justify-content:center;
-      padding:16px 14px;
+      padding:14px 12px;
       background: radial-gradient(circle at top, #0f172a, var(--navy));
-      color: var(--light);
-      overflow-x:hidden; /* no horizontal scroll ever */
+      overflow-x:hidden;
     }
-
-    .page{
+    .wrap{
       width:100%;
       max-width:520px;
       display:flex;
       flex-direction:column;
       gap:12px;
-      min-height:0;
     }
-
-    /* Header pill */
     .header{
       display:flex;
       align-items:center;
       justify-content:space-between;
-      padding:10px 14px;
+      gap:10px;
+      padding:10px 16px;
       border-radius:999px;
       background: var(--panel);
-      border:1px solid var(--line);
-      box-shadow:0 10px 30px rgba(0,0,0,0.55);
-      gap:10px;
+      border:1px solid var(--border);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
     .brand{
-      font-size:12px;
-      letter-spacing:0.22em;
+      font-size:14px;
+      letter-spacing:0.18em;
       text-transform:uppercase;
-      color:var(--gold);
+      color: var(--gold);
       white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
     .pill{
       font-size:10px;
       padding:6px 12px;
       border-radius:999px;
-      border:1px solid rgba(212,175,55,0.6);
+      border:1px solid rgba(212,175,55,0.55);
       background: rgba(10,25,47,0.9);
-      color:var(--light);
-      letter-spacing:0.16em;
+      color: var(--text);
+      letter-spacing:0.14em;
       text-transform:uppercase;
       white-space:nowrap;
-      max-width: 58%;
-      overflow:hidden;
-      text-overflow:ellipsis;
     }
-    .pill.danger{ border-color: var(--danger); color:#fecaca; }
-    .pill.success{ border-color: rgba(16,185,129,0.9); color:#a7f3d0; }
+    .pill.bad{ border-color: var(--danger); color:#fecaca; }
+    .pill.good{ border-color: rgba(16,185,129,0.9); color:#a7f3d0; }
 
     .card{
-      flex:1 1 auto;
       background: rgba(2,11,27,0.96);
-      border-radius:20px;
-      box-shadow: var(--shadow);
+      border-radius:18px;
       border:1px solid rgba(15,23,42,0.9);
-      padding:14px;
+      box-shadow: 0 18px 45px rgba(0,0,0,0.7);
+      padding:14px 14px 16px;
       display:flex;
       flex-direction:column;
       gap:12px;
       min-height:0;
     }
 
-    .meta{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-    .meta-left{
-      display:flex;
-      align-items:baseline;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-    .qprogress{
-      font-size:12px;
-      letter-spacing:0.16em;
-      text-transform:uppercase;
-      color:var(--gold);
-      white-space:nowrap;
-    }
-    .score{
-      font-size:12px;
-      letter-spacing:0.12em;
-      text-transform:uppercase;
-      color:var(--light);
-      white-space:nowrap;
-    }
-    .timer{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      white-space:nowrap;
-    }
-    .timer-label{
-      font-size:10px;
-      letter-spacing:0.16em;
-      text-transform:uppercase;
-      color:var(--muted);
-    }
-    .timer-value{
-      font-size:13px;
-      letter-spacing:0.10em;
-      text-transform:uppercase;
-      color:var(--light);
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid var(--line2);
-      background:#020617;
-      min-width:64px;
+    /* lock screen */
+    .lockTitle{
       text-align:center;
-    }
-    .timer-value.low{
-      border-color: rgba(249,115,115,0.85);
-      color:#fecaca;
-    }
-
-    .panel{
-      background: radial-gradient(circle at top, #020617, #020b1b);
-      border-radius:16px;
-      border:1px solid rgba(31,41,55,0.9);
-      padding:14px 14px 12px;
-      box-shadow:0 18px 40px rgba(0,0,0,0.55);
-    }
-    .panel-title{
-      margin:0 0 8px;
-      font-size:13px;
-      letter-spacing:0.18em;
+      font-size:16px;
+      letter-spacing:0.14em;
       text-transform:uppercase;
-      color:var(--gold);
-      font-weight:700;
+      color: var(--danger);
+      margin-top:2px;
     }
-    .panel-sub{
-      margin:0;
+    .lockSub{
+      text-align:center;
       font-size:12px;
-      color:var(--muted);
-      letter-spacing:0.02em;
-      line-height:1.45;
-      overflow-wrap:anywhere;
-      word-break:break-word;
-    }
-
-    .form{
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    }
-    .row{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
+      color: var(--muted);
+      line-height:1.4;
+      margin-top:-6px;
     }
     .input{
       width:100%;
       border-radius:999px;
       border:1px solid #374151;
-      background:#020617;
-      padding:12px 14px;
+      background: var(--panel2);
+      padding:12px 16px;
       color:#e5e7eb;
-      font-size:16px;
+      font-size:18px;
+      letter-spacing:0.28em;
       outline:none;
-      letter-spacing:0.06em;
     }
     .input::placeholder{
-      font-size:12px;
-      letter-spacing:0.04em;
+      font-size:13px;
+      letter-spacing:0.08em;
       color:#4b5563;
     }
     .input:focus{
-      border-color: var(--success);
+      border-color: rgba(16,185,129,0.95);
       box-shadow: 0 0 0 1px rgba(16,185,129,0.45);
     }
-
     .btn{
       width:100%;
       border-radius:999px;
-      border:1px solid rgba(55,65,81,0.9);
-      padding:12px 14px;
-      font-size:12px;
-      font-weight:700;
-      cursor:pointer;
-      text-transform:uppercase;
-      letter-spacing:0.12em;
-      background:#111827;
-      color:#f9fafb;
-    }
-    .btn:hover{ background:#1f2937; }
-    .btn.primary{
+      border:none;
       background: var(--success);
       color:#022c22;
-      border-color: rgba(16,185,129,0.9);
-    }
-    .btn.primary:hover{ filter: brightness(1.05); }
-    .btn:disabled{ opacity:0.55; cursor:default; }
-
-    .error{
-      font-size:11px;
-      color:var(--danger);
-      min-height:14px;
-      letter-spacing:0.02em;
-      text-align:center;
-    }
-
-    .answers{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:10px;
-      margin-top:2px;
-    }
-
-    .answer-btn{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      border-radius:18px;
-      border:1px solid rgba(55,65,81,0.9);
-      background:#020617;
-      color:var(--light);
-      padding:14px 14px;
+      font-size:13px;
+      font-weight:700;
+      padding:12px 14px;
       cursor:pointer;
-      box-shadow:0 14px 35px rgba(0,0,0,0.42);
-      user-select:none;
-      text-align:left;
-      width:100%;
-    }
-    .answer-btn:active{ transform: translateY(1px); }
-    .badge{
-      flex:0 0 auto;
-      width:44px;
-      height:44px;
-      border-radius:999px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      border:1px solid rgba(212,175,55,0.55);
-      color:var(--gold);
+      text-transform:uppercase;
       letter-spacing:0.12em;
-      font-weight:800;
-      background: rgba(10,25,47,0.75);
     }
-    .answer-text{
-      flex:1 1 auto;
-      font-size:16px;
-      line-height:1.22;
-      letter-spacing:0.01em;
-      overflow-wrap:anywhere;
-      word-break:break-word;
+    .btn:disabled{ opacity:0.6; cursor:default; }
+    .err{
+      min-height:16px;
+      text-align:center;
+      font-size:11px;
+      color: var(--danger);
     }
 
-    /* lock overlay */
-    .overlay{
-      position:fixed;
-      inset:0;
-      background: radial-gradient(circle at top, rgba(2,6,23,0.96), rgba(2,6,23,0.98));
+    /* gameplay */
+    .topRow{
       display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:18px;
-      z-index:50;
+      gap:10px;
+      align-items:stretch;
     }
-    .overlay.hidden{ display:none; }
-    .overlay-card{
-      width:100%;
-      max-width:460px;
-      background:#020617;
-      border-radius:20px;
-      border:1px solid rgba(212,175,55,0.55);
-      box-shadow:0 22px 55px rgba(0,0,0,0.85);
-      padding:18px 16px 16px;
+    .stat{
+      flex:1;
+      background: radial-gradient(circle at top, var(--panel2), var(--panel));
+      border-radius:14px;
+      border:1px solid rgba(31,41,55,0.9);
+      padding:10px 12px;
       display:flex;
       flex-direction:column;
-      gap:10px;
-      text-align:center;
+      gap:4px;
+      min-width:0;
     }
-    .overlay-title{
-      margin:0;
-      font-size:18px;
+    .k{
+      font-size:10px;
       letter-spacing:0.16em;
       text-transform:uppercase;
-      color:var(--gold);
+      color: var(--muted);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .v{
+      font-size:18px;
       font-weight:800;
+      color: var(--text);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
-    .overlay-sub{
-      margin:0;
-      font-size:12px;
-      color:var(--muted);
-      letter-spacing:0.04em;
-      line-height:1.55;
+    .timerbar{
+      height:10px;
+      border-radius:999px;
+      background: rgba(148,163,184,0.25);
+      overflow:hidden;
+      border:1px solid rgba(55,65,81,0.65);
     }
-    .mini{
-      font-size:10px;
-      color:var(--muted);
-      letter-spacing:0.12em;
-      text-transform:uppercase;
-      margin-top:4px;
+    .timerfill{
+      height:100%;
+      width:100%;
+      background: linear-gradient(to right, var(--gold), #f9fafb);
+      transform-origin:left center;
+      transform: scaleX(1);
+      transition: transform 0.1s linear;
     }
 
-    .footer-note{
-      font-size:10px;
-      color:rgba(156,163,175,0.85);
-      letter-spacing:0.12em;
+    .questionBox{
+      background: rgba(2,6,23,0.55);
+      border:1px solid rgba(55,65,81,0.8);
+      border-radius:16px;
+      padding:12px 12px;
+    }
+    .qLabel{
+      font-size:11px;
+      letter-spacing:0.16em;
       text-transform:uppercase;
+      color: var(--gold);
+      margin-bottom:6px;
+    }
+    .qText{
+      font-size:18px;
+      font-weight:800;
+      line-height:1.2;
+      word-wrap:break-word;
+      overflow-wrap:anywhere;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:10px;
+    }
+    .choiceBtn{
+      width:100%;
+      border-radius:16px;
+      border:1px solid rgba(55,65,81,0.9);
+      background: rgba(2,6,23,0.75);
+      padding:14px 14px;
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+      cursor:pointer;
+      box-shadow: 0 10px 26px rgba(0,0,0,0.35);
+      text-align:left;
+    }
+    .choiceKey{
+      width:42px;
+      height:42px;
+      border-radius:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border:1px solid rgba(212,175,55,0.55);
+      background: rgba(10,25,47,0.85);
+      color: var(--gold);
+      font-weight:900;
+      flex:0 0 auto;
+    }
+    .choiceText{
+      font-size:16px;
+      line-height:1.15;
+      color: var(--text);
+      word-wrap:break-word;
+      overflow-wrap:anywhere;
+    }
+    .choiceBtn:disabled{ opacity:0.55; cursor:default; }
+
+    .smallNote{
       text-align:center;
-      margin-top:auto;
-      padding-top:6px;
+      font-size:10px;
+      color: var(--muted);
+      line-height:1.5;
+      letter-spacing:0.04em;
     }
   </style>
 </head>
 <body>
-  <div class="page">
-    <header class="header">
-      <div class="brand">LMNR TRIVIA</div>
-      <div id="statusPill" class="pill">STATUS: LOCKED</div>
-    </header>
+  <div class="wrap">
+    <div class="header">
+      <div class="brand">Trivia · Controller</div>
+      <div id="pill" class="pill">STATUS: LOCKED</div>
+    </div>
 
-    <main class="card">
-      <div class="meta">
-        <div class="meta-left">
-          <div id="qProgress" class="qprogress">QUESTION — / 20</div>
-          <div id="scoreLine" class="score">SCORE: 0</div>
+    <div class="card" id="lockCard">
+      <div class="lockTitle">Restricted access</div>
+      <div class="lockSub">Host enters the master passkey to start.</div>
+      <input id="passkey" class="input" type="password" placeholder="Master code" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+      <button id="enterBtn" class="btn">Enter</button>
+      <div id="err" class="err"></div>
+      <div class="smallNote">LMNR GROUP · One guest at a time</div>
+    </div>
+
+    <div class="card" id="gameCard" style="display:none;">
+      <div class="topRow">
+        <div class="stat">
+          <div class="k">Score</div>
+          <div class="v" id="score">0</div>
         </div>
-        <div class="timer">
-          <div class="timer-label">Timer</div>
-          <div id="timerValue" class="timer-value">—</div>
+        <div class="stat">
+          <div class="k">Question</div>
+          <div class="v" id="progress">—</div>
+        </div>
+        <div class="stat">
+          <div class="k">Seconds</div>
+          <div class="v" id="seconds">—</div>
         </div>
       </div>
 
-      <section class="panel">
-        <div class="panel-title" id="panelTitle">Controller</div>
-        <p class="panel-sub" id="panelSub">
-          Enter the passkey + session code shown on the big screen.
-        </p>
-      </section>
+      <div class="timerbar"><div id="timerFill" class="timerfill"></div></div>
 
-      <section class="answers" id="answers">
-        <button class="answer-btn" id="btnA" disabled>
-          <div class="badge">A</div>
-          <div class="answer-text" id="txtA">Answer A</div>
-        </button>
-        <button class="answer-btn" id="btnB" disabled>
-          <div class="badge">B</div>
-          <div class="answer-text" id="txtB">Answer B</div>
-        </button>
-        <button class="answer-btn" id="btnC" disabled>
-          <div class="badge">C</div>
-          <div class="answer-text" id="txtC">Answer C</div>
-        </button>
-        <button class="answer-btn" id="btnD" disabled>
-          <div class="badge">D</div>
-          <div class="answer-text" id="txtD">Answer D</div>
-        </button>
-      </section>
-
-      <div class="footer-note">Refresh-safe • one controller per session</div>
-    </main>
-  </div>
-
-  <!-- LOCK / JOIN OVERLAY -->
-  <div id="joinOverlay" class="overlay">
-    <div class="overlay-card">
-      <h1 class="overlay-title">Restricted access</h1>
-      <p class="overlay-sub">Enter the event passkey and the session code displayed on the big screen.</p>
-
-      <div class="form">
-        <input id="passkeyInput" class="input" type="password" placeholder="Passkey (host)" autocomplete="off" />
-        <input id="roomCodeInput" class="input" type="text" placeholder="Session code (e.g., A1B2C3)" autocomplete="off" autocapitalize="characters" />
-        <button id="joinBtn" class="btn primary">ENTER</button>
-        <div id="errorEl" class="error"></div>
-        <div class="mini">One player at a time • if session is active, others are blocked</div>
+      <div class="questionBox">
+        <div class="qLabel" id="qLabel">WAITING…</div>
+        <div class="qText" id="qText">Look at the big screen.</div>
       </div>
+
+      <div class="grid">
+        <button class="choiceBtn" id="btnA"><div class="choiceKey">A</div><div class="choiceText" id="txtA">—</div></button>
+        <button class="choiceBtn" id="btnB"><div class="choiceKey">B</div><div class="choiceText" id="txtB">—</div></button>
+        <button class="choiceBtn" id="btnC"><div class="choiceKey">C</div><div class="choiceText" id="txtC">—</div></button>
+        <button class="choiceBtn" id="btnD"><div class="choiceKey">D</div><div class="choiceText" id="txtD">—</div></button>
+      </div>
+
+      <div class="smallNote" id="footerNote">Answer on your phone. Big screen will highlight instantly.</div>
     </div>
   </div>
 
-  <script>
-    /**
-     * Phone controller logic
-     * - User enters passkey + roomCode
-     * - validate passkey via /api/validate-passkey
-     * - join room via /api/join-room => controllerToken
-     * - store sessionId + controllerToken + roomCode in localStorage to resume
-     * - poll /api/get-state to show: score, progress, timer, answers
-     * - send answers via /api/answer (controllerToken)
-     */
+<script>
+const ROOM_CODE = "ACTIVE";
+const QUESTION_SECONDS = 30;
 
-    // ====== Config ======
-    const POLL_MS = 800;
+const pill = document.getElementById("pill");
+const lockCard = document.getElementById("lockCard");
+const gameCard = document.getElementById("gameCard");
+const passkeyEl = document.getElementById("passkey");
+const enterBtn = document.getElementById("enterBtn");
+const errEl = document.getElementById("err");
 
-    // ====== Storage keys ======
-    const LS_ROOM = "trivia_roomCode_v1";
-    const LS_CTRL_TOKEN = "trivia_controllerToken_v1";
-    const LS_SESSION_ID = "trivia_sessionId_v1";
+const scoreEl = document.getElementById("score");
+const progressEl = document.getElementById("progress");
+const secondsEl = document.getElementById("seconds");
+const timerFill = document.getElementById("timerFill");
 
-    // ====== Elements ======
-    const statusPill = document.getElementById("statusPill");
-    const joinOverlay = document.getElementById("joinOverlay");
-    const passkeyInput = document.getElementById("passkeyInput");
-    const roomCodeInput = document.getElementById("roomCodeInput");
-    const joinBtn = document.getElementById("joinBtn");
-    const errorEl = document.getElementById("errorEl");
+const qLabel = document.getElementById("qLabel");
+const qText = document.getElementById("qText");
 
-    const qProgress = document.getElementById("qProgress");
-    const scoreLine = document.getElementById("scoreLine");
-    const timerValue = document.getElementById("timerValue");
+const btnA = document.getElementById("btnA");
+const btnB = document.getElementById("btnB");
+const btnC = document.getElementById("btnC");
+const btnD = document.getElementById("btnD");
 
-    const panelTitle = document.getElementById("panelTitle");
-    const panelSub = document.getElementById("panelSub");
+const txtA = document.getElementById("txtA");
+const txtB = document.getElementById("txtB");
+const txtC = document.getElementById("txtC");
+const txtD = document.getElementById("txtD");
 
-    const btnA = document.getElementById("btnA");
-    const btnB = document.getElementById("btnB");
-    const btnC = document.getElementById("btnC");
-    const btnD = document.getElementById("btnD");
+const SESSION_ID_KEY = "trivia_controller_sessionId";
+const CTRL_TOKEN_KEY = "trivia_controller_token";
 
-    const txtA = document.getElementById("txtA");
-    const txtB = document.getElementById("txtB");
-    const txtC = document.getElementById("txtC");
-    const txtD = document.getElementById("txtD");
+function setPill(text, mode){
+  pill.textContent = text;
+  pill.classList.remove("bad","good");
+  if (mode) pill.classList.add(mode);
+}
 
-    // ====== Local state ======
-    let roomCode = null;
-    let controllerToken = null;
-    let sessionId = null;
-    let pollId = null;
+function getOrMakeSessionId(){
+  let sid = localStorage.getItem(SESSION_ID_KEY);
+  if (!sid){
+    sid = "sess_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem(SESSION_ID_KEY, sid);
+  }
+  return sid;
+}
 
-    let lastPhase = null;
-    let lastQIndex = null;
+let sessionId = getOrMakeSessionId();
+let controllerToken = localStorage.getItem(CTRL_TOKEN_KEY) || "";
+let statePoll = null;
+let tickTimer = null;
+let lastState = null;
+let lockedAnswer = false;
 
-    function setStatus(text, type=null){
-      statusPill.textContent = text;
-      statusPill.classList.remove("danger","success");
-      if(type === "danger") statusPill.classList.add("danger");
-      if(type === "success") statusPill.classList.add("success");
+function disableChoices(disabled){
+  [btnA,btnB,btnC,btnD].forEach(b=> b.disabled = !!disabled);
+}
+
+async function validateAndJoin(){
+  const pk = passkeyEl.value.trim();
+  if (!pk){
+    errEl.textContent = "Enter the master code.";
+    return;
+  }
+  errEl.textContent = "";
+  enterBtn.disabled = true;
+
+  try{
+    // 1) validate passkey
+    const v = await fetch("/api/validate-passkey",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ passkey: pk })
+    });
+    const vd = await v.json().catch(()=> ({}));
+    if (!v.ok || !vd.ok){
+      throw new Error(vd.error || "invalid_passkey");
     }
 
-    function disableAnswers(disabled=true){
-      [btnA,btnB,btnC,btnD].forEach(b=> b.disabled = disabled);
+    // 2) join fixed room
+    const j = await fetch("/api/join-room",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        roomCode: ROOM_CODE,
+        passkey: pk,
+        sessionId
+      })
+    });
+    const jd = await j.json().catch(()=> ({}));
+    if (!j.ok || !jd.ok){
+      if (jd.error === "controller_taken") throw new Error("controller_taken");
+      throw new Error(jd.error || "join_failed");
     }
 
-    function makeSessionId(){
-      // local unique id (resume identity)
-      return "sess_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    controllerToken = jd.controllerToken;
+    localStorage.setItem(CTRL_TOKEN_KEY, controllerToken);
+
+    // show game UI
+    lockCard.style.display = "none";
+    gameCard.style.display = "flex";
+    setPill("STATUS: CONNECTED", "good");
+    passkeyEl.value = "";
+    lockedAnswer = false;
+
+    startLoops();
+  }catch(err){
+    const code = String(err.message || err);
+    if (code === "controller_taken"){
+      errEl.textContent = "Another phone is already controlling this trivia.";
+    } else {
+      errEl.textContent = "Access denied. Check the master code.";
     }
+    setPill("STATUS: LOCKED", "bad");
+  }finally{
+    enterBtn.disabled = false;
+  }
+}
 
-    async function api(url, opts={}){
-      const res = await fetch(url, {
-        ...opts,
-        headers: {
-          "Content-Type":"application/json",
-          ...(opts.headers || {})
-        }
-      });
-      const text = await res.text();
-      let data = {};
-      try { data = text ? JSON.parse(text) : {}; } catch(_) {}
-      if(!res.ok){
-        const msg = (data && data.error) ? data.error : `HTTP ${res.status}`;
-        const err = new Error(msg);
-        err.status = res.status;
-        throw err;
-      }
-      return data;
+enterBtn.addEventListener("click", validateAndJoin);
+passkeyEl.addEventListener("keydown",(e)=>{
+  if (e.key === "Enter") validateAndJoin();
+});
+
+async function getState(){
+  if (!controllerToken) return null;
+  const r = await fetch("/api/get-state",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      roomCode: ROOM_CODE,
+      controllerToken,
+      sessionId
+    })
+  });
+  const d = await r.json().catch(()=> ({}));
+  if (!r.ok || !d.ok){
+    // lost controller / reset happened
+    if (d.errorCode === "controller_lost"){
+      controllerToken = "";
+      localStorage.removeItem(CTRL_TOKEN_KEY);
+      stopLoops();
+      lockCard.style.display = "flex";
+      gameCard.style.display = "none";
+      setPill("STATUS: LOCKED", "bad");
+      errEl.textContent = "Session ended. Host can start the next guest.";
     }
+    return null;
+  }
+  return d.state;
+}
 
-    function openJoin(message=""){
-      joinOverlay.classList.remove("hidden");
-      joinOverlay.style.display = "flex";
-      errorEl.textContent = message || "";
-      disableAnswers(true);
-      setStatus("STATUS: LOCKED", "danger");
-    }
+function renderFromState(st){
+  lastState = st;
 
-    function closeJoin(){
-      joinOverlay.classList.add("hidden");
-      joinOverlay.style.display = "none";
-    }
+  const score = typeof st.score === "number" ? st.score : 0;
+  const qIndex = typeof st.qIndex === "number" ? st.qIndex : 0;
+  const total = typeof st.total === "number" ? st.total : 20;
 
-    async function doJoin(){
-      const passkey = (passkeyInput.value || "").trim();
-      const code = (roomCodeInput.value || "").trim().toUpperCase();
+  scoreEl.textContent = String(score);
 
-      if(!passkey || !code){
-        errorEl.textContent = "Enter passkey and session code.";
-        return;
-      }
+  if (st.phase === "splash"){
+    progressEl.textContent = "—";
+    secondsEl.textContent = "—";
+    qLabel.textContent = "WAITING…";
+    qText.textContent = "Look at the big screen.";
+    disableChoices(true);
+    lockedAnswer = false;
+    timerFill.style.transform = "scaleX(0)";
+    return;
+  }
 
-      joinBtn.disabled = true;
-      errorEl.textContent = "";
+  if (st.phase === "finished"){
+    progressEl.textContent = `${total}/${total}`;
+    secondsEl.textContent = "—";
+    qLabel.textContent = "DONE";
+    qText.textContent = `Final score: ${score}/${total}`;
+    disableChoices(true);
+    lockedAnswer = true;
+    timerFill.style.transform = "scaleX(0)";
+    return;
+  }
 
-      try{
-        // 1) validate passkey
-        await api("/api/validate-passkey", {
-          method:"POST",
-          body: JSON.stringify({ passkey })
-        });
+  // live
+  progressEl.textContent = `${Math.min(total, qIndex+1)}/${total}`;
+  qLabel.textContent = `QUESTION ${Math.min(total, qIndex+1)} / ${total}`;
+  qText.textContent = "Choose A / B / C / D";
 
-        // 2) ensure sessionId exists
-        sessionId = localStorage.getItem(LS_SESSION_ID) || makeSessionId();
-        localStorage.setItem(LS_SESSION_ID, sessionId);
+  // If big screen sends answer text snapshot, show it.
+  if (st.answers){
+    txtA.textContent = st.answers.A || "A";
+    txtB.textContent = st.answers.B || "B";
+    txtC.textContent = st.answers.C || "C";
+    txtD.textContent = st.answers.D || "D";
+  } else {
+    txtA.textContent = "A";
+    txtB.textContent = "B";
+    txtC.textContent = "C";
+    txtD.textContent = "D";
+  }
 
-        // 3) join room (controller lock)
-        const data = await api("/api/join-room", {
-          method:"POST",
-          body: JSON.stringify({ roomCode: code, passkey, sessionId })
-        });
+  // enable buttons only during live
+  disableChoices(st.phase !== "live");
+  if (st.phase === "live") lockedAnswer = false;
+}
 
-        roomCode = code;
-        controllerToken = data.controllerToken;
+async function sendAnswer(choice){
+  if (!controllerToken || lockedAnswer) return;
+  lockedAnswer = true;
+  disableChoices(true);
 
-        localStorage.setItem(LS_ROOM, roomCode);
-        localStorage.setItem(LS_CTRL_TOKEN, controllerToken);
+  try{
+    await fetch("/api/answer",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        roomCode: ROOM_CODE,
+        controllerToken,
+        sessionId,
+        choice
+      })
+    });
+  }catch(_){}
+}
 
-        closeJoin();
-        setStatus("STATUS: CONNECTED", "success");
+btnA.addEventListener("click", ()=> sendAnswer("A"));
+btnB.addEventListener("click", ()=> sendAnswer("B"));
+btnC.addEventListener("click", ()=> sendAnswer("C"));
+btnD.addEventListener("click", ()=> sendAnswer("D"));
 
-        startPolling();
-      }catch(e){
-        errorEl.textContent = e.message || "Join failed.";
-        setStatus("STATUS: DENIED", "danger");
-      }finally{
-        joinBtn.disabled = false;
-      }
-    }
+async function stateLoop(){
+  const st = await getState();
+  if (!st) return;
 
-    function formatTimerMs(msLeft){
-      const s = Math.max(0, Math.ceil(msLeft / 1000));
-      return `${s}s`;
-    }
+  // If question index changed, unlock answering
+  if (lastState && st.phase === "live" && lastState.qIndex !== st.qIndex){
+    lockedAnswer = false;
+    disableChoices(false);
+  }
 
-    function renderFromState(state){
-      const total = state.total || 20;
-      const qIndex = typeof state.qIndex === "number" ? state.qIndex : 0;
-      const score = typeof state.score === "number" ? state.score : 0;
-      const phase = state.phase || (state.isRunning ? "live" : "splash");
+  renderFromState(st);
+}
 
-      scoreLine.textContent = `SCORE: ${score}`;
-      qProgress.textContent = `QUESTION ${Math.min(qIndex + 1, total)} / ${total}`;
+function tick(){
+  if (!lastState || lastState.phase !== "live" || !lastState.questionEndsAt){
+    secondsEl.textContent = "—";
+    timerFill.style.transform = "scaleX(0)";
+    return;
+  }
+  const msLeft = lastState.questionEndsAt - Date.now();
+  const sLeft = Math.max(0, Math.ceil(msLeft/1000));
+  secondsEl.textContent = String(sLeft);
 
-      // timer
-      if(state.questionEndsAt){
-        const msLeft = state.questionEndsAt - Date.now();
-        timerValue.textContent = formatTimerMs(msLeft);
-        timerValue.classList.toggle("low", Math.ceil(msLeft/1000) <= 7);
-      }else{
-        timerValue.textContent = "—";
-        timerValue.classList.remove("low");
-      }
+  const pct = Math.max(0, Math.min(1, msLeft/(QUESTION_SECONDS*1000)));
+  timerFill.style.transform = `scaleX(${pct})`;
 
-      // phase handling
-      if(phase !== lastPhase){
-        lastPhase = phase;
-      }
+  if (msLeft <= 0){
+    // big screen will advance; keep buttons disabled
+    disableChoices(true);
+  }
+}
 
-      if(phase === "splash"){
-        panelTitle.textContent = "Waiting…";
-        panelSub.textContent = "Big screen is waiting for a new session.";
-        disableAnswers(true);
-        setStatus("STATUS: WAITING", "danger");
-      } else if(phase === "live"){
-        panelTitle.textContent = "Answer now";
-        panelSub.textContent = "Tap A / B / C / D on your phone.";
-        disableAnswers(false);
-        setStatus("STATUS: LIVE", "success");
-      } else if(phase === "reveal"){
-        panelTitle.textContent = "Locked";
-        panelSub.textContent = "Answer received. Next question loading…";
-        disableAnswers(true);
-        setStatus("STATUS: LOCKED", "danger");
-      } else if(phase === "finished"){
-        panelTitle.textContent = "Finished";
-        panelSub.textContent = `Final score: ${score} / ${total}`;
-        disableAnswers(true);
-        setStatus("STATUS: FINISHED", "success");
-      } else if(phase === "reset"){
-        panelTitle.textContent = "Resetting…";
-        panelSub.textContent = "Big screen is resetting for next player.";
-        disableAnswers(true);
-        setStatus("STATUS: RESET", "danger");
-      }
+function startLoops(){
+  stopLoops();
+  statePoll = setInterval(stateLoop, 500);
+  tickTimer = setInterval(tick, 100);
+  stateLoop();
+}
+function stopLoops(){
+  if (statePoll) clearInterval(statePoll);
+  if (tickTimer) clearInterval(tickTimer);
+  statePoll = null;
+  tickTimer = null;
+}
 
-      // (Optional) display answers if provided in state (we’ll support it)
-      // If backend/host-state doesn’t include answers, we keep placeholders.
-      if(state.answers && typeof state.answers === "object"){
-        txtA.textContent = state.answers.A || "A";
-        txtB.textContent = state.answers.B || "B";
-        txtC.textContent = state.answers.C || "C";
-        txtD.textContent = state.answers.D || "D";
-      }
-
-      // If question index changes, re-enable (only if phase live)
-      if(lastQIndex !== qIndex){
-        lastQIndex = qIndex;
-      }
-    }
-
-    async function pollState(){
-      if(!roomCode || !controllerToken) return;
-
-      try{
-        const data = await api("/api/get-state", {
-          method:"POST",
-          body: JSON.stringify({ roomCode, controllerToken, sessionId })
-        });
-
-        // If controller lock lost, show join overlay.
-        if(data && data.errorCode === "controller_lost"){
-          openJoin("This session is already controlled by another phone.");
-          stopPolling();
-          return;
-        }
-
-        if(data && data.state){
-          renderFromState(data.state);
-        }else{
-          // no state => session ended or invalid
-          openJoin("Session not found. Enter a new session code.");
-          stopPolling();
-        }
-      }catch(e){
-        // If unauthorized, force re-join
-        if(e.status === 401 || e.status === 403){
-          openJoin("Session expired. Enter passkey + session code again.");
-          stopPolling();
-          return;
-        }
-        // otherwise keep polling
-        setStatus("STATUS: NETWORK…", "danger");
-      }
-    }
-
-    function startPolling(){
-      stopPolling();
-      pollState(); // immediate
-      pollId = setInterval(pollState, POLL_MS);
-    }
-
-    function stopPolling(){
-      if(pollId){
-        clearInterval(pollId);
-        pollId = null;
-      }
-    }
-
-    async function sendAnswer(choice){
-      if(!roomCode || !controllerToken) return;
-      disableAnswers(true);
-
-      try{
-        await api("/api/answer", {
-          method:"POST",
-          body: JSON.stringify({ roomCode, controllerToken, sessionId, choice })
-        });
-        // keep UI locked until big screen advances (poll will show reveal/live)
-      }catch(e){
-        if(e.status === 401 || e.status === 403){
-          openJoin("Session expired. Enter passkey + session code again.");
-          stopPolling();
-          return;
-        }
-        // on errors, allow retry
-        disableAnswers(false);
-      }
-    }
-
-    // ====== Wire buttons ======
-    btnA.addEventListener("click", ()=> sendAnswer("A"));
-    btnB.addEventListener("click", ()=> sendAnswer("B"));
-    btnC.addEventListener("click", ()=> sendAnswer("C"));
-    btnD.addEventListener("click", ()=> sendAnswer("D"));
-
-    joinBtn.addEventListener("click", doJoin);
-    roomCodeInput.addEventListener("keydown", (e)=> { if(e.key === "Enter") doJoin(); });
-    passkeyInput.addEventListener("keydown", (e)=> { if(e.key === "Enter") doJoin(); });
-
-    // ====== Boot / Resume ======
-    (function boot(){
-      // Restore previous session if available
-      const savedRoom = localStorage.getItem(LS_ROOM);
-      const savedToken = localStorage.getItem(LS_CTRL_TOKEN);
-      const savedSess = localStorage.getItem(LS_SESSION_ID);
-
-      if(savedSess) sessionId = savedSess;
-
-      if(savedRoom && savedToken){
-        roomCode = savedRoom;
-        controllerToken = savedToken;
-        setStatus("STATUS: RESUMING…", "danger");
-        closeJoin();
-        startPolling();
-      }else{
-        openJoin("");
-      }
-    })();
-  </script>
+// Auto-resume if token exists
+(async function bootstrap(){
+  if (controllerToken){
+    // show game UI while we attempt state
+    lockCard.style.display = "none";
+    gameCard.style.display = "flex";
+    setPill("STATUS: RESUMING…");
+    startLoops();
+    // if controller lost, getState handler will bounce back to lock
+  }
+})();
+</script>
 </body>
 </html>
