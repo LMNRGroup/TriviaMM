@@ -162,11 +162,11 @@
       z-index:2;
     }
 
-    /* HUD */
+    /* HUD (timer centered) */
     .hud{
-      display:flex;
+      display:grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items:center;
-      justify-content:space-between;
       gap:18px;
       padding:14px 20px;
       border-radius:999px;
@@ -181,6 +181,9 @@
       gap:12px;
       min-width:0;
     }
+
+    .hudGroup.left{ justify-content:flex-start; }
+    .hudGroup.right{ justify-content:flex-end; }
 
     .hudLabel{
       font-size:14px;
@@ -202,6 +205,42 @@
     .hudValue.small{
       font-size:34px;
       font-weight:1000;
+    }
+
+    /* Timer centerpiece */
+    .timerCenter{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:14px;
+      padding:6px 18px;
+      border-radius:999px;
+      border:1px solid rgba(212,175,55,0.45);
+      background: rgba(10,25,47,0.72);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+    }
+
+    .timerBig{
+      font-size:64px;
+      font-weight:1000;
+      letter-spacing:0.08em;
+      line-height:1;
+      color: var(--text);
+      text-shadow: 0 18px 55px rgba(0,0,0,0.65);
+      min-width:110px;
+      text-align:center;
+    }
+    .timerBig.warn{ color: #fde68a; }
+    .timerBig.danger{
+      color:#fecaca;
+      animation: flash 650ms infinite;
+      text-shadow:
+        0 0 26px rgba(249,115,115,0.45),
+        0 18px 55px rgba(0,0,0,0.65);
+    }
+    @keyframes flash{
+      0%,100%{ transform: scale(1); filter: brightness(1); }
+      50%{ transform: scale(1.02); filter: brightness(1.25); }
     }
 
     .pill{
@@ -486,9 +525,11 @@
       .liveWrap{ padding:22px; }
       .choice{ min-height:120px; }
       .hudValue{ font-size:36px; }
+      .timerBig{ font-size:46px; min-width:84px; }
       .bigResult{ font-size:88px; }
       .bigScore{ font-size:120px; }
       .finalThanks{ font-size:34px; }
+      .pickBadge{ font-size:44px; }
     }
     @media (max-width: 900px){
       body{ padding:10px; }
@@ -497,7 +538,9 @@
       .qText{ font-size:32px; }
       .logoText{ font-size:44px; }
       .tagline{ font-size:18px; }
-      .hud{ flex-wrap:wrap; gap:10px; }
+      .hud{ grid-template-columns: 1fr; gap:10px; border-radius:22px; }
+      .hudGroup.left, .hudGroup.right{ justify-content:center; }
+      .timerCenter{ justify-content:center; }
       .hudValue{ font-size:30px; }
       .hudValue.small{ font-size:26px; }
     }
@@ -526,21 +569,20 @@
     <!-- LIVE -->
     <section class="liveWrap" id="live">
       <div class="hud">
-        <div class="hudGroup">
-          <div class="hudLabel">Pregunta</div>
-          <div class="hudValue small" id="mQ">—</div>
-        </div>
-
-        <div id="livePill" class="pill good">EN VIVO</div>
-
-        <div class="hudGroup" style="margin-left:auto;">
+        <div class="hudGroup left">
           <div class="hudLabel">Puntos</div>
           <div class="hudValue" id="mS">0</div>
+        </div>
 
-          <div class="hudLabel" style="margin-left:18px;">Tiempo</div>
-          <div class="hudValue" id="mT">—</div>
+        <div class="timerCenter" aria-label="Tiempo">
+          <div class="hudLabel" style="margin-right:6px;">Tiempo</div>
+          <div class="timerBig" id="mT">—</div>
+          <div id="livePill" class="pill good">EN VIVO</div>
+        </div>
 
-          <div id="mStatus" style="display:none;">WAITING</div>
+        <div class="hudGroup right">
+          <div class="hudLabel">Pregunta</div>
+          <div class="hudValue small" id="mQ">—</div>
         </div>
       </div>
 
@@ -595,38 +637,83 @@
  * - Never get stuck: auto-advance on timeout, always.
  * - Game show feel: big score/progress, big overlays on correct/incorrect.
  * - Spanish UI (visible text), English code/comments.
+ *
+ * NOTE: Auto-start on PK requires the phone to send a "__START__" ping right after join.
+ * This file already supports it (it will start the round immediately when it sees "__START__").
  */
 
 const ROOM_CODE = "ACTIVE";
 const QUESTION_SECONDS = 30;
-const FINAL_HOLD_MS = 30000;          // 30 seconds on final screen
-const FEEDBACK_PICK_MS = 500;         // show "SELECCIÓN" first
-const FEEDBACK_RESULT_MS = 900;       // then show CORRECTA/INCORRECTA
-const ADVANCE_AFTER_FEEDBACK_MS = 500;// small beat, then next question
+const FINAL_HOLD_MS = 30000;     // 30 seconds on final screen
 
-// ====== Your question set ======
+// Overlay timing (longer)
+const FEEDBACK_PICK_MS = 450;    // show selection
+const FEEDBACK_RESULT_MS = 2000; // show CORRECTA/INCORRECTA longer (~2s)
+const ADVANCE_AFTER_FEEDBACK_MS = 250; // small beat then next question
+
+// ====== Your Mayagüez question set (with your answer key) ======
 const QUESTIONS = [
-  { q:"What color is Luminar’s primary accent?", a:{A:"Gold",B:"Purple",C:"Orange",D:"Pink"}, correct:"A" },
-  { q:"How many choices per question?", a:{A:"2",B:"3",C:"4",D:"5"}, correct:"C" },
-  { q:"Score for a correct answer?", a:{A:"+2",B:"+1",C:"+0.5",D:"-1"}, correct:"B" },
-  { q:"Timer per question is…", a:{A:"10s",B:"20s",C:"30s",D:"60s"}, correct:"C" },
-  { q:"Puerto Rico is an island in the…", a:{A:"Pacific",B:"Atlantic",C:"Indian",D:"Arctic"}, correct:"B" },
-  { q:"HTML stands for…", a:{A:"HyperText Markup Language",B:"HighText Markdown List",C:"Hyper Transfer Markup Link",D:"Home Tool Markup Language"}, correct:"A" },
-  { q:"CSS is mainly used for…", a:{A:"Database",B:"Styling",C:"Email",D:"Compiling"}, correct:"B" },
-  { q:"Vercel KV is based on…", a:{A:"Redis",B:"MySQL",C:"MongoDB",D:"SQLite"}, correct:"A" },
-  { q:"A hex color starts with…", a:{A:"@",B:"#",C:"$",D:"&"}, correct:"B" },
-  { q:"Which is a JavaScript primitive?", a:{A:"Array",B:"Object",C:"String",D:"Date"}, correct:"C" },
-  { q:"HTTP status for success is…", a:{A:"200",B:"404",C:"500",D:"301"}, correct:"A" },
-  { q:"Which is NOT a browser?", a:{A:"Chrome",B:"Safari",C:"Firefox",D:"Node"}, correct:"D" },
-  { q:"RGB has how many channels?", a:{A:"1",B:"2",C:"3",D:"4"}, correct:"C" },
-  { q:"A URL usually starts with…", a:{A:"ftp://",B:"http://",C:"zip://",D:"raw://"}, correct:"B" },
-  { q:"Which is a correct JSON value?", a:{A:"undefined",B:"function()",C:"null",D:"NaN"}, correct:"C" },
-  { q:"LocalStorage stores data…", a:{A:"On server",B:"In memory only",C:"In browser",D:"In DNS"}, correct:"C" },
-  { q:"Max score in this game is…", a:{A:"10",B:"15",C:"20",D:"25"}, correct:"C" },
-  { q:"If time runs out, score change is…", a:{A:"+1",B:"+0",C:"-1",D:"+2"}, correct:"B" },
-  { q:"Correct answers highlight…", a:{A:"Red",B:"Blue",C:"Green",D:"Gray"}, correct:"C" },
-  { q:"This app avoids realtime providers using…", a:{A:"WebSockets",B:"Polling",C:"Bluetooth",D:"SMS"}, correct:"B" }
+  { q:"¿En qué año fue fundado el municipio de Mayagüez?",
+    a:{A:"1703",B:"1760",C:"1805",D:"1823"}, correct:"B" },
+
+  { q:"¿Quién fue el fundador de Mayagüez?",
+    a:{A:"Juan Ponce de León",B:"Faustino Martínez",C:"Cristóbal Colón",D:"Diego Salcedo"}, correct:"B" },
+
+  { q:"¿Qué evento natural destruyó gran parte de la ciudad en 1918?",
+    a:{A:"Un huracán",B:"Un maremoto",C:"Un terremoto",D:"Una erupción volcánica"}, correct:"C" },
+
+  { q:"¿Cómo se llamaba originalmente Mayagüez?",
+    a:{A:"Nuestra Señora de la Candelaria",B:"El Pueblo del Oeste",C:"Mayagüez del Mar",D:"Las Claras"}, correct:"A" },
+
+  { q:"¿Por qué Mayagüez fue conocida como la “Sultana del Oeste”?",
+    a:{A:"Por su arquitectura árabe",B:"Por su importancia económica y cultural",C:"Por su clima cálido",D:"Por su puerto militar"}, correct:"B" },
+
+  { q:"¿Qué catedral se encuentra en la Plaza Colón de Mayagüez?",
+    a:{A:"Catedral San Juan Bautista",B:"Catedral Nuestra Señora de la Candelaria",C:"Catedral del Carmen",D:"Catedral San Germán"}, correct:"B" },
+
+  { q:"¿Cuál es una de las fiestas patronales más importantes de Mayagüez?",
+    a:{A:"San Sebastián",B:"Virgen del Carmen",C:"Nuestra Señora de la Candelaria",D:"Reyes Magos"}, correct:"C" },
+
+  { q:"¿Qué teatro histórico es uno de los íconos culturales de la ciudad?",
+    a:{A:"Teatro Tapia",B:"Teatro Yagüez",C:"Teatro Alejandro Tapia",D:"Teatro de Bellas Artes"}, correct:"B" },
+
+  { q:"¿Qué universidad pública tiene su sede principal en Mayagüez?",
+    a:{A:"Universidad Interamericana",B:"Universidad del Sagrado Corazón",C:"Universidad de Puerto Rico, Recinto de Mayagüez",D:"Universidad Metropolitana"}, correct:"C" },
+
+  { q:"¿Qué apodo reciben los residentes de Mayagüez?",
+    a:{A:"Capitalinos",B:"Mayagüezanos",C:"Isleños",D:"Mayos"}, correct:"B" },
+
+  { q:"¿Cómo se llama el equipo de baloncesto de Mayagüez en el BSN?",
+    a:{A:"Piratas",B:"Mets",C:"Leones",D:"Indios"}, correct:"D" },
+
+  { q:"¿En qué año los Indios de Mayagüez ganaron su campeonato más reciente?",
+    a:{A:"2008",B:"2010",C:"2012",D:"2015"}, correct:"C" },
+
+  { q:"¿Qué evento deportivo internacional se celebró en Mayagüez en 2010?",
+    a:{A:"Juegos Olímpicos",B:"Juegos Panamericanos",C:"Juegos Centroamericanos y del Caribe",D:"Juegos del Caribe"}, correct:"C" },
+
+  { q:"¿Cómo se llama el estadio de béisbol de la ciudad?",
+    a:{A:"Estadio Roberto Clemente",B:"Estadio Isidoro García",C:"Estadio Francisco Pagán",D:"Estadio Juan Ramón Loubriel"}, correct:"B" },
+
+  { q:"¿Qué deporte universitario destaca históricamente en el RUM?",
+    a:{A:"Natación",B:"Atletismo",C:"Baloncesto",D:"Fútbol"}, correct:"C" },
+
+  { q:"¿Qué educador y filósofo puertorriqueño nació en Mayagüez en 1839?",
+    a:{A:"Eugenio María de Hostos",B:"Luis Muñoz Rivera",C:"José Celso Barbosa",D:"Ramón Emeterio Betances"}, correct:"A" },
+
+  { q:"¿Qué cantante y compositor salsero nació en Mayagüez?",
+    a:{A:"Héctor Lavoe",B:"Frankie Ruiz",C:"Willie Colón",D:"Gilberto Santa Rosa"}, correct:"B" },
+
+  { q:"¿Qué poeta del siglo XIX estuvo vinculado a Mayagüez?",
+    a:{A:"Julia de Burgos",B:"Lola Rodríguez de Tió",C:"José Gautier Benítez",D:"Luis Palés Matos"}, correct:"C" },
+
+  { q:"¿Por qué es reconocido el Recinto Universitario de Mayagüez?",
+    a:{A:"Artes y música",B:"Ciencias e ingeniería",C:"Derecho",D:"Medicina"}, correct:"B" },
+
+  { q:"¿Qué rol ha tenido Mayagüez en el desarrollo deportivo de Puerto Rico?",
+    a:{A:"Sede de eventos internacionales",B:"Capital del béisbol profesional",C:"Única ciudad con estadio olímpico",D:"Centro exclusivo del boxeo"}, correct:"A" }
 ];
+
 const TOTAL = QUESTIONS.length;
 
 // ====== DOM ======
@@ -776,6 +863,7 @@ async function resetToSplash(){
   mQ.textContent = "—";
   mS.textContent = "0";
   mT.textContent = "—";
+  mT.classList.remove("warn","danger");
   timerFill.style.transform = "scaleX(0)";
   timerBar.classList.remove("danger");
   clearHighlights();
@@ -809,13 +897,13 @@ function showOverlayPick(choice){
   overlay.classList.add("show");
   pickBadge.textContent = `SELECCIÓN: ${choice}`;
   bigResult.classList.remove("correct","wrong");
-  bigResult.textContent = ""; // we show pick first
+  bigResult.textContent = ""; // show pick first
 }
 
-function showOverlayResult(isCorrect){
+function showOverlayResult(isCorrect, text){
   bigResult.classList.remove("correct","wrong");
   bigResult.classList.add(isCorrect ? "correct" : "wrong");
-  bigResult.textContent = isCorrect ? "CORRECTA" : "INCORRECTA";
+  bigResult.textContent = text || (isCorrect ? "CORRECTA" : "INCORRECTA");
 }
 
 function applyAnswer(choice){
@@ -838,11 +926,10 @@ function applyAnswer(choice){
   showOverlayPick(choice);
 
   setTimeout(()=>{
-    showOverlayResult(isCorrect);
-    // Push updated state so phone sees score/qIndex changes cleanly
+    showOverlayResult(isCorrect, isCorrect ? "CORRECTA" : "INCORRECTA");
     hostPush();
-    scheduleAdvance();
-  }, FEEDBACK_PICK_MS + FEEDBACK_RESULT_MS);
+    setTimeout(()=> scheduleAdvance(), FEEDBACK_RESULT_MS); // keep result visible longer
+  }, FEEDBACK_PICK_MS);
 }
 
 function applyTimeout(){
@@ -850,25 +937,20 @@ function applyTimeout(){
   if (timeoutHandledForQ === state.qIndex) return;
   timeoutHandledForQ = state.qIndex;
 
-  // No score change, but still give “game” feedback
   if (!resolving){
     resolving = true;
     showOverlayPick("—");
     setTimeout(()=>{
-      bigResult.classList.remove("correct","wrong");
-      bigResult.classList.add("wrong");
-      bigResult.textContent = "TIEMPO";
+      showOverlayResult(false, "TIEMPO");
       hostPush();
-      scheduleAdvance();
-    }, FEEDBACK_PICK_MS + 650);
+      setTimeout(()=> scheduleAdvance(), 1400);
+    }, FEEDBACK_PICK_MS);
   } else {
-    // If already resolving, just ensure advance happens
     scheduleAdvance();
   }
 }
 
 function advance(){
-  // Prevent any chance of getting stuck
   if (state.phase !== "live") return;
 
   if (state.qIndex >= TOTAL - 1){
@@ -893,19 +975,26 @@ async function pollAnswersLoop(){
 
     if (res.ok && data.ok){
       if (typeof data.seq === "number") {
-        // Dedupe protection
         if (data.seq <= lastSeq) return;
         lastSeq = data.seq;
       }
 
       if (data.answer){
         const choice = String(data.answer.choice || "").toUpperCase();
-        // If splash, start round and then apply answer to Q1
+
+        // Support "start ping" (sent by phone immediately after PK success)
+        if (choice === "__START__"){
+          if (state.phase === "splash") startNewRound();
+          return;
+        }
+
+        // If splash, start on first real answer and apply it to Q1
         if (state.phase === "splash"){
           startNewRound();
           if (choice) applyAnswer(choice);
           return;
         }
+
         // Normal live answer
         if (state.phase === "live" && choice){
           applyAnswer(choice);
@@ -918,6 +1007,7 @@ async function pollAnswersLoop(){
 function tick(){
   if (state.phase !== "live" || !state.questionEndsAt){
     mT.textContent = "—";
+    mT.classList.remove("warn","danger");
     timerFill.style.transform = "scaleX(0)";
     setTimerDanger(false);
     return;
@@ -925,15 +1015,20 @@ function tick(){
 
   const msLeft = state.questionEndsAt - Date.now();
   const sLeft = Math.max(0, Math.ceil(msLeft/1000));
+
+  // Timer color rules (big and centered)
   mT.textContent = `${sLeft}`;
+  mT.classList.remove("warn","danger");
+  if (sLeft <= 5) mT.classList.add("danger");
+  else if (sLeft <= 15) mT.classList.add("warn");
 
   const pct = Math.max(0, Math.min(1, msLeft/(QUESTION_SECONDS*1000)));
   timerFill.style.transform = `scaleX(${pct})`;
 
-  // Crowd-friendly danger mode under 10 seconds
+  // Bar danger glow under 10 seconds
   setTimerDanger(sLeft <= 10);
 
-  // HARD GUARANTEE: if time is up, force timeout handling once
+  // Hard guarantee: if time is up, force timeout handling once
   if (msLeft <= 0){
     applyTimeout();
   }
@@ -947,7 +1042,7 @@ async function bootstrap(){
   pollTimer = setInterval(pollAnswersLoop, 250);
   tickTimer = setInterval(tick, 100);
 
-  // Spacebar fallback (host can start manually)
+  // Spacebar fallback
   window.addEventListener("keydown",(e)=>{
     if (e.code === "Space"){
       e.preventDefault();
