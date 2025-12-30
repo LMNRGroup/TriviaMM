@@ -29,7 +29,10 @@
       align-items:stretch;
       justify-content:center;
       padding:14px 12px;
-      background: radial-gradient(circle at top, #0f172a, var(--navy));
+      background:
+        radial-gradient(circle at top, rgba(212,175,55,0.10), transparent 45%),
+        radial-gradient(circle at 20% 20%, rgba(16,185,129,0.08), transparent 40%),
+        radial-gradient(circle at top, #0f172a, var(--navy));
       overflow:hidden; /* no horizontal scroll */
     }
 
@@ -41,7 +44,7 @@
       gap:12px;
     }
 
-    /* simple header */
+    /* header */
     .header{
       display:flex;
       align-items:center;
@@ -87,9 +90,24 @@
       flex-direction:column;
       gap:14px;
       min-height:0;
+      position:relative;
     }
 
-    /* ===== LOCK SCREEN (simple) ===== */
+    /* ===== SHAKE (feedback) ===== */
+    .shake{
+      animation: shake 420ms ease-in-out;
+    }
+    @keyframes shake{
+      0%,100%{ transform: translateX(0); }
+      15%{ transform: translateX(-10px); }
+      30%{ transform: translateX(10px); }
+      45%{ transform: translateX(-8px); }
+      60%{ transform: translateX(8px); }
+      75%{ transform: translateX(-5px); }
+      90%{ transform: translateX(5px); }
+    }
+
+    /* ===== LOCK SCREEN ===== */
     .lockCenter{
       display:flex;
       flex-direction:column;
@@ -160,16 +178,14 @@
       letter-spacing:0.04em;
     }
 
-    /* ===== GAME UI (simple, priorities: question + 4 big buttons + score + timer) ===== */
+    /* ===== GAME HUD (Score | BIG TIMER | Question #) ===== */
     .hudRow{
-      display:flex;
-      align-items:stretch;
+      display:grid;
+      grid-template-columns: 1fr minmax(160px, 1.2fr) 1fr;
       gap:10px;
-      flex-wrap:wrap; /* wraps on small screens (no overflow) */
+      align-items:stretch;
     }
     .hudCard{
-      flex:1 1 120px;
-      min-width:120px;
       background: radial-gradient(circle at top, rgba(2,6,23,0.92), rgba(2,11,27,0.92));
       border-radius:16px;
       border:1px solid rgba(31,41,55,0.9);
@@ -177,6 +193,7 @@
       display:flex;
       flex-direction:column;
       gap:4px;
+      min-width:0;
     }
     .k{
       font-size:10px;
@@ -197,12 +214,55 @@
       text-overflow:ellipsis;
     }
 
+    /* BIG timer center */
+    .timerCard{
+      position:relative;
+      padding:10px 12px 12px;
+      overflow:hidden;
+    }
+    .timerBig{
+      display:flex;
+      align-items:baseline;
+      justify-content:center;
+      gap:10px;
+      padding-top:2px;
+    }
+    .timerNum{
+      font-size:44px;
+      font-weight:1000;
+      letter-spacing:0.04em;
+      line-height:1;
+      text-shadow: 0 10px 28px rgba(0,0,0,0.55);
+    }
+    .timerLabel{
+      font-size:10px;
+      letter-spacing:0.18em;
+      text-transform:uppercase;
+      color: var(--muted);
+      margin-top:10px;
+      white-space:nowrap;
+    }
+    .timerNum.warn{
+      color: #FDE68A; /* yellow */
+      text-shadow: 0 0 18px rgba(212,175,55,0.35), 0 10px 28px rgba(0,0,0,0.55);
+    }
+    .timerNum.danger{
+      color: #FCA5A5; /* red-ish */
+      animation: pulse 700ms ease-in-out infinite;
+      text-shadow: 0 0 18px rgba(249,115,115,0.35), 0 10px 28px rgba(0,0,0,0.55);
+    }
+    @keyframes pulse{
+      0%,100%{ transform: scale(1); filter: brightness(1); }
+      50%{ transform: scale(1.06); filter: brightness(1.25); }
+    }
+
     .timerbar{
       height:10px;
       border-radius:999px;
       background: rgba(148,163,184,0.20);
       overflow:hidden;
       border:1px solid rgba(55,65,81,0.55);
+      margin-top:10px;
     }
     .timerfill{
       height:100%;
@@ -213,15 +273,46 @@
       transition: transform 0.1s linear;
     }
 
+    /* ===== QUESTION BOX (with bulbs) ===== */
     .questionBox{
-      background: rgba(2,6,23,0.62);
+      background: linear-gradient(180deg, rgba(2,6,23,0.68), rgba(2,6,23,0.50));
       border:1px solid rgba(55,65,81,0.8);
       border-radius:16px;
       padding:14px 14px;
       display:flex;
       flex-direction:column;
       gap:8px;
+      position:relative;
+      overflow:hidden;
     }
+    .questionBox::before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      border-radius:18px;
+      pointer-events:none;
+      opacity:0.55;
+      background:
+        radial-gradient(circle at 8% 20%, rgba(212,175,55,0.85) 0 3px, transparent 4px),
+        radial-gradient(circle at 18% 12%, rgba(212,175,55,0.85) 0 3px, transparent 4px),
+        radial-gradient(circle at 30% 18%, rgba(212,175,55,0.85) 0 3px, transparent 4px),
+        radial-gradient(circle at 70% 18%, rgba(212,175,55,0.85) 0 3px, transparent 4px),
+        radial-gradient(circle at 82% 12%, rgba(212,175,55,0.85) 0 3px, transparent 4px),
+        radial-gradient(circle at 92% 20%, rgba(212,175,55,0.85) 0 3px, transparent 4px),
+        radial-gradient(circle at 10% 86%, rgba(212,175,55,0.85) 0 3px, transparent 4px),
+        radial-gradient(circle at 22% 92%, rgba(212,175,55,0.85) 0 3px, transparent 4px),
+        radial-gradient(circle at 36% 88%, rgba(212,175,55,0.85) 0 3px, transparent 4px),
+        radial-gradient(circle at 64% 88%, rgba(212,175,55,0.85) 0 3px, transparent 4px),
+        radial-gradient(circle at 78% 92%, rgba(212,175,55,0.85) 0 3px, transparent 4px),
+        radial-gradient(circle at 90% 86%, rgba(212,175,55,0.85) 0 3px, transparent 4px);
+      animation: bulbs 1.2s ease-in-out infinite;
+      filter: drop-shadow(0 0 6px rgba(212,175,55,0.35));
+    }
+    @keyframes bulbs{
+      0%,100%{ opacity:0.35; }
+      50%{ opacity:0.75; }
+    }
+
     .qMeta{
       display:flex;
       align-items:center;
@@ -240,25 +331,24 @@
     }
     .qText{
       font-size:18px;
-      font-weight:900;
+      font-weight:1000;
       line-height:1.25;
       word-wrap:break-word;
       overflow-wrap:anywhere;
       margin:0;
     }
 
-    /* 2x2 buttons */
+    /* ===== Answer Buttons (2x2 big) ===== */
     .grid{
       display:grid;
       grid-template-columns: 1fr 1fr;
       gap:12px;
     }
-
     .choiceBtn{
       width:100%;
       border-radius:18px;
       border:1px solid rgba(55,65,81,0.92);
-      background: rgba(2,6,23,0.78);
+      background: linear-gradient(180deg, rgba(2,6,23,0.82), rgba(2,6,23,0.68));
       padding:16px 14px;
       display:flex;
       align-items:center;
@@ -267,16 +357,25 @@
       box-shadow: 0 10px 26px rgba(0,0,0,0.35);
       user-select:none;
       -webkit-tap-highlight-color: transparent;
-      min-height:86px; /* big buttons */
+      min-height:92px;
       transition: transform 0.06s ease, filter 0.06s ease, border-color 0.12s ease;
+      position:relative;
+      overflow:hidden;
     }
-    .choiceBtn:active{ transform: scale(0.985); }
+    .choiceBtn::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background: radial-gradient(circle at 20% 10%, rgba(212,175,55,0.18), transparent 35%);
+      opacity:0.65;
+      pointer-events:none;
+    }
+    .choiceBtn:active{ transform: scale(0.985); filter: brightness(1.05); }
     .choiceBtn:disabled{ opacity:0.55; cursor:default; }
 
-    /* ONLY letter on button */
     .choiceKeyBig{
-      width:56px;
-      height:56px;
+      width:58px;
+      height:58px;
       border-radius:18px;
       display:flex;
       align-items:center;
@@ -287,12 +386,10 @@
       font-weight:1000;
       font-size:22px;
       letter-spacing:0.06em;
+      box-shadow: inset 0 0 0 1px rgba(212,175,55,0.15);
     }
 
-    /* optional feedback states if you ever want to toggle them */
-    .choiceBtn.good{ border-color: rgba(16,185,129,0.95); }
-    .choiceBtn.bad{ border-color: rgba(249,115,115,0.95); }
-
+    /* Answer list (long texts) */
     .answerList{
       margin-top:-2px;
       background: rgba(2,6,23,0.50);
@@ -334,29 +431,34 @@
       min-width:0;
     }
 
+    /* small screens */
+    @media (max-width: 520px){
+      .hudRow{ grid-template-columns: 1fr; }
+      .timerNum{ font-size:46px; }
+    }
     @media (max-width: 420px){
       .grid{ grid-template-columns:1fr; }
-      .choiceBtn{ min-height:74px; }
-      .choiceKeyBig{ width:52px; height:52px; }
+      .choiceBtn{ min-height:78px; }
+      .choiceKeyBig{ width:54px; height:54px; }
     }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="header">
-      <div class="brand">TRIVIA · CONTROLLER</div>
-      <div id="pill" class="pill">STATUS: LOCKED</div>
+      <div class="brand">TRIVIA · CONTROL</div>
+      <div id="pill" class="pill">ESTADO: BLOQUEADO</div>
     </div>
 
     <!-- LOCK -->
     <div class="card" id="lockCard">
       <div class="lockCenter">
-        <h2 class="lockTitle">Master Passkey</h2>
-        <p class="lockSub">Host enters the master code to control the trivia.</p>
-        <input id="passkey" class="input" type="password" placeholder="Master code" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-        <button id="enterBtn" class="btn">Enter</button>
+        <h2 class="lockTitle">Código Maestro</h2>
+        <p class="lockSub">El host entra el código maestro para activar el juego.</p>
+        <input id="passkey" class="input" type="password" placeholder="Código maestro" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+        <button id="enterBtn" class="btn">Entrar</button>
         <div id="err" class="err"></div>
-        <div class="smallNote">One guest at a time · No join code shown on screen</div>
+        <div class="smallNote">Un invitado a la vez · No se muestra ningún código en pantalla</div>
       </div>
     </div>
 
@@ -364,53 +466,60 @@
     <div class="card" id="gameCard" style="display:none;">
       <div class="hudRow">
         <div class="hudCard">
-          <div class="k">Score</div>
+          <div class="k">Puntos</div>
           <div class="v" id="score">0</div>
         </div>
+
+        <div class="hudCard timerCard">
+          <div class="timerBig">
+            <div id="timerNum" class="timerNum">—</div>
+          </div>
+          <div class="timerLabel" style="text-align:center;">Tiempo</div>
+          <div class="timerbar"><div id="timerFill" class="timerfill"></div></div>
+        </div>
+
         <div class="hudCard">
-          <div class="k">Question</div>
+          <div class="k">Pregunta</div>
           <div class="v" id="progress">—</div>
         </div>
-        <div class="hudCard">
-          <div class="k">Seconds</div>
-          <div class="v" id="seconds">—</div>
-        </div>
-        <!-- keep this hidden but present for JS logic -->
-        <div id="mStatus" style="display:none;">WAITING</div>
       </div>
-
-      <div class="timerbar"><div id="timerFill" class="timerfill"></div></div>
 
       <div class="questionBox">
         <div class="qMeta">
-          <div class="qLabel" id="qLabel">WAITING…</div>
-          <!-- optional tiny state pill if you ever want it -->
-          <div id="livePill" class="pill good" style="font-size:9px;padding:5px 10px;">LIVE</div>
+          <div class="qLabel" id="qLabel">ESPERANDO…</div>
+          <div id="livePill" class="pill good" style="font-size:9px;padding:5px 10px;">EN VIVO</div>
         </div>
-        <p class="qText" id="qText">Look at the big screen.</p>
+        <p class="qText" id="qText">Mira la pantalla grande.</p>
       </div>
 
       <!-- A/B/C/D big buttons ONLY letters -->
       <div class="grid">
-        <button class="choiceBtn" id="btnA" aria-label="Answer A"><div class="choiceKeyBig">A</div></button>
-        <button class="choiceBtn" id="btnB" aria-label="Answer B"><div class="choiceKeyBig">B</div></button>
-        <button class="choiceBtn" id="btnC" aria-label="Answer C"><div class="choiceKeyBig">C</div></button>
-        <button class="choiceBtn" id="btnD" aria-label="Answer D"><div class="choiceKeyBig">D</div></button>
+        <button class="choiceBtn" id="btnA" aria-label="Respuesta A"><div class="choiceKeyBig">A</div></button>
+        <button class="choiceBtn" id="btnB" aria-label="Respuesta B"><div class="choiceKeyBig">B</div></button>
+        <button class="choiceBtn" id="btnC" aria-label="Respuesta C"><div class="choiceKeyBig">C</div></button>
+        <button class="choiceBtn" id="btnD" aria-label="Respuesta D"><div class="choiceKeyBig">D</div></button>
       </div>
 
-      <!-- Answer text list (long answers live here, not on buttons) -->
-      <div class="answerList" aria-label="Answer choices">
+      <!-- Long answers list -->
+      <div class="answerList" aria-label="Opciones">
         <div class="ansRow"><div class="ansKey">A</div><div class="ansText" id="txtA">—</div></div>
         <div class="ansRow"><div class="ansKey">B</div><div class="ansText" id="txtB">—</div></div>
         <div class="ansRow"><div class="ansKey">C</div><div class="ansText" id="txtC">—</div></div>
         <div class="ansRow"><div class="ansKey">D</div><div class="ansText" id="txtD">—</div></div>
       </div>
 
-      <div class="smallNote" id="footerNote">Tap A/B/C/D. The big screen will reveal if it’s correct.</div>
+      <div class="smallNote" id="footerNote">Toca A/B/C/D. La pantalla grande muestra el resultado.</div>
     </div>
   </div>
 
 <script>
+/**
+ * Notes:
+ * - UI strings are Spanish (what the user sees).
+ * - Code/comments remain in English.
+ * - For "incorrect answer shake": supports optional state.lastResult = { qIndex, correct }.
+ */
+
 const ROOM_CODE = "ACTIVE";
 const QUESTION_SECONDS = 30;
 
@@ -423,9 +532,6 @@ const errEl = document.getElementById("err");
 
 const scoreEl = document.getElementById("score");
 const progressEl = document.getElementById("progress");
-const secondsEl = document.getElementById("seconds");
-const timerFill = document.getElementById("timerFill");
-
 const qLabel = document.getElementById("qLabel");
 const qText = document.getElementById("qText");
 
@@ -438,6 +544,9 @@ const txtA = document.getElementById("txtA");
 const txtB = document.getElementById("txtB");
 const txtC = document.getElementById("txtC");
 const txtD = document.getElementById("txtD");
+
+const timerFill = document.getElementById("timerFill");
+const timerNum = document.getElementById("timerNum");
 
 const SESSION_ID_KEY = "trivia_controller_sessionId";
 const CTRL_TOKEN_KEY = "trivia_controller_token";
@@ -459,19 +568,34 @@ function getOrMakeSessionId(){
 
 let sessionId = getOrMakeSessionId();
 let controllerToken = localStorage.getItem(CTRL_TOKEN_KEY) || "";
+
 let statePoll = null;
 let tickTimer = null;
 let lastState = null;
 let lockedAnswer = false;
 
+// For per-question effects (prevent repeated shake on timeout)
+let shakenTimeoutForQ = -1;
+// For lastResult (incorrect) shake once per question
+let shakenIncorrectForQ = -1;
+
 function disableChoices(disabled){
-  [btnA,btnB,btnC,btnD].forEach(b=> b.disabled = !!disabled);
+  [btnA,btnB,btnC,btnD].forEach(b => b.disabled = !!disabled);
+}
+
+function shakeGame(){
+  // Shake only the game card (feels like a "game show" buzzer)
+  gameCard.classList.remove("shake");
+  // Force reflow so animation can retrigger reliably
+  void gameCard.offsetWidth;
+  gameCard.classList.add("shake");
+  setTimeout(()=> gameCard.classList.remove("shake"), 500);
 }
 
 async function validateAndJoin(){
   const pk = passkeyEl.value.trim();
   if (!pk){
-    errEl.textContent = "Enter the master code.";
+    errEl.textContent = "Entra el código maestro.";
     return;
   }
   errEl.textContent = "";
@@ -508,22 +632,23 @@ async function validateAndJoin(){
     controllerToken = jd.controllerToken;
     localStorage.setItem(CTRL_TOKEN_KEY, controllerToken);
 
-    // show game UI
     lockCard.style.display = "none";
     gameCard.style.display = "flex";
-    setPill("STATUS: CONNECTED", "good");
+    setPill("ESTADO: CONECTADO", "good");
     passkeyEl.value = "";
     lockedAnswer = false;
+    shakenTimeoutForQ = -1;
+    shakenIncorrectForQ = -1;
 
     startLoops();
   }catch(err){
     const code = String(err.message || err);
     if (code === "controller_taken"){
-      errEl.textContent = "Another phone is already controlling this trivia.";
+      errEl.textContent = "Otro teléfono ya está controlando este trivia.";
     } else {
-      errEl.textContent = "Access denied. Check the master code.";
+      errEl.textContent = "Acceso denegado. Verifica el código.";
     }
-    setPill("STATUS: LOCKED", "bad");
+    setPill("ESTADO: BLOQUEADO", "bad");
   }finally{
     enterBtn.disabled = false;
   }
@@ -536,6 +661,7 @@ passkeyEl.addEventListener("keydown",(e)=>{
 
 async function getState(){
   if (!controllerToken) return null;
+
   const r = await fetch("/api/get-state",{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
@@ -545,17 +671,18 @@ async function getState(){
       sessionId
     })
   });
+
   const d = await r.json().catch(()=> ({}));
+
   if (!r.ok || !d.ok){
-    // lost controller / reset happened
     if (d.errorCode === "controller_lost"){
       controllerToken = "";
       localStorage.removeItem(CTRL_TOKEN_KEY);
       stopLoops();
       lockCard.style.display = "flex";
       gameCard.style.display = "none";
-      setPill("STATUS: LOCKED", "bad");
-      errEl.textContent = "Session ended. Host can start the next guest.";
+      setPill("ESTADO: BLOQUEADO", "bad");
+      errEl.textContent = "Sesión terminada. El host puede iniciar el próximo invitado.";
     }
     return null;
   }
@@ -573,55 +700,72 @@ function renderFromState(st){
 
   if (st.phase === "splash"){
     progressEl.textContent = "—";
-    secondsEl.textContent = "—";
-    qLabel.textContent = "WAITING…";
-    qText.textContent = "Look at the big screen.";
+    qLabel.textContent = "ESPERANDO…";
+    qText.textContent = "Mira la pantalla grande.";
     disableChoices(true);
     lockedAnswer = false;
     timerFill.style.transform = "scaleX(0)";
+    timerNum.textContent = "—";
+    timerNum.classList.remove("warn","danger");
+    shakenTimeoutForQ = -1;
+    shakenIncorrectForQ = -1;
     return;
   }
 
   if (st.phase === "finished"){
     progressEl.textContent = `${total}/${total}`;
-    secondsEl.textContent = "—";
-    qLabel.textContent = "DONE";
-    qText.textContent = `Final score: ${score}/${total}`;
+    qLabel.textContent = "LISTO";
+    qText.textContent = `Puntuación final: ${score}/${total}`;
     disableChoices(true);
     lockedAnswer = true;
     timerFill.style.transform = "scaleX(0)";
+    timerNum.textContent = "—";
+    timerNum.classList.remove("warn","danger");
     return;
   }
 
   // live
   progressEl.textContent = `${Math.min(total, qIndex+1)}/${total}`;
-  qLabel.textContent = `QUESTION ${Math.min(total, qIndex+1)} / ${total}`;
+  qLabel.textContent = `PREGUNTA ${Math.min(total, qIndex+1)} / ${total}`;
 
-  // IMPORTANT: user should see the question
-  qText.textContent = st.questionText || st.q || st.question || "Choose A / B / C / D";
+  // show question text if backend provides it
+  qText.textContent = st.questionText || st.q || st.question || "Selecciona A / B / C / D";
 
-  // long answers show here (NOT on buttons)
+  // long answers (optional)
   if (st.answers){
     txtA.textContent = st.answers.A || "—";
     txtB.textContent = st.answers.B || "—";
     txtC.textContent = st.answers.C || "—";
     txtD.textContent = st.answers.D || "—";
   } else {
-    // fallback (keeps UI clean even if backend doesn't send answer text)
     txtA.textContent = "A";
     txtB.textContent = "B";
     txtC.textContent = "C";
     txtD.textContent = "D";
   }
 
-  disableChoices(st.phase !== "live");
-  if (st.phase === "live") lockedAnswer = false;
+  // enable buttons only during live
+  disableChoices(false);
+
+  // If backend sends last result, shake on incorrect (once per question)
+  // Expected shape: st.lastResult = { qIndex: number, correct: boolean }
+  if (st.lastResult && typeof st.lastResult.qIndex === "number" && st.lastResult.correct === false){
+    if (shakenIncorrectForQ !== st.lastResult.qIndex){
+      shakenIncorrectForQ = st.lastResult.qIndex;
+      shakeGame();
+    }
+  }
 }
 
 async function sendAnswer(choice){
   if (!controllerToken || lockedAnswer) return;
+
   lockedAnswer = true;
   disableChoices(true);
+
+  // Immediate game-feel feedback on submit (like a buzzer / impact).
+  // If you ONLY want shake on incorrect, remove this line.
+  shakeGame();
 
   try{
     await fetch("/api/answer",{
@@ -657,25 +801,40 @@ async function stateLoop(){
 
 function tick(){
   if (!lastState || lastState.phase !== "live" || !lastState.questionEndsAt){
-    secondsEl.textContent = "—";
+    timerNum.textContent = "—";
+    timerNum.classList.remove("warn","danger");
     timerFill.style.transform = "scaleX(0)";
     return;
   }
+
   const msLeft = lastState.questionEndsAt - Date.now();
   const sLeft = Math.max(0, Math.ceil(msLeft/1000));
-  secondsEl.textContent = String(sLeft);
+
+  timerNum.textContent = String(sLeft);
+
+  // Color rules:
+  // <=15s => yellow, <=5s => red + flashing
+  timerNum.classList.remove("warn","danger");
+  if (sLeft <= 5) timerNum.classList.add("danger");
+  else if (sLeft <= 15) timerNum.classList.add("warn");
 
   const pct = Math.max(0, Math.min(1, msLeft/(QUESTION_SECONDS*1000)));
   timerFill.style.transform = `scaleX(${pct})`;
 
+  // If time is up: disable and shake (once per question)
   if (msLeft <= 0){
     disableChoices(true);
+    const qIndex = typeof lastState.qIndex === "number" ? lastState.qIndex : -1;
+    if (shakenTimeoutForQ !== qIndex){
+      shakenTimeoutForQ = qIndex;
+      shakeGame();
+    }
   }
 }
 
 function startLoops(){
   stopLoops();
-  statePoll = setInterval(stateLoop, 500);
+  statePoll = setInterval(stateLoop, 350);
   tickTimer = setInterval(tick, 100);
   stateLoop();
 }
@@ -691,7 +850,7 @@ function stopLoops(){
   if (controllerToken){
     lockCard.style.display = "none";
     gameCard.style.display = "flex";
-    setPill("STATUS: RESUMING…");
+    setPill("ESTADO: REANUDANDO…");
     startLoops();
   }
 })();
