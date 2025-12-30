@@ -160,31 +160,20 @@
     }
     @keyframes bulbs{ 0%,100%{ opacity:0.35; } 50%{ opacity:0.85; } }
 
-    .lockBadge{
-      margin:0 auto 2px;
-      display:inline-flex;
-      align-items:center;
+    /* ✅ UPDATED: no square badge; logo is bigger and free */
+    .lockLogoWrap{
+      display:flex;
       justify-content:center;
-      width:86px;
-      height:86px;
-      border-radius:26px;
-      border:2px solid rgba(212,175,55,0.55);
-      background: radial-gradient(circle at top, rgba(10,25,47,0.92), rgba(2,6,23,0.78));
-      box-shadow: 0 18px 45px rgba(0,0,0,0.55);
-      position:relative;
-      overflow:hidden;
-      padding:10px;
+      align-items:center;
+      margin:2px auto 6px;
+      padding:0;
     }
-
-    /* logo inside the badge */
     .lockLogo{
-      max-width:100%;
-      max-height:100%;
-      width:72px;
+      width:min(260px, 80%);
       height:auto;
       display:block;
       object-fit:contain;
-      filter: drop-shadow(0 10px 20px rgba(0,0,0,0.45));
+      filter: drop-shadow(0 14px 26px rgba(0,0,0,0.55));
       user-select:none;
       -webkit-user-drag:none;
       pointer-events:none;
@@ -214,22 +203,8 @@
       margin:0;
     }
 
-    .codeStrip{
-      display:flex;
-      gap:10px;
-      justify-content:center;
-      margin-top:6px;
-      flex-wrap:wrap;
-    }
-    .codeBox{
-      width:44px;
-      height:50px;
-      border-radius:14px;
-      border:1px solid rgba(212,175,55,0.28);
-      background: rgba(2,6,23,0.62);
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
-      opacity:0.9;
-    }
+    /* ✅ REMOVED: passkey squares (codeStrip/codeBox) */
+    /* (intentionally deleted from HTML below) */
 
     .input{
       width:100%;
@@ -245,7 +220,7 @@
       text-transform:uppercase;
       box-shadow: 0 12px 30px rgba(0,0,0,0.35);
       position:relative;
-      z-index:5; /* key: stays clickable */
+      z-index:5; /* stays clickable */
     }
     .input::placeholder{
       font-size:12px;
@@ -272,7 +247,7 @@
       letter-spacing:0.18em;
       box-shadow: 0 14px 30px rgba(0,0,0,0.35);
       position:relative;
-      z-index:5; /* stays clickable */
+      z-index:5;
     }
     .btn:active{ transform: scale(0.99); }
     .btn:disabled{ opacity:0.6; cursor:default; }
@@ -636,6 +611,7 @@
       .timerNum{ font-size:56px; }
       .choiceTxt{ font-size:13px; }
       .finalScoreBig{ font-size:72px; }
+      .lockLogo{ width:min(280px, 86%); }
     }
   </style>
 </head>
@@ -650,25 +626,24 @@
     <div class="card" id="lockCard">
       <div class="lockCenter">
         <div class="marquee">
-          <div class="lockBadge" aria-hidden="true" id="lockBadge">
+          <!-- ✅ Logo bigger + no square container -->
+          <div class="lockLogoWrap" id="lockLogoWrap" aria-hidden="true">
             <img
               class="lockLogo"
               src="Assets/Logo_MM_Text.png"
               alt="Municipio de Mayagüez"
               draggable="false"
-              onerror="this.remove(); document.getElementById('lockBadge').innerHTML='<span class=&quot;goFallback&quot;>GO</span>';"
+              onerror="this.remove(); document.getElementById('lockLogoWrap').innerHTML='<span class=&quot;goFallback&quot;>GO</span>';"
             />
           </div>
 
           <h2 class="lockTitle">ENTRA EL CÓDIGO</h2>
-          <p class="lockSub">Escribe el passkey y prepárate — mira la pantalla grande.</p>
-          <div class="codeStrip" aria-hidden="true">
-            <div class="codeBox"></div><div class="codeBox"></div><div class="codeBox"></div>
-            <div class="codeBox"></div><div class="codeBox"></div><div class="codeBox"></div>
-          </div>
+          <p class="lockSub">Escribe la contraseña y prepárate — mira la pantalla grande.</p>
+          <!-- ✅ REMOVED squares -->
         </div>
 
-        <input id="passkey" class="input" type="password" placeholder="PASSKEY"
+        <!-- ✅ UI says CONTRASEÑA (id stays passkey for code) -->
+        <input id="passkey" class="input" type="password" placeholder="CONTRASEÑA"
                autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" />
         <button id="enterBtn" class="btn">COMENZAR</button>
         <div id="err" class="err"></div>
@@ -843,7 +818,7 @@ function hideFinalOverlay(){
 async function validateAndJoin(){
   const pk = passkeyEl.value.trim();
   if (!pk){
-    errEl.textContent = "Escribe el passkey para comenzar.";
+    errEl.textContent = "Escribe la contraseña para comenzar.";
     return;
   }
   errEl.textContent = "";
@@ -907,7 +882,7 @@ async function validateAndJoin(){
     if (code === "controller_taken"){
       errEl.textContent = "Otro teléfono ya está controlando este trivia.";
     } else {
-      errEl.textContent = "Acceso denegado. Verifica el passkey.";
+      errEl.textContent = "Acceso denegado. Verifica la contraseña.";
     }
     setPill("ESTADO: BLOQUEADO", "bad");
   }finally{
