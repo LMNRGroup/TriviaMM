@@ -42,6 +42,7 @@
       display:flex;
       flex-direction:column;
       gap:12px;
+      min-height:100vh;
     }
 
     /* header */
@@ -55,6 +56,7 @@
       background: rgba(2,11,27,0.92);
       border:1px solid var(--border);
       box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+      flex:0 0 auto;
     }
     .brand{
       font-size:14px;
@@ -94,9 +96,7 @@
     }
 
     /* ===== SHAKE (feedback) ===== */
-    .shake{
-      animation: shake 420ms ease-in-out;
-    }
+    .shake{ animation: shake 420ms ease-in-out; }
     @keyframes shake{
       0%,100%{ transform: translateX(0); }
       15%{ transform: translateX(-10px); }
@@ -107,18 +107,56 @@
       90%{ transform: translateX(5px); }
     }
 
-    /* ===== LOCK SCREEN ===== */
+    /* ===== LOCK SCREEN (game-like) ===== */
     .lockCenter{
       display:flex;
       flex-direction:column;
-      gap:10px;
-      padding:6px 2px 2px;
+      gap:12px;
+      padding:10px 2px 2px;
     }
+    .lockBadge{
+      margin:0 auto;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:74px;
+      height:74px;
+      border-radius:22px;
+      border:1px solid rgba(212,175,55,0.55);
+      background: radial-gradient(circle at top, rgba(10,25,47,0.92), rgba(2,6,23,0.78));
+      box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+      position:relative;
+      overflow:hidden;
+    }
+    .lockBadge::before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      border-radius:24px;
+      pointer-events:none;
+      opacity:0.65;
+      background:
+        radial-gradient(circle at 22% 18%, rgba(212,175,55,0.90) 0 3px, transparent 4px),
+        radial-gradient(circle at 76% 22%, rgba(212,175,55,0.90) 0 3px, transparent 4px),
+        radial-gradient(circle at 30% 86%, rgba(212,175,55,0.90) 0 3px, transparent 4px),
+        radial-gradient(circle at 70% 82%, rgba(212,175,55,0.90) 0 3px, transparent 4px);
+      animation: bulbs 1.2s ease-in-out infinite;
+      filter: drop-shadow(0 0 6px rgba(212,175,55,0.35));
+    }
+    .lockBadge span{
+      font-size:28px;
+      font-weight:1000;
+      color: var(--gold);
+      letter-spacing:0.08em;
+      position:relative;
+      z-index:1;
+    }
+
     .lockTitle{
       text-align:center;
       font-size:18px;
-      font-weight:900;
-      letter-spacing:0.14em;
+      font-weight:1000;
+      letter-spacing:0.12em;
       text-transform:uppercase;
       color: var(--gold);
       margin:0;
@@ -140,6 +178,7 @@
       font-size:18px;
       letter-spacing:0.28em;
       outline:none;
+      text-align:center;
     }
     .input::placeholder{
       font-size:13px;
@@ -157,11 +196,12 @@
       background: var(--success);
       color:#022c22;
       font-size:13px;
-      font-weight:800;
+      font-weight:900;
       padding:12px 14px;
       cursor:pointer;
       text-transform:uppercase;
       letter-spacing:0.14em;
+      box-shadow: 0 10px 26px rgba(0,0,0,0.30);
     }
     .btn:disabled{ opacity:0.6; cursor:default; }
     .err{
@@ -170,18 +210,11 @@
       font-size:11px;
       color: var(--danger);
     }
-    .smallNote{
-      text-align:center;
-      font-size:10px;
-      color: var(--muted);
-      line-height:1.5;
-      letter-spacing:0.04em;
-    }
 
-    /* ===== GAME HUD (Score | BIG TIMER | Question #) ===== */
+    /* ===== GAME HUD (Puntos left, Timer centered visually) ===== */
     .hudRow{
       display:grid;
-      grid-template-columns: 1fr minmax(160px, 1.2fr) 1fr;
+      grid-template-columns: 1fr minmax(190px, 1.4fr) 1fr;
       gap:10px;
       align-items:stretch;
     }
@@ -192,8 +225,9 @@
       padding:10px 12px;
       display:flex;
       flex-direction:column;
-      gap:4px;
+      gap:6px;
       min-width:0;
+      justify-content:center;
     }
     .k{
       font-size:10px;
@@ -203,15 +237,18 @@
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
+      text-align:center;
     }
     .v{
-      font-size:20px;
-      font-weight:900;
+      font-size:34px;
+      font-weight:1000;
       letter-spacing:0.04em;
       color: var(--text);
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
+      text-align:center;
+      text-shadow: 0 10px 28px rgba(0,0,0,0.55);
     }
 
     /* BIG timer center */
@@ -228,7 +265,7 @@
       padding-top:2px;
     }
     .timerNum{
-      font-size:44px;
+      font-size:54px;
       font-weight:1000;
       letter-spacing:0.04em;
       line-height:1;
@@ -239,15 +276,16 @@
       letter-spacing:0.18em;
       text-transform:uppercase;
       color: var(--muted);
-      margin-top:10px;
+      margin-top:8px;
       white-space:nowrap;
+      text-align:center;
     }
     .timerNum.warn{
-      color: #FDE68A; /* yellow */
+      color: #FDE68A;
       text-shadow: 0 0 18px rgba(212,175,55,0.35), 0 10px 28px rgba(0,0,0,0.55);
     }
     .timerNum.danger{
-      color: #FCA5A5; /* red-ish */
+      color: #FCA5A5;
       animation: pulse 700ms ease-in-out infinite;
       text-shadow: 0 0 18px rgba(249,115,115,0.35), 0 10px 28px rgba(0,0,0,0.55);
     }
@@ -272,6 +310,9 @@
       transform: scaleX(1);
       transition: transform 0.1s linear;
     }
+
+    /* right spacer to keep timer visually centered */
+    .hudSpacer{ opacity:0; pointer-events:none; }
 
     /* ===== QUESTION BOX (with bulbs) ===== */
     .questionBox{
@@ -312,13 +353,14 @@
       0%,100%{ opacity:0.35; }
       50%{ opacity:0.75; }
     }
-
     .qMeta{
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:10px;
       min-width:0;
+      position:relative;
+      z-index:1;
     }
     .qLabel{
       font-size:11px;
@@ -330,6 +372,8 @@
       text-overflow:ellipsis;
     }
     .qText{
+      position:relative;
+      z-index:1;
       font-size:18px;
       font-weight:1000;
       line-height:1.25;
@@ -338,7 +382,7 @@
       margin:0;
     }
 
-    /* ===== Answer Buttons (2x2 big) ===== */
+    /* ===== Answer Buttons: 2x2 SQUARE tiles with text ===== */
     .grid{
       display:grid;
       grid-template-columns: 1fr 1fr;
@@ -349,15 +393,17 @@
       border-radius:18px;
       border:1px solid rgba(55,65,81,0.92);
       background: linear-gradient(180deg, rgba(2,6,23,0.82), rgba(2,6,23,0.68));
-      padding:16px 14px;
+      padding:14px 14px;
       display:flex;
       align-items:center;
-      justify-content:center;
+      justify-content:flex-start;
+      gap:12px;
       cursor:pointer;
       box-shadow: 0 10px 26px rgba(0,0,0,0.35);
       user-select:none;
       -webkit-tap-highlight-color: transparent;
-      min-height:92px;
+      aspect-ratio: 1 / 1;          /* square */
+      min-height:110px;             /* safety */
       transition: transform 0.06s ease, filter 0.06s ease, border-color 0.12s ease;
       position:relative;
       overflow:hidden;
@@ -374,8 +420,8 @@
     .choiceBtn:disabled{ opacity:0.55; cursor:default; }
 
     .choiceKeyBig{
-      width:58px;
-      height:58px;
+      width:54px;
+      height:54px;
       border-radius:18px;
       display:flex;
       align-items:center;
@@ -387,59 +433,43 @@
       font-size:22px;
       letter-spacing:0.06em;
       box-shadow: inset 0 0 0 1px rgba(212,175,55,0.15);
-    }
-
-    /* Answer list (long texts) */
-    .answerList{
-      margin-top:-2px;
-      background: rgba(2,6,23,0.50);
-      border:1px solid rgba(55,65,81,0.60);
-      border-radius:16px;
-      padding:12px 12px;
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-    }
-    .ansRow{
-      display:flex;
-      gap:10px;
-      align-items:flex-start;
-      min-width:0;
-    }
-    .ansKey{
-      width:28px;
-      height:28px;
-      border-radius:10px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      border:1px solid rgba(212,175,55,0.45);
-      background: rgba(10,25,47,0.65);
-      color: var(--gold);
-      font-weight:900;
-      font-size:12px;
+      position:relative;
+      z-index:1;
       flex:0 0 auto;
-      margin-top:1px;
     }
-    .ansText{
-      font-size:12px;
-      line-height:1.35;
+    .choiceTxt{
+      position:relative;
+      z-index:1;
+      font-size:14px;
+      font-weight:900;
+      line-height:1.15;
       color:#e5e7eb;
-      opacity:0.92;
+      opacity:0.98;
       word-wrap:break-word;
       overflow-wrap:anywhere;
       min-width:0;
+      flex:1 1 auto;
+    }
+
+    /* footer legal */
+    .footer{
+      margin-top:auto;
+      padding:10px 6px 14px;
+      text-align:center;
+      font-size:10px;
+      color: rgba(156,163,175,0.95);
+      letter-spacing:0.04em;
+      line-height:1.35;
+      flex:0 0 auto;
+      text-wrap:balance;
     }
 
     /* small screens */
     @media (max-width: 520px){
       .hudRow{ grid-template-columns: 1fr; }
-      .timerNum{ font-size:46px; }
-    }
-    @media (max-width: 420px){
-      .grid{ grid-template-columns:1fr; }
-      .choiceBtn{ min-height:78px; }
-      .choiceKeyBig{ width:54px; height:54px; }
+      .hudSpacer{ display:none; }
+      .timerNum{ font-size:56px; }
+      .choiceTxt{ font-size:13px; }
     }
   </style>
 </head>
@@ -453,12 +483,12 @@
     <!-- LOCK -->
     <div class="card" id="lockCard">
       <div class="lockCenter">
-        <h2 class="lockTitle">Código Maestro</h2>
-        <p class="lockSub">El host entra el código maestro para activar el juego.</p>
-        <input id="passkey" class="input" type="password" placeholder="Código maestro" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-        <button id="enterBtn" class="btn">Entrar</button>
+        <div class="lockBadge" aria-hidden="true"><span>GO</span></div>
+        <h2 class="lockTitle">Ingresa el código</h2>
+        <p class="lockSub">Para comenzar el juego en la pantalla grande.</p>
+        <input id="passkey" class="input" type="password" placeholder="CÓDIGO" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+        <button id="enterBtn" class="btn">Comenzar</button>
         <div id="err" class="err"></div>
-        <div class="smallNote">Un invitado a la vez · No se muestra ningún código en pantalla</div>
       </div>
     </div>
 
@@ -474,13 +504,13 @@
           <div class="timerBig">
             <div id="timerNum" class="timerNum">—</div>
           </div>
-          <div class="timerLabel" style="text-align:center;">Tiempo</div>
+          <div class="timerLabel">Tiempo</div>
           <div class="timerbar"><div id="timerFill" class="timerfill"></div></div>
         </div>
 
-        <div class="hudCard">
-          <div class="k">Pregunta</div>
-          <div class="v" id="progress">—</div>
+        <div class="hudCard hudSpacer" aria-hidden="true">
+          <div class="k">—</div>
+          <div class="v">—</div>
         </div>
       </div>
 
@@ -489,35 +519,47 @@
           <div class="qLabel" id="qLabel">ESPERANDO…</div>
           <div id="livePill" class="pill good" style="font-size:9px;padding:5px 10px;">EN VIVO</div>
         </div>
+        <!-- This is now the actual question (no more “Selecciona A/B/C/D”) -->
         <p class="qText" id="qText">Mira la pantalla grande.</p>
       </div>
 
-      <!-- A/B/C/D big buttons ONLY letters -->
+      <!-- 2x2 squares: A B top, C D bottom -->
       <div class="grid">
-        <button class="choiceBtn" id="btnA" aria-label="Respuesta A"><div class="choiceKeyBig">A</div></button>
-        <button class="choiceBtn" id="btnB" aria-label="Respuesta B"><div class="choiceKeyBig">B</div></button>
-        <button class="choiceBtn" id="btnC" aria-label="Respuesta C"><div class="choiceKeyBig">C</div></button>
-        <button class="choiceBtn" id="btnD" aria-label="Respuesta D"><div class="choiceKeyBig">D</div></button>
-      </div>
+        <button class="choiceBtn" id="btnA" aria-label="Respuesta A">
+          <div class="choiceKeyBig">A</div>
+          <div class="choiceTxt" id="txtA">—</div>
+        </button>
 
-      <!-- Long answers list -->
-      <div class="answerList" aria-label="Opciones">
-        <div class="ansRow"><div class="ansKey">A</div><div class="ansText" id="txtA">—</div></div>
-        <div class="ansRow"><div class="ansKey">B</div><div class="ansText" id="txtB">—</div></div>
-        <div class="ansRow"><div class="ansKey">C</div><div class="ansText" id="txtC">—</div></div>
-        <div class="ansRow"><div class="ansKey">D</div><div class="ansText" id="txtD">—</div></div>
-      </div>
+        <button class="choiceBtn" id="btnB" aria-label="Respuesta B">
+          <div class="choiceKeyBig">B</div>
+          <div class="choiceTxt" id="txtB">—</div>
+        </button>
 
-      <div class="smallNote" id="footerNote">Toca A/B/C/D. La pantalla grande muestra el resultado.</div>
+        <button class="choiceBtn" id="btnC" aria-label="Respuesta C">
+          <div class="choiceKeyBig">C</div>
+          <div class="choiceTxt" id="txtC">—</div>
+        </button>
+
+        <button class="choiceBtn" id="btnD" aria-label="Respuesta D">
+          <div class="choiceKeyBig">D</div>
+          <div class="choiceTxt" id="txtD">—</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="footer">
+      LuminarApps © 2025 · All rights reserved.<br/>
+      Municipio de Mayagüez
     </div>
   </div>
 
 <script>
 /**
- * Notes:
- * - UI strings are Spanish (what the user sees).
- * - Code/comments remain in English.
- * - For "incorrect answer shake": supports optional state.lastResult = { qIndex, correct }.
+ * Controller patch:
+ * ✅ Auto-start after correct code (sends "__START__")
+ * ✅ Removes duplicate progress block (only qLabel shows PREGUNTA X/20)
+ * ✅ Shows the real question in qText
+ * ✅ 2x2 square answer tiles with text inside
  */
 
 const ROOM_CODE = "ACTIVE";
@@ -531,7 +573,6 @@ const enterBtn = document.getElementById("enterBtn");
 const errEl = document.getElementById("err");
 
 const scoreEl = document.getElementById("score");
-const progressEl = document.getElementById("progress");
 const qLabel = document.getElementById("qLabel");
 const qText = document.getElementById("qText");
 
@@ -574,9 +615,8 @@ let tickTimer = null;
 let lastState = null;
 let lockedAnswer = false;
 
-// For per-question effects (prevent repeated shake on timeout)
+// prevent repeated shakes
 let shakenTimeoutForQ = -1;
-// For lastResult (incorrect) shake once per question
 let shakenIncorrectForQ = -1;
 
 function disableChoices(disabled){
@@ -584,18 +624,16 @@ function disableChoices(disabled){
 }
 
 function shakeGame(){
-  // Shake only the game card (feels like a "game show" buzzer)
   gameCard.classList.remove("shake");
-  // Force reflow so animation can retrigger reliably
   void gameCard.offsetWidth;
   gameCard.classList.add("shake");
-  setTimeout(()=> gameCard.classList.remove("shake"), 500);
+  setTimeout(()=> gameCard.classList.remove("shake"), 520);
 }
 
 async function validateAndJoin(){
   const pk = passkeyEl.value.trim();
   if (!pk){
-    errEl.textContent = "Entra el código maestro.";
+    errEl.textContent = "Entra el código para comenzar.";
     return;
   }
   errEl.textContent = "";
@@ -632,13 +670,29 @@ async function validateAndJoin(){
     controllerToken = jd.controllerToken;
     localStorage.setItem(CTRL_TOKEN_KEY, controllerToken);
 
+    // show game UI
     lockCard.style.display = "none";
     gameCard.style.display = "flex";
     setPill("ESTADO: CONECTADO", "good");
+
     passkeyEl.value = "";
     lockedAnswer = false;
     shakenTimeoutForQ = -1;
     shakenIncorrectForQ = -1;
+
+    // ✅ AUTO-START (index.html must treat "__START__" specially)
+    try{
+      await fetch("/api/answer",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({
+          roomCode: ROOM_CODE,
+          controllerToken,
+          sessionId,
+          choice: "__START__"
+        })
+      });
+    }catch(_){}
 
     startLoops();
   }catch(err){
@@ -682,7 +736,7 @@ async function getState(){
       lockCard.style.display = "flex";
       gameCard.style.display = "none";
       setPill("ESTADO: BLOQUEADO", "bad");
-      errEl.textContent = "Sesión terminada. El host puede iniciar el próximo invitado.";
+      errEl.textContent = "Sesión terminada. El próximo invitado puede comenzar.";
     }
     return null;
   }
@@ -699,25 +753,31 @@ function renderFromState(st){
   scoreEl.textContent = String(score);
 
   if (st.phase === "splash"){
-    progressEl.textContent = "—";
     qLabel.textContent = "ESPERANDO…";
     qText.textContent = "Mira la pantalla grande.";
     disableChoices(true);
     lockedAnswer = false;
+
     timerFill.style.transform = "scaleX(0)";
     timerNum.textContent = "—";
     timerNum.classList.remove("warn","danger");
+
+    txtA.textContent = "—";
+    txtB.textContent = "—";
+    txtC.textContent = "—";
+    txtD.textContent = "—";
+
     shakenTimeoutForQ = -1;
     shakenIncorrectForQ = -1;
     return;
   }
 
   if (st.phase === "finished"){
-    progressEl.textContent = `${total}/${total}`;
     qLabel.textContent = "LISTO";
     qText.textContent = `Puntuación final: ${score}/${total}`;
     disableChoices(true);
     lockedAnswer = true;
+
     timerFill.style.transform = "scaleX(0)";
     timerNum.textContent = "—";
     timerNum.classList.remove("warn","danger");
@@ -725,13 +785,13 @@ function renderFromState(st){
   }
 
   // live
-  progressEl.textContent = `${Math.min(total, qIndex+1)}/${total}`;
-  qLabel.textContent = `PREGUNTA ${Math.min(total, qIndex+1)} / ${total}`;
+  const n = Math.min(total, qIndex + 1);
+  qLabel.textContent = `PREGUNTA ${n} / ${total}`;
 
-  // show question text if backend provides it
-  qText.textContent = st.questionText || st.q || st.question || "Selecciona A / B / C / D";
+  // show the real question
+  qText.textContent = st.questionText || st.q || st.question || "—";
 
-  // long answers (optional)
+  // answers inside tiles
   if (st.answers){
     txtA.textContent = st.answers.A || "—";
     txtB.textContent = st.answers.B || "—";
@@ -744,11 +804,9 @@ function renderFromState(st){
     txtD.textContent = "D";
   }
 
-  // enable buttons only during live
   disableChoices(false);
 
-  // If backend sends last result, shake on incorrect (once per question)
-  // Expected shape: st.lastResult = { qIndex: number, correct: boolean }
+  // optional: shake once on incorrect if backend sends lastResult
   if (st.lastResult && typeof st.lastResult.qIndex === "number" && st.lastResult.correct === false){
     if (shakenIncorrectForQ !== st.lastResult.qIndex){
       shakenIncorrectForQ = st.lastResult.qIndex;
@@ -762,10 +820,6 @@ async function sendAnswer(choice){
 
   lockedAnswer = true;
   disableChoices(true);
-
-  // Immediate game-feel feedback on submit (like a buzzer / impact).
-  // If you ONLY want shake on incorrect, remove this line.
-  shakeGame();
 
   try{
     await fetch("/api/answer",{
@@ -790,7 +844,7 @@ async function stateLoop(){
   const st = await getState();
   if (!st) return;
 
-  // If question index changed, unlock answering
+  // unlock when question changes
   if (lastState && st.phase === "live" && lastState.qIndex !== st.qIndex){
     lockedAnswer = false;
     disableChoices(false);
@@ -812,8 +866,6 @@ function tick(){
 
   timerNum.textContent = String(sLeft);
 
-  // Color rules:
-  // <=15s => yellow, <=5s => red + flashing
   timerNum.classList.remove("warn","danger");
   if (sLeft <= 5) timerNum.classList.add("danger");
   else if (sLeft <= 15) timerNum.classList.add("warn");
@@ -821,7 +873,6 @@ function tick(){
   const pct = Math.max(0, Math.min(1, msLeft/(QUESTION_SECONDS*1000)));
   timerFill.style.transform = `scaleX(${pct})`;
 
-  // If time is up: disable and shake (once per question)
   if (msLeft <= 0){
     disableChoices(true);
     const qIndex = typeof lastState.qIndex === "number" ? lastState.qIndex : -1;
@@ -838,6 +889,7 @@ function startLoops(){
   tickTimer = setInterval(tick, 100);
   stateLoop();
 }
+
 function stopLoops(){
   if (statePoll) clearInterval(statePoll);
   if (tickTimer) clearInterval(tickTimer);
@@ -845,8 +897,8 @@ function stopLoops(){
   tickTimer = null;
 }
 
-// Auto-resume if token exists
-(async function bootstrap(){
+// auto-resume
+(function bootstrap(){
   if (controllerToken){
     lockCard.style.display = "none";
     gameCard.style.display = "flex";
