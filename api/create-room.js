@@ -1,76 +1,53 @@
-import { kv } from "@vercel/kv";
+const crypto = require("crypto");
+const { kv } = require("@vercel/kv");
 
-function json(res, status, obj) {
+const ROOM_CODE_FIXED = "ACTIVE";
+const TTL_SECONDS = 60 * 60 * 2; // 2h
+
+function json(res, status, payload) {
   res.status(status).setHeader("Content-Type", "application/json");
-  res.end(JSON.stringify(obj));
+  res.end(JSON.stringify(payload));
 }
 
-function randToken(prefix = "tok") {
-  return `${prefix}_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+function randToken(prefix) {
+  return `${prefix}_${crypto.randomBytes(16).toString("hex")}`;
 }
 
-function makeRoomCode() {
-  // 6 chars, easy to read
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let out = "";
-  for (let i = 0; i < 6; i++) out += chars[Math.floor(Math.random() * chars.length)];
-  return out;
-}
-
-const ROOM_TTL_SECONDS = 60 * 60 * 2; // 2 hours
-
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   if (req.method !== "POST") return json(res, 405, { ok: false, error: "method_not_allowed" });
 
   try {
-    // Make a unique roomCode (retry a few times)
-    let roomCode = null;
-    for (let i = 0; i < 6; i++) {
-      const code = makeRoomCode();
-      const metaKey = `trivia:room:${code}:meta`;
-      const exists = await kv.get(metaKey);
-      if (!exists) {
-        roomCode = code;
-        break;
+    const body = req.body || {};
+    const roomCode = ROOM_CODE_FIXED; // ONE-room mode
+
+    const hostKey = `trivia:host:${roomCode}`;
+    const existing = await kv.get(hostKey);
+
+    // If a host already exists, DO NOT leak the hostToken.
+    // Big screen must keep its hostToken in localStorage to survive refresh.
+    if (existing && existing.hostToken) {
+      const provided = (body.hostToken || "").trim();
+      if (provided && provided === existing.hostToken) {
+        return json(res, 200, { ok: true, roomCode, hostToken: existing.hostToken, alreadyExists: true });
       }
+      return json(res, 200, { ok: true, roomCode, hostToken: null, alreadyExists: true, needsHostToken: true });
     }
-    if (!roomCode) return json(res, 500, { ok: false, error: "could_not_allocate_room" });
 
+    // Create fresh host token (first time only)
     const hostToken = randToken("host");
+    await kv.set(hostKey, { hostToken, createdAt: Date.now() }, { ex: TTL_SECONDS });
 
-    const metaKey = `trivia:room:${roomCode}:meta`;
-    const stateKey = `trivia:room:${roomCode}:state`;
-    const answerKey = `trivia:room:${roomCode}:lastAnswer`;
+    // Also set a default "splash" state so phone can poll safely
+    const stateKey = `trivia:state:${roomCode}`;
+    await kv.set(
+      stateKey,
+      { phase: "splash", total: 20, qIndex: 0, score: 0, questionEndsAt: null },
+      { ex: TTL_SECONDS }
+    );
 
-    const now = Date.now();
-
-    const meta = {
-      roomCode,
-      hostToken, // private to big screen
-      createdAt: now,
-      active: true,
-      controllerToken: null,
-      controllerSessionId: null,
-      controllerLastSeenAt: null,
-      hostLastSeenAt: now
-    };
-
-    const state = {
-      phase: "splash",   // splash | live | reveal | finished | reset
-      total: 20,
-      qIndex: 0,
-      score: 0,
-      questionEndsAt: null, // ms epoch
-      answers: null,         // optional {A,B,C,D} if you send it from big screen
-      lastUpdateAt: now
-    };
-
-    await kv.set(metaKey, meta, { ex: ROOM_TTL_SECONDS });
-    await kv.set(stateKey, state, { ex: ROOM_TTL_SECONDS });
-    await kv.set(answerKey, { seq: 0, answer: null }, { ex: ROOM_TTL_SECONDS });
-
-    return json(res, 200, { ok: true, roomCode, hostToken, ttlSeconds: ROOM_TTL_SECONDS });
-  } catch (e) {
-    return json(res, 500, { ok: false, error: "server_error", detail: String(e?.message || e) });
+    return json(res, 200, { ok: true, roomCode, hostToken, alreadyExists: false });
+  } catch (err) {
+    console.error("create-room error:", err);
+    return json(res, 500, { ok: false, error: "server_error" });
   }
-}
+};
