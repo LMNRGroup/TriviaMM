@@ -15,11 +15,13 @@
       --panel2:#020617;
       --border:rgba(212,175,55,0.35);
       --text:#F4F4F4;
+
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
       color: var(--text);
       background: var(--navy);
     }
     *{ box-sizing:border-box; }
+
     body{
       margin:0;
       min-height:100vh;
@@ -28,8 +30,10 @@
       justify-content:center;
       padding:24px;
       background: radial-gradient(circle at top, #0f172a, var(--navy));
-      overflow-x:hidden;
+      overflow:hidden; /* no horizontal scroll ever */
     }
+
+    /* 1920x1080 stage */
     .stage{
       width:1920px;
       height:1080px;
@@ -39,40 +43,148 @@
       border-radius: 22px;
       border: 1px solid rgba(15, 23, 42, 0.9);
       box-shadow: 0 18px 45px rgba(0,0,0,0.7);
-      padding:18px;
-      display:flex;
-      flex-direction:column;
-      gap:14px;
+      position:relative;
       overflow:hidden;
+      display:flex;
     }
 
-    /* Top header bar (same vibe as your admin UI) */
-    .header{
+    /* ===== SPLASH ===== */
+    .splash{
+      position:absolute;
+      inset:0;
       display:flex;
+      flex-direction:column;
       align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      padding:10px 18px;
-      border-radius:999px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      justify-content:center;
+      text-align:center;
+      padding:72px 90px;
+      gap:18px;
     }
-    .header-left, .header-right{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      min-width:0;
-    }
-    .brand{
-      font-size:18px;
-      letter-spacing:0.20em;
+
+    .logoText{
+      font-size:74px;
+      font-weight:900;
+      letter-spacing:0.16em;
       text-transform:uppercase;
       color: var(--gold);
+      margin:0;
+      line-height:1.0;
+    }
+
+    .tagline{
+      margin:0;
+      font-size:22px;
+      line-height:1.35;
+      color:#e5e7eb;
+      opacity:0.95;
+      max-width:1100px;
+    }
+
+    .subline{
+      margin:0;
+      font-size:16px;
+      line-height:1.45;
+      color: var(--muted);
+      max-width:1050px;
+    }
+
+    .bottomStatus{
+      position:absolute;
+      left:0;
+      right:0;
+      bottom:44px;
+      display:flex;
+      justify-content:center;
+      pointer-events:none;
+    }
+
+    .waitingPill{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:12px 18px;
+      border-radius:999px;
+      border:1px solid rgba(212,175,55,0.45);
+      background: rgba(10,25,47,0.75);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      font-size:13px;
+      letter-spacing:0.16em;
+      text-transform:uppercase;
+      color: var(--text);
       white-space:nowrap;
+      max-width:92%;
       overflow:hidden;
       text-overflow:ellipsis;
     }
+
+    /* animated dots */
+    .dots{
+      display:inline-flex;
+      gap:6px;
+      align-items:center;
+    }
+    .dot{
+      width:7px;
+      height:7px;
+      border-radius:999px;
+      background: var(--gold);
+      opacity:0.25;
+      animation: dotPulse 1.2s infinite ease-in-out;
+    }
+    .dot:nth-child(2){ animation-delay: 0.2s; }
+    .dot:nth-child(3){ animation-delay: 0.4s; }
+
+    @keyframes dotPulse{
+      0%{ opacity:0.18; transform: translateY(0); }
+      35%{ opacity:1; transform: translateY(-2px); }
+      70%{ opacity:0.22; transform: translateY(0); }
+      100%{ opacity:0.18; transform: translateY(0); }
+    }
+
+    /* ===== LIVE ===== */
+    .liveWrap{
+      position:absolute;
+      inset:0;
+      display:none; /* toggled by JS */
+      padding:54px 64px 56px;
+    }
+
+    /* HUD bar (score + timer + progress) */
+    .hud{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:18px;
+      padding:12px 18px;
+      border-radius:999px;
+      background: rgba(2,11,27,0.86);
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+
+    .hudGroup{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width:0;
+    }
+
+    .hudLabel{
+      font-size:12px;
+      letter-spacing:0.18em;
+      text-transform:uppercase;
+      color: var(--muted);
+      white-space:nowrap;
+    }
+
+    .hudValue{
+      font-size:20px;
+      font-weight:800;
+      letter-spacing:0.06em;
+      color: var(--text);
+      white-space:nowrap;
+    }
+
     .pill{
       font-size:12px;
       padding:7px 14px;
@@ -83,67 +195,19 @@
       letter-spacing:0.14em;
       text-transform:uppercase;
       white-space:nowrap;
+      flex:0 0 auto;
     }
     .pill.bad{ border-color: var(--danger); color:#fecaca; }
     .pill.good{ border-color: rgba(16,185,129,0.9); color:#a7f3d0; }
 
-    .main{
-      flex:1;
-      display:grid;
-      grid-template-columns: 280px minmax(0, 1fr) 320px;
-      gap:16px;
-      min-height:0;
-    }
-
-    .side{
-      background: radial-gradient(circle at top, var(--panel2), var(--panel));
-      border-radius:16px;
-      border: 1px solid rgba(31,41,55,0.9);
-      padding:14px 14px 12px;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      min-height:0;
-    }
-    .side-title{
-      font-size:13px;
-      letter-spacing:0.18em;
-      text-transform:uppercase;
-      color: var(--gold);
-      margin-bottom:4px;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-    .metric{
-      display:flex;
-      justify-content:space-between;
-      align-items:baseline;
-      gap:10px;
-      padding:10px 12px;
-      border-radius:14px;
-      border:1px solid rgba(55,65,81,0.85);
-      background: rgba(2,6,23,0.55);
-    }
-    .metric .k{
-      font-size:11px;
-      letter-spacing:0.14em;
-      text-transform:uppercase;
-      color: var(--muted);
-      white-space:nowrap;
-    }
-    .metric .v{
-      font-size:18px;
-      letter-spacing:0.06em;
-      color: var(--text);
-      white-space:nowrap;
-    }
+    /* timer bar under HUD */
     .timerbar{
+      margin-top:12px;
       height:10px;
       border-radius:999px;
-      background: rgba(148,163,184,0.25);
+      background: rgba(148,163,184,0.20);
       overflow:hidden;
-      border:1px solid rgba(55,65,81,0.65);
+      border:1px solid rgba(55,65,81,0.55);
     }
     .timerfill{
       height:100%;
@@ -154,83 +218,86 @@
       transition: transform 0.1s linear;
     }
 
-    .center{
-      background: rgba(2,6,23,0.55);
-      border-radius:18px;
-      border: 1px solid rgba(55,65,81,0.75);
-      padding:16px;
+    /* question block */
+    .qa{
+      margin-top:36px;
+      height: calc(100% - 110px);
       display:flex;
       flex-direction:column;
-      gap:14px;
-      min-height:0;
+      justify-content:flex-start;
+      gap:28px;
     }
-    .questionTop{
-      display:flex;
-      justify-content:space-between;
-      align-items:baseline;
-      gap:12px;
-    }
-    .qLabel{
-      font-size:14px;
-      letter-spacing:0.16em;
-      text-transform:uppercase;
-      color: var(--gold);
-      white-space:nowrap;
-    }
+
     .qText{
-      margin-top:4px;
-      font-size:40px;
-      line-height:1.08;
-      font-weight:700;
+      margin:0 auto;
+      width:min(1480px, 100%);
+      font-size:54px;
+      line-height:1.06;
+      font-weight:900;
       letter-spacing:-0.01em;
+      text-align:center;
       color: var(--text);
       word-wrap:break-word;
       overflow-wrap:anywhere;
     }
 
+    /* answers in 2x2: left column A/C, right column B/D */
     .choices{
-      margin-top:6px;
+      margin:0 auto;
+      width:min(1520px, 100%);
       display:grid;
       grid-template-columns: 1fr 1fr;
-      gap:12px;
-      min-height:0;
+      grid-template-areas:
+        "A B"
+        "C D";
+      gap:18px;
+      align-content:start;
     }
+
     .choice{
       border-radius:18px;
       border:1px solid rgba(55,65,81,0.9);
       background: rgba(2,6,23,0.75);
-      padding:16px 16px;
-      min-height:118px;
+      padding:18px 18px;
+      min-height:132px;
       display:flex;
-      gap:12px;
+      gap:14px;
       align-items:flex-start;
       box-shadow: 0 10px 26px rgba(0,0,0,0.35);
-      transition: transform 0.12s ease, filter 0.12s ease, border-color 0.12s ease;
     }
+
+    #cA{ grid-area:A; }
+    #cB{ grid-area:B; }
+    #cC{ grid-area:C; }
+    #cD{ grid-area:D; }
+
     .choiceKey{
-      width:46px;
-      height:46px;
-      border-radius:14px;
+      width:52px;
+      height:52px;
+      border-radius:16px;
       display:flex;
       align-items:center;
       justify-content:center;
       border:1px solid rgba(212,175,55,0.55);
       background: rgba(10,25,47,0.85);
       color: var(--gold);
-      font-weight:800;
+      font-weight:900;
       font-size:18px;
       flex:0 0 auto;
     }
     .choiceText{
-      font-size:22px;
-      line-height:1.15;
+      font-size:24px;
+      line-height:1.18;
       color: var(--text);
       word-wrap:break-word;
       overflow-wrap:anywhere;
+      padding-top:2px;
     }
+
+    /* highlights (JS adds these classes) */
     .choice.correct{
       border-color: rgba(16,185,129,0.95);
-      box-shadow: 0 0 0 2px rgba(16,185,129,0.25), 0 18px 45px rgba(0,0,0,0.55);
+      box-shadow: 0 0 0 2px rgba(16,185,129,0.22), 0 18px 45px rgba(0,0,0,0.55);
     }
     .choice.correct .choiceKey{
       border-color: rgba(16,185,129,0.95);
@@ -238,52 +305,24 @@
     }
     .choice.wrong{
       border-color: rgba(249,115,115,0.95);
-      box-shadow: 0 0 0 2px rgba(249,115,115,0.18), 0 18px 45px rgba(0,0,0,0.55);
+      box-shadow: 0 0 0 2px rgba(249,115,115,0.16), 0 18px 45px rgba(0,0,0,0.55);
     }
     .choice.wrong .choiceKey{
       border-color: rgba(249,115,115,0.95);
       color:#fecaca;
     }
 
-    .splash{
-      height:100%;
-      display:flex;
-      flex-direction:column;
+    /* ===== FINAL ===== */
+    .final{
+      position:absolute;
+      inset:0;
+      display:none; /* toggled by JS */
       align-items:center;
       justify-content:center;
+      flex-direction:column;
       text-align:center;
-      gap:14px;
-      padding:20px;
-    }
-    .splashTitle{
-      font-size:56px;
-      font-weight:900;
-      letter-spacing:0.12em;
-      text-transform:uppercase;
-      color: var(--gold);
-      margin:0;
-    }
-    .splashSub{
-      font-size:18px;
-      color: var(--muted);
-      margin:0;
-      max-width:900px;
-    }
-    .splashHint{
-      margin-top:12px;
-      font-size:13px;
-      letter-spacing:0.14em;
-      text-transform:uppercase;
-      color:#e5e7eb;
-      opacity:0.9;
-    }
-
-    .bigScore{
-      font-size:92px;
-      font-weight:900;
-      letter-spacing:0.06em;
-      color: var(--text);
-      margin:0;
+      padding:72px 90px;
+      gap:16px;
     }
     .finalLabel{
       font-size:14px;
@@ -292,107 +331,117 @@
       color: var(--gold);
       margin:0;
     }
+    .bigScore{
+      font-size:108px;
+      font-weight:900;
+      letter-spacing:0.06em;
+      color: var(--text);
+      margin:0;
+      line-height:1.0;
+    }
+    .finalSub{
+      margin:0;
+      font-size:18px;
+      color: var(--muted);
+    }
 
-    /* Keep no horizontal overflow at any size */
+    /* responsive safety (keeps layout, no overflow) */
     @media (max-width: 1100px){
-      .main{ grid-template-columns: 240px minmax(0,1fr) 260px; }
-      .qText{ font-size:34px; }
-      .choiceText{ font-size:18px; }
+      .logoText{ font-size:52px; }
+      .qText{ font-size:40px; }
+      .choiceText{ font-size:19px; }
+      .liveWrap{ padding:22px; }
+      .qa{ margin-top:18px; height: calc(100% - 98px); }
+      .choice{ min-height:112px; }
     }
     @media (max-width: 900px){
       body{ padding:10px; }
-      .stage{ padding:12px; }
-      .main{ grid-template-columns: 1fr; grid-template-rows:auto 1fr auto; }
-      .qText{ font-size:28px; }
-      .choices{ grid-template-columns:1fr; }
+      .stage{ border-radius:16px; }
+      .choices{ grid-template-columns:1fr; grid-template-areas:"A" "B" "C" "D"; }
+      .qText{ font-size:30px; }
+      .logoText{ font-size:44px; }
+      .tagline{ font-size:18px; }
     }
   </style>
 </head>
 <body>
   <div class="stage" id="stage">
-    <div class="header">
-      <div class="header-left">
-        <div class="brand">LUMinar Apps · Trivia</div>
-      </div>
-      <div class="header-right">
-        <div id="pill" class="pill">SERVER: LOADING…</div>
+    <!-- SPLASH (simple) -->
+    <div class="splash" id="splash">
+      <h1 class="logoText">TRIVIA APP</h1>
+      <p class="tagline">Can you answer all 20 questions correctly? Join our Trivia to find out.</p>
+      <p class="subline">One guest at a time. The host starts the game from the phone controller.</p>
+
+      <div class="bottomStatus">
+        <div class="waitingPill">
+          WAITING FOR HOST
+          <span class="dots" aria-hidden="true">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+          </span>
+        </div>
       </div>
     </div>
 
-    <div class="main">
-      <!-- Left -->
-      <aside class="side">
-        <div class="side-title">Game</div>
-        <div class="metric">
-          <div class="k">Question</div>
-          <div class="v" id="mQ">—</div>
-        </div>
-        <div class="metric">
-          <div class="k">Score</div>
-          <div class="v" id="mS">0</div>
-        </div>
-        <div class="side-title" style="margin-top:6px;">Timer</div>
-        <div class="timerbar"><div id="timerFill" class="timerfill"></div></div>
-        <div class="metric">
-          <div class="k">Seconds left</div>
-          <div class="v" id="mT">—</div>
-        </div>
-        <div class="metric">
-          <div class="k">Status</div>
-          <div class="v" id="mStatus">WAITING</div>
-        </div>
-      </aside>
-
-      <!-- Center -->
-      <section class="center" id="center">
-        <!-- Splash by default -->
-        <div class="splash" id="splash">
-          <h1 class="splashTitle">Trivia</h1>
-          <p class="splashSub">
-            One guest at a time. Host enters the master code on the phone to start.
-          </p>
-          <div class="splashHint">Waiting for host…</div>
+    <!-- LIVE (simple TV-trivia layout) -->
+    <section class="liveWrap" id="live">
+      <div class="hud">
+        <div class="hudGroup">
+          <div class="hudLabel">Question</div>
+          <!-- keep ID for JS -->
+          <div class="hudValue" id="mQ">—</div>
         </div>
 
-        <!-- Live question -->
-        <div id="live" style="display:none;">
-          <div class="questionTop">
-            <div class="qLabel" id="qLabel">QUESTION 1 / 20</div>
-            <div class="pill good" id="livePill">LIVE</div>
+        <!-- keep ID for JS (it toggles classes) -->
+        <div id="livePill" class="pill good">LIVE</div>
+
+        <div class="hudGroup">
+          <div class="hudLabel">Score</div>
+          <div class="hudValue" id="mS">0</div>
+          <div class="hudLabel" style="margin-left:10px;">Time</div>
+          <div class="hudValue" id="mT">—</div>
+          <!-- keep ID for JS -->
+          <div id="mStatus" style="display:none;">WAITING</div>
+        </div>
+      </div>
+
+      <div class="timerbar">
+        <div id="timerFill" class="timerfill"></div>
+      </div>
+
+      <div class="qa">
+        <!-- keep ID for JS (even if you don't visually use it) -->
+        <div id="qLabel" style="display:none;">QUESTION 1 / 20</div>
+
+        <h2 class="qText" id="qText">—</h2>
+
+        <div class="choices" id="choices">
+          <div class="choice" id="cA">
+            <div class="choiceKey">A</div>
+            <div class="choiceText" id="tA">—</div>
           </div>
-          <div class="qText" id="qText">—</div>
-
-          <div class="choices" id="choices">
-            <div class="choice" id="cA"><div class="choiceKey">A</div><div class="choiceText" id="tA">—</div></div>
-            <div class="choice" id="cB"><div class="choiceKey">B</div><div class="choiceText" id="tB">—</div></div>
-            <div class="choice" id="cC"><div class="choiceKey">C</div><div class="choiceText" id="tC">—</div></div>
-            <div class="choice" id="cD"><div class="choiceKey">D</div><div class="choiceText" id="tD">—</div></div>
+          <div class="choice" id="cB">
+            <div class="choiceKey">B</div>
+            <div class="choiceText" id="tB">—</div>
+          </div>
+          <div class="choice" id="cC">
+            <div class="choiceKey">C</div>
+            <div class="choiceText" id="tC">—</div>
+          </div>
+          <div class="choice" id="cD">
+            <div class="choiceKey">D</div>
+            <div class="choiceText" id="tD">—</div>
           </div>
         </div>
+      </div>
+    </section>
 
-        <!-- Final -->
-        <div class="splash" id="final" style="display:none;">
-          <div class="finalLabel">Final score</div>
-          <h2 class="bigScore" id="finalScore">0 / 20</h2>
-          <div class="splashSub">Returning to splash for next guest…</div>
-        </div>
-      </section>
-
-      <!-- Right -->
-      <aside class="side">
-        <div class="side-title">Notes</div>
-        <div style="font-size:12px;color:var(--muted);line-height:1.5;">
-          • Phone controls the game<br/>
-          • 30 seconds per question<br/>
-          • Correct +1, incorrect +0<br/>
-          • Auto-advance on answer or timeout
-        </div>
-        <div class="side-title" style="margin-top:8px;">Event</div>
-        <div style="font-size:12px;color:#e5e7eb;opacity:0.9;line-height:1.55;">
-          This screen never shows any join code.<br/>
-          Host starts each guest using the master passkey.
-        </div>
-      </aside>
+    <!-- FINAL -->
+    <div class="final" id="final">
+      <div class="finalLabel">Final score</div>
+      <h2 class="bigScore" id="finalScore">0 / 20</h2>
+      <p class="finalSub">Returning to splash for next guest…</p>
     </div>
   </div>
 
@@ -467,6 +516,7 @@ let lastSeq = 0;
 let locked = false; // prevent double-advance
 
 function setPill(text, mode){
+  if (!elPill) return;
   elPill.textContent = text;
   elPill.classList.remove("bad","good");
   if (mode) elPill.classList.add(mode);
@@ -486,7 +536,7 @@ function clearHighlights(){
 
 function renderQuestion(){
   const q = QUESTIONS[state.qIndex];
-  qLabel.textContent = `QUESTION ${state.qIndex+1} / ${TOTAL}`;
+  if (qLabel) qLabel.textContent = `QUESTION ${state.qIndex+1} / ${TOTAL}`;
   qText.textContent = q.q;
   tA.textContent = q.a.A;
   tB.textContent = q.a.B;
@@ -495,7 +545,7 @@ function renderQuestion(){
 
   mQ.textContent = `${state.qIndex+1}/${TOTAL}`;
   mS.textContent = `${state.score}`;
-  mStatus.textContent = "LIVE";
+  if (mStatus) mStatus.textContent = "LIVE";
   clearHighlights();
 }
 
@@ -556,7 +606,7 @@ function endRound(){
   hostPush();
   setView("final");
   finalScore.textContent = `${state.score} / ${TOTAL}`;
-  mStatus.textContent = "DONE";
+  if (mStatus) mStatus.textContent = "DONE";
   mT.textContent = "—";
   timerFill.style.transform = "scaleX(0)";
 
@@ -578,7 +628,7 @@ async function resetToSplash(){
   mQ.textContent = "—";
   mS.textContent = "0";
   mT.textContent = "—";
-  mStatus.textContent = "WAITING";
+  if (mStatus) mStatus.textContent = "WAITING";
   clearHighlights();
   locked = false;
   lastSeq = 0;
@@ -665,7 +715,7 @@ function tick(){
 
 async function bootstrap(){
   setView("splash");
-  mStatus.textContent = "WAITING";
+  if (mStatus) mStatus.textContent = "WAITING";
   await ensureRoom();
 
   // Always keep a snapshot even on splash
@@ -675,11 +725,7 @@ async function bootstrap(){
   pollTimer = setInterval(pollAnswersLoop, 350);
   tickTimer = setInterval(tick, 100);
 
-  // Auto-start when controller joins:
-  // We’ll simply watch for controller existence by probing get-state from host side? No.
-  // Instead: host starts game automatically when it receives the first answer OR after controller joins
-  // For simplicity: start game on first answer received while on splash.
-  // We'll also allow manual start: press Space.
+  // Start game when controller engages (space still works as backup)
   window.addEventListener("keydown",(e)=>{
     if (e.code === "Space"){
       e.preventDefault();
@@ -698,7 +744,7 @@ async function bootstrap(){
       if (res.ok && data.ok){
         if (typeof data.seq === "number") lastSeq = data.seq;
         if (data.answer){
-          // If splash and controller sends something (or any ping), begin round
+          // If splash and controller sends something, begin round
           if (state.phase === "splash"){
             startNewRound();
             // after start, apply answer to Q1
