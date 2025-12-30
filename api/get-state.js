@@ -1,43 +1,53 @@
-import { kv } from "@vercel/kv";
+const { kv } = require("@vercel/kv");
 
-function json(res, status, obj) {
+const ROOM_CODE_FIXED = "ACTIVE";
+const TTL_SECONDS = 60 * 60 * 2; // 2h
+
+function json(res, status, payload) {
   res.status(status).setHeader("Content-Type", "application/json");
-  res.end(JSON.stringify(obj));
+  res.end(JSON.stringify(payload));
 }
 
-const ROOM_TTL_SECONDS = 60 * 60 * 2;
-
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   if (req.method !== "POST") return json(res, 405, { ok: false, error: "method_not_allowed" });
 
   try {
-    const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
-    const roomCode = String(body.roomCode || "").trim().toUpperCase();
-    const controllerToken = String(body.controllerToken || "").trim();
-    const sessionId = String(body.sessionId || "").trim();
+    const { controllerToken, sessionId } = req.body || {};
+    const ct = (controllerToken || "").trim();
+    const sid = (sessionId || "").trim();
 
-    if (!roomCode) return json(res, 400, { ok: false, error: "missing_roomCode" });
-    if (!controllerToken) return json(res, 400, { ok: false, error: "missing_controllerToken" });
-    if (!sessionId) return json(res, 400, { ok: false, error: "missing_sessionId" });
+    if (!ct) return json(res, 400, { ok: false, error: "missing_controllerToken" });
+    if (!sid) return json(res, 400, { ok: false, error: "missing_sessionId" });
 
-    const metaKey = `trivia:room:${roomCode}:meta`;
-    const stateKey = `trivia:room:${roomCode}:state`;
+    const roomCode = ROOM_CODE_FIXED;
 
-    const meta = await kv.get(metaKey);
-    if (!meta || !meta.active) return json(res, 404, { ok: false, error: "room_not_found" });
+    const controllerKey = `trivia:controller:${roomCode}`;
+    const ctrl = await kv.get(controllerKey);
 
-    if (!meta.controllerToken || meta.controllerToken !== controllerToken || meta.controllerSessionId !== sessionId) {
-      return json(res, 403, { ok: false, error: "controller_not_authorized", errorCode: "controller_lost" });
+    // controller must still be the active one
+    if (!ctrl || !ctrl.controllerToken) {
+      return json(res, 403, { ok: false, error: "controller_lost", errorCode: "controller_lost" });
+    }
+    if (ctrl.controllerToken !== ct || ctrl.sessionId !== sid) {
+      return json(res, 403, { ok: false, error: "controller_lost", errorCode: "controller_lost" });
     }
 
-    const state = await kv.get(stateKey);
-    if (!state) return json(res, 404, { ok: false, error: "room_state_missing" });
+    const stateKey = `trivia:state:${roomCode}`;
+    const st = await kv.get(stateKey);
 
-    meta.controllerLastSeenAt = Date.now();
-    await kv.set(metaKey, meta, { ex: ROOM_TTL_SECONDS });
+    // keep TTL alive while game runs
+    await kv.expire(controllerKey, TTL_SECONDS);
+    if (st) await kv.expire(stateKey, TTL_SECONDS);
+
+    // default fallback
+    const state =
+      st && typeof st === "object"
+        ? st
+        : { phase: "splash", total: 20, qIndex: 0, score: 0, questionEndsAt: null };
 
     return json(res, 200, { ok: true, state });
-  } catch (e) {
-    return json(res, 400, { ok: false, error: "bad_json" });
+  } catch (err) {
+    console.error("get-state error:", err);
+    return json(res, 500, { ok: false, error: "server_error" });
   }
-}
+};
