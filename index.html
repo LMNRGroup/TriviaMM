@@ -2,803 +2,795 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <title>TriviaApp - Big Screen</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TriviaApp</title>
   <style>
     :root{
-      --bg:#0b0f1a;
-      --panel:#111a2e;
-      --panel2:#0f1630;
-      --text:#e9eefc;
-      --muted:#9fb0df;
-      --accent:#6aa6ff;
-
-      --good:#23c55e;
-      --bad:#ef4444;
-      --warn:#f59e0b;
-
-      --btnA:#2b4bff22;
-      --btnB:#00d5cf22;
-      --btnC:#ff4bd822;
-      --btnD:#ffd34b22;
-
-      --stroke:#233055;
-      --shadow: 0 18px 60px rgba(0,0,0,.45);
-      --radius: 22px;
+      --navy:#0A192F;
+      --gold:#D4AF37;
+      --dark:#020617;
+      --panel:#020b1b;
+      --light:#F4F4F4;
+      --muted:#9CA3AF;
+      --danger:#F97373;
+      --success:#10B981;
+      --line:rgba(212,175,55,0.35);
+      --line2:rgba(55,65,81,0.75);
+      --shadow:0 18px 45px rgba(0,0,0,0.75);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--light);
+      background: var(--navy);
     }
 
-    * { box-sizing: border-box; }
-    html, body { height: 100%; margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color: var(--text); background: radial-gradient(1200px 800px at 50% 20%, #14204a 0%, var(--bg) 60%); }
-    button { font: inherit; }
-
-    .wrap {
-      min-height: 100%;
-      display: grid;
-      place-items: center;
-      padding: 32px;
+    *{ box-sizing:border-box; }
+    html, body { height:100%; }
+    body{
+      margin:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: radial-gradient(circle at top, #0f172a, var(--navy));
+      overflow:hidden; /* big screen: no scroll */
     }
 
-    .card {
-      width: min(1100px, 96vw);
-      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
-      border: 1px solid var(--stroke);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
+    /* 1920x1080 fixed stage */
+    .stage{
+      width:1920px;
+      height:1080px;
+      position:relative;
+      padding:24px;
+      display:flex;
+      flex-direction:column;
+      gap:16px;
     }
 
-    .topbar{
+    /* Header pill */
+    .header{
       display:flex;
       align-items:center;
       justify-content:space-between;
-      padding: 18px 22px;
-      background: linear-gradient(90deg, rgba(106,166,255,.16), rgba(0,0,0,0));
-      border-bottom: 1px solid var(--stroke);
-      gap: 14px;
+      padding:10px 18px;
+      border-radius:999px;
+      background: var(--panel);
+      border:1px solid var(--line);
+      box-shadow:0 10px 30px rgba(0,0,0,0.55);
+      gap:12px;
+      flex:0 0 auto;
     }
-
-    .brand{
+    .header-left, .header-right{
       display:flex;
       align-items:center;
-      gap: 12px;
-      min-width: 0;
+      gap:10px;
+      min-width:0;
     }
-    .dot{
-      width: 14px;
-      height: 14px;
-      border-radius: 999px;
-      background: var(--accent);
-      box-shadow: 0 0 0 6px rgba(106,166,255,.14);
-      flex: 0 0 auto;
+    .brand{
+      font-size:14px;
+      letter-spacing:0.22em;
+      text-transform:uppercase;
+      color:var(--gold);
+      white-space:nowrap;
     }
     .title{
-      font-weight: 800;
-      letter-spacing: .4px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .status{
-      display:flex;
-      align-items:center;
-      gap: 10px;
-      color: var(--muted);
-      font-weight: 600;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      text-align:right;
+      flex:1;
+      text-align:center;
+      font-size:22px;
+      letter-spacing:0.28em;
+      text-transform:uppercase;
+      color:var(--gold);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
     .pill{
-      padding: 7px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--stroke);
-      background: rgba(0,0,0,.18);
-      color: var(--text);
-      font-weight: 700;
+      font-size:11px;
+      padding:6px 14px;
+      border-radius:999px;
+      border:1px solid rgba(212,175,55,0.6);
+      background: rgba(10,25,47,0.9);
+      color:var(--light);
+      letter-spacing:0.16em;
+      text-transform:uppercase;
+      white-space:nowrap;
     }
-    .pill.muted{
-      color: var(--muted);
-      font-weight: 700;
+    .pill.danger{
+      border-color: var(--danger);
+      color:#fecaca;
     }
-    .pill.good{ border-color: rgba(35,197,94,.4); background: rgba(35,197,94,.1); }
-    .pill.bad{ border-color: rgba(239,68,68,.4); background: rgba(239,68,68,.1); }
-    .pill.warn{ border-color: rgba(245,158,11,.4); background: rgba(245,158,11,.1); }
+    .pill.success{
+      border-color: rgba(16,185,129,0.9);
+      color:#a7f3d0;
+    }
 
-    .content{
-      padding: 26px 26px 28px;
-    }
-
-    /* Splash */
-    .splash{
-      display:grid;
-      gap: 18px;
-      text-align:center;
-      padding: 40px 20px 18px;
-    }
-    .splash h1{
-      margin:0;
-      font-size: clamp(34px, 4vw, 54px);
-      letter-spacing: .6px;
-    }
-    .splash p{
-      margin:0 auto;
-      max-width: 780px;
-      color: var(--muted);
-      line-height: 1.4;
-      font-size: clamp(16px, 1.5vw, 18px);
-    }
-    .bigCode{
+    /* Main card */
+    .card{
+      flex:1 1 auto;
+      background: rgba(2,11,27,0.96);
+      border-radius:20px;
+      box-shadow: var(--shadow);
+      border:1px solid rgba(15,23,42,0.9);
+      padding:18px;
       display:flex;
-      flex-direction: column;
+      flex-direction:column;
+      gap:14px;
+      min-height:0;
+    }
+
+    .toprow{
+      display:flex;
       align-items:center;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    .codeBox{
-      font-size: clamp(44px, 7vw, 86px);
-      font-weight: 900;
-      letter-spacing: 10px;
-      padding: 14px 20px;
-      border-radius: 18px;
-      border: 1px solid var(--stroke);
-      background: rgba(0,0,0,.24);
-      min-width: min(520px, 92vw);
-      text-align:center;
-    }
-    .hint{
-      color: var(--muted);
-      font-weight: 700;
-      letter-spacing: .3px;
-    }
-    .row{
-      display:flex;
-      gap: 12px;
-      justify-content:center;
-      flex-wrap: wrap;
-      margin-top: 12px;
-    }
-    .btn{
-      appearance: none;
-      border: 1px solid var(--stroke);
-      background: rgba(0,0,0,.18);
-      color: var(--text);
-      padding: 14px 18px;
-      border-radius: 16px;
-      font-weight: 800;
-      letter-spacing:.2px;
-      cursor:pointer;
-      transition: transform .08s ease, filter .08s ease, background .15s ease;
-      min-width: 160px;
-    }
-    .btn:hover{ filter: brightness(1.08); }
-    .btn:active{ transform: translateY(1px); }
-    .btn.primary{
-      background: rgba(106,166,255,.18);
-      border-color: rgba(106,166,255,.35);
-    }
-    .btn.danger{
-      background: rgba(239,68,68,.12);
-      border-color: rgba(239,68,68,.3);
-    }
-
-    /* Game */
-    .game{
-      display:grid;
-      gap: 16px;
-      padding: 8px 2px 0;
-    }
-    .qHeader{
-      display:flex;
       justify-content:space-between;
-      align-items:flex-start;
-      gap: 12px;
-      flex-wrap: wrap;
+      gap:10px;
+      padding:6px 4px 2px;
     }
-    .qMeta{
+    .meta-left{
       display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
+      align-items:baseline;
+      gap:12px;
+      min-width:0;
+    }
+    .qprogress{
+      font-size:14px;
+      letter-spacing:0.16em;
+      text-transform:uppercase;
+      color:var(--gold);
+      white-space:nowrap;
+    }
+    .score{
+      font-size:14px;
+      letter-spacing:0.12em;
+      text-transform:uppercase;
+      color:var(--light);
+      white-space:nowrap;
+    }
+    .timer{
+      display:flex;
       align-items:center;
+      gap:10px;
+      white-space:nowrap;
     }
+    .timer-label{
+      font-size:12px;
+      letter-spacing:0.16em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+    .timer-value{
+      font-size:18px;
+      letter-spacing:0.08em;
+      text-transform:uppercase;
+      color:var(--light);
+      padding:6px 12px;
+      border-radius:999px;
+      border:1px solid var(--line2);
+      background: #020617;
+      min-width:84px;
+      text-align:center;
+    }
+    .timer-value.low{
+      border-color: rgba(249,115,115,0.85);
+      color:#fecaca;
+    }
+
     .question{
-      margin: 6px 0 2px;
-      font-size: clamp(24px, 3vw, 40px);
-      font-weight: 900;
-      line-height: 1.08;
-      letter-spacing: .2px;
+      flex:0 0 auto;
+      background: radial-gradient(circle at top, #020617, #020b1b);
+      border-radius:16px;
+      border:1px solid rgba(31,41,55,0.9);
+      padding:18px 18px 16px;
+      box-shadow:0 18px 40px rgba(0,0,0,0.55);
     }
-    .sub{
-      color: var(--muted);
-      font-weight: 700;
-      margin:0;
+    .question h2{
+      margin:0 0 10px;
+      font-size:28px;
+      line-height:1.22;
+      letter-spacing:0.02em;
+      color:var(--light);
+      font-weight:650;
+    }
+    .subline{
+      font-size:12px;
+      color:var(--muted);
+      letter-spacing:0.12em;
+      text-transform:uppercase;
     }
 
     .answers{
+      flex:1 1 auto;
       display:grid;
       grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-top: 6px;
+      gap:14px;
+      min-height:0;
     }
 
-    .answer{
-      border-radius: 18px;
-      border: 1px solid var(--stroke);
-      background: rgba(0,0,0,.18);
-      padding: 18px 18px;
-      min-height: 110px;
+    .ans{
+      border-radius:18px;
+      border:1px solid rgba(55,65,81,0.9);
+      background:#020617;
+      color:var(--light);
+      padding:18px 18px;
       display:flex;
-      gap: 14px;
-      align-items:center;
-      box-shadow: 0 10px 30px rgba(0,0,0,.2);
-      position: relative;
+      gap:14px;
+      align-items:flex-start;
+      justify-content:flex-start;
+      box-shadow:0 14px 35px rgba(0,0,0,0.45);
+      position:relative;
       overflow:hidden;
-      transition: transform .12s ease, border-color .12s ease, background .12s ease, filter .12s ease;
     }
-
-    .answer .label{
-      width: 54px;
-      height: 54px;
-      border-radius: 16px;
-      display:grid;
-      place-items:center;
-      font-weight: 1000;
-      font-size: 26px;
-      border: 1px solid var(--stroke);
-      flex: 0 0 auto;
-      background: rgba(255,255,255,.05);
-    }
-    .answer .text{
-      font-size: clamp(16px, 1.6vw, 22px);
-      font-weight: 850;
-      line-height: 1.2;
-    }
-    .answer .tag{
+    .ans::after{
+      content:"";
       position:absolute;
-      top: 12px;
-      right: 12px;
-      font-weight: 900;
-      letter-spacing: .3px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--stroke);
-      background: rgba(0,0,0,.18);
-      color: var(--muted);
-      display:none;
+      inset:0;
+      opacity:0;
+      transition: opacity 0.16s ease;
+      pointer-events:none;
+      background: linear-gradient(to right, rgba(212,175,55,0.14), transparent);
     }
-
-    .answer.A{ background: linear-gradient(180deg, var(--btnA), rgba(0,0,0,.18)); }
-    .answer.B{ background: linear-gradient(180deg, var(--btnB), rgba(0,0,0,.18)); }
-    .answer.C{ background: linear-gradient(180deg, var(--btnC), rgba(0,0,0,.18)); }
-    .answer.D{ background: linear-gradient(180deg, var(--btnD), rgba(0,0,0,.18)); }
-
-    .answer.selected{
-      border-color: rgba(106,166,255,.55);
-      box-shadow: 0 18px 40px rgba(106,166,255,.12);
-      transform: translateY(-1px);
-      filter: brightness(1.06);
-    }
-
-    .answer.correct{
-      border-color: rgba(35,197,94,.65);
-      background: rgba(35,197,94,.14);
-    }
-    .answer.correct .tag{ display:block; color: rgba(35,197,94,.95); border-color: rgba(35,197,94,.45); background: rgba(35,197,94,.12); }
-    .answer.correct .tag::before{ content:"CORRECT"; }
-
-    .answer.wrong{
-      border-color: rgba(239,68,68,.65);
-      background: rgba(239,68,68,.12);
-    }
-    .answer.wrong .tag{ display:block; color: rgba(239,68,68,.95); border-color: rgba(239,68,68,.45); background: rgba(239,68,68,.10); }
-    .answer.wrong .tag::before{ content:"WRONG"; }
-
-    .centerBig{
-      display:grid;
-      place-items:center;
-      padding: 44px 8px 22px;
-      text-align:center;
-    }
-    .countdown{
-      font-size: clamp(72px, 14vw, 150px);
-      font-weight: 1000;
-      letter-spacing: 2px;
-      margin: 0;
-      line-height: 1;
-      text-shadow: 0 18px 50px rgba(0,0,0,.35);
-    }
-    .smallText{
-      margin-top: 12px;
-      color: var(--muted);
-      font-weight: 800;
-      letter-spacing:.4px;
-    }
-
-    .footerRow{
-      margin-top: 10px;
+    .ans.active::after{ opacity:1; }
+    .badge{
+      flex:0 0 auto;
+      width:44px;
+      height:44px;
+      border-radius:999px;
       display:flex;
-      justify-content:space-between;
       align-items:center;
-      gap: 12px;
-      flex-wrap: wrap;
-      padding-top: 14px;
-      border-top: 1px solid var(--stroke);
-      color: var(--muted);
-      font-weight: 700;
+      justify-content:center;
+      border:1px solid rgba(212,175,55,0.55);
+      color:var(--gold);
+      letter-spacing:0.12em;
+      font-weight:750;
+      background: rgba(10,25,47,0.75);
+    }
+    .ans-text{
+      flex:1 1 auto;
+      font-size:22px;
+      line-height:1.22;
+      letter-spacing:0.01em;
+      color:var(--light);
+      word-break:break-word;
+      overflow-wrap:anywhere;
     }
 
-    .toast{
-      position: fixed;
-      left: 50%;
-      bottom: 18px;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,.6);
-      border: 1px solid var(--stroke);
-      padding: 10px 14px;
-      border-radius: 14px;
-      color: var(--text);
-      font-weight: 800;
-      letter-spacing: .2px;
-      box-shadow: 0 18px 50px rgba(0,0,0,.45);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .16s ease, transform .16s ease;
-      max-width: min(820px, 92vw);
+    /* highlight states after answer */
+    .ans.correct{
+      border-color: rgba(16,185,129,0.95);
+      box-shadow: 0 0 0 1px rgba(16,185,129,0.45), 0 18px 45px rgba(0,0,0,0.6);
+    }
+    .ans.correct .badge{
+      border-color: rgba(16,185,129,0.95);
+      color:#a7f3d0;
+    }
+    .ans.incorrect{
+      border-color: rgba(249,115,115,0.95);
+      box-shadow: 0 0 0 1px rgba(249,115,115,0.35), 0 18px 45px rgba(0,0,0,0.6);
+    }
+    .ans.incorrect .badge{
+      border-color: rgba(249,115,115,0.95);
+      color:#fecaca;
+    }
+
+    /* Splash overlay */
+    .overlay{
+      position:absolute;
+      inset:0;
+      background: radial-gradient(circle at top, rgba(2,6,23,0.96), rgba(2,6,23,0.98));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:28px;
+      z-index:50;
+    }
+    .overlay.hidden{ display:none; }
+    .overlay-card{
+      width:100%;
+      max-width:920px;
+      background: #020617;
+      border-radius:20px;
+      border:1px solid rgba(212,175,55,0.55);
+      box-shadow:0 22px 55px rgba(0,0,0,0.85);
+      padding:22px 22px 18px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
       text-align:center;
     }
-    .toast.show{
-      opacity: 1;
-      transform: translateX(-50%) translateY(-4px);
+    .overlay-title{
+      margin:0;
+      font-size:28px;
+      letter-spacing:0.16em;
+      text-transform:uppercase;
+      color:var(--gold);
+      font-weight:700;
+    }
+    .overlay-sub{
+      margin:0;
+      font-size:13px;
+      color:var(--muted);
+      letter-spacing:0.08em;
+      line-height:1.55;
+    }
+    .code-row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:center;
+      flex-wrap:wrap;
+      margin-top:8px;
+    }
+    .code{
+      font-size:44px;
+      letter-spacing:0.18em;
+      text-transform:uppercase;
+      color:var(--light);
+      padding:12px 18px;
+      border-radius:18px;
+      border:1px solid rgba(55,65,81,0.9);
+      background: rgba(2,11,27,0.98);
+      min-width:360px;
+      text-align:center;
+    }
+    .hint{
+      font-size:11px;
+      color:var(--muted);
+      letter-spacing:0.14em;
+      text-transform:uppercase;
+    }
+    .overlay-footer{
+      margin-top:6px;
+      font-size:11px;
+      color:var(--muted);
+      letter-spacing:0.12em;
+      text-transform:uppercase;
     }
 
-    @media (max-width: 760px){
-      .answers{ grid-template-columns: 1fr; }
-      .answer{ min-height: 92px; }
-      .codeBox{ letter-spacing: 6px; }
+    /* End overlay */
+    .end-score{
+      font-size:68px;
+      letter-spacing:0.08em;
+      text-transform:uppercase;
+      color:var(--light);
+      margin: 8px 0 0;
+    }
+    .end-sub{
+      font-size:13px;
+      color:var(--muted);
+      letter-spacing:0.10em;
+      margin: 4px 0 0;
+      text-transform:uppercase;
+    }
+
+    /* Tiny top-right hint */
+    .corner-hint{
+      position:absolute;
+      right:26px;
+      bottom:18px;
+      font-size:10px;
+      color:rgba(156,163,175,0.85);
+      letter-spacing:0.12em;
+      text-transform:uppercase;
+      z-index:5;
+      user-select:none;
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <div class="topbar">
-        <div class="brand">
-          <div class="dot"></div>
-          <div class="title">TriviaApp · Main Screen</div>
+  <div class="stage">
+    <header class="header">
+      <div class="header-left">
+        <div class="brand">LMNR TRIVIA</div>
+      </div>
+
+      <div class="title">TRIVIA APP</div>
+
+      <div class="header-right">
+        <span id="statusPill" class="pill">STATUS: LOADING…</span>
+      </div>
+    </header>
+
+    <main class="card">
+      <div class="toprow">
+        <div class="meta-left">
+          <div id="qProgress" class="qprogress">QUESTION 1 / 20</div>
+          <div id="scoreLine" class="score">SCORE: 0</div>
         </div>
-        <div class="status">
-          <span class="pill muted" id="connPill">Connecting…</span>
-          <span class="pill muted" id="roomPill">Room: —</span>
-          <span class="pill" id="scorePill">Score: 0</span>
-          <span class="pill muted" id="qPill">Q: —</span>
+        <div class="timer">
+          <div class="timer-label">Timer</div>
+          <div id="timerValue" class="timer-value">30s</div>
         </div>
       </div>
 
-      <div class="content" id="root"></div>
+      <section class="question">
+        <div class="subline" id="subline">WAITING FOR CONTROLLER…</div>
+        <h2 id="questionText">Create a session to begin.</h2>
+      </section>
+
+      <section class="answers" id="answersGrid">
+        <div class="ans" id="ansA">
+          <div class="badge">A</div>
+          <div class="ans-text" id="ansAText">—</div>
+        </div>
+        <div class="ans" id="ansB">
+          <div class="badge">B</div>
+          <div class="ans-text" id="ansBText">—</div>
+        </div>
+        <div class="ans" id="ansC">
+          <div class="badge">C</div>
+          <div class="ans-text" id="ansCText">—</div>
+        </div>
+        <div class="ans" id="ansD">
+          <div class="badge">D</div>
+          <div class="ans-text" id="ansDText">—</div>
+        </div>
+      </section>
+    </main>
+
+    <div class="corner-hint">Open user.html on phone • enter passkey • type session code</div>
+
+    <!-- Splash / Session overlay -->
+    <div id="splashOverlay" class="overlay">
+      <div class="overlay-card">
+        <h1 class="overlay-title">READY</h1>
+        <p class="overlay-sub">
+          Open <b>user.html</b> on your phone, enter the passkey, and type this session code:
+        </p>
+
+        <div class="code-row">
+          <div id="roomCodeEl" class="code">—</div>
+        </div>
+        <div class="hint">This code changes every session</div>
+
+        <div id="overlayFooter" class="overlay-footer">Creating session…</div>
+      </div>
+    </div>
+
+    <!-- End overlay -->
+    <div id="endOverlay" class="overlay hidden">
+      <div class="overlay-card">
+        <h1 class="overlay-title">FINISHED</h1>
+        <div id="endScore" class="end-score">SCORE: 0 / 20</div>
+        <div class="end-sub">Returning to splash for next player…</div>
+      </div>
     </div>
   </div>
 
-  <div class="toast" id="toast"></div>
-
-  <!-- Socket.IO CDN (expects your server to serve /socket.io/) -->
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
   <script>
-    /******************************************************************
-     * MAIN SCREEN (Big Display) — paste-ready.
-     *
-     * Pairing / lock:
-     * - Big screen generates a 6-char room code (e.g., A7K2Q9)
-     * - User app must "join" this room code
-     * - Only accepts the FIRST answer per question, then advances
-     *
-     * You will need a tiny server (Node/Vercel) that:
-     * - hosts Socket.IO
-     * - allows clients to join rooms
-     * - relays 'user_answer' from phones to the room
-     *
-     * Events used:
-     *   Big screen emits:
-     *     - "host_create_room" { roomCode }
-     *     - "host_state" { roomCode, stateSnapshot }
-     *     - "host_next_question" { roomCode, qIndex }
-     *
-     *   Server emits to host:
-     *     - "room_created" { roomCode }
-     *     - "room_joined" { roomCode, userId? }
-     *     - "user_answer" { roomCode, choice: "A"|"B"|"C"|"D", userId? }
-     *
-     * If your server uses different names, just rename below.
-     ******************************************************************/
-
-    // 20 dumb sample questions
+    // ====== Embedded questions (20) ======
+    // SAMPLE QUESTIONS.
     const QUESTIONS = [
-      { q: "What color is the sky on a clear day?", a: ["Blue","Green","Orange","Purple"], correct: "A" },
-      { q: "How many days are in a week?", a: ["5","6","7","9"], correct: "C" },
-      { q: "Which animal says 'meow'?", a: ["Dog","Cat","Cow","Duck"], correct: "B" },
-      { q: "2 + 2 equals…", a: ["3","4","5","22"], correct: "B" },
-      { q: "Which one is a fruit?", a: ["Carrot","Potato","Apple","Onion"], correct: "C" },
-      { q: "What do you use to write on paper?", a: ["Spoon","Pencil","Shoe","Fork"], correct: "B" },
-      { q: "Which month comes after June?", a: ["May","July","August","January"], correct: "B" },
-      { q: "What does water turn into when frozen?", a: ["Steam","Ice","Sand","Glass"], correct: "B" },
-      { q: "Which one is a planet?", a: ["Mars","Pluto (debate)","Moon","Sun"], correct: "A" },
-      { q: "What do bees make?", a: ["Milk","Honey","Bread","Cheese"], correct: "B" },
-      { q: "Which one is a primary color?", a: ["Pink","Red","Brown","Gray"], correct: "B" },
-      { q: "What do you call a baby cat?", a: ["Puppy","Kitten","Calf","Chick"], correct: "B" },
-      { q: "Which tool is used to cut paper?", a: ["Scissors","Hammer","Broom","Wrench"], correct: "A" },
-      { q: "What is the opposite of 'hot'?", a: ["Warm","Cold","Spicy","Bright"], correct: "B" },
-      { q: "Which one can you drink?", a: ["Juice","Rock","Chair","Dust"], correct: "A" },
-      { q: "How many wheels does a typical bicycle have?", a: ["1","2","3","4"], correct: "B" },
-      { q: "What do you wear on your feet?", a: ["Gloves","Hat","Shoes","Scarf"], correct: "C" },
-      { q: "Which one is a shape?", a: ["Circle","Banana","Loud","Sleepy"], correct: "A" },
-      { q: "What do you call the star in our solar system?", a: ["Moon","Sun","Mars","Polaris"], correct: "B" },
-      { q: "Which one is used to call someone?", a: ["Phone","Plate","Pillow","Plant"], correct: "A" },
+      { q: "Which color is used as the main accent in this UI style?", a:"Gold", b:"Purple", c:"Orange", d:"Pink", correct:"A" },
+      { q: "What is 5 + 7?", a:"10", b:"12", c:"13", d:"14", correct:"B" },
+      { q: "Which one is a web browser?", a:"Photoshop", b:"Illustrator", c:"Chrome", d:"Figma", correct:"C" },
+      { q: "Which planet is known as the Red Planet?", a:"Venus", b:"Mars", c:"Jupiter", d:"Mercury", correct:"B" },
+      { q: "What does CPU stand for?", a:"Central Processing Unit", b:"Computer Power Utility", c:"Control Panel User", d:"Core Processing Umbrella", correct:"A" },
+      { q: "How many seconds are in one minute?", a:"30", b:"45", c:"60", d:"90", correct:"C" },
+      { q: "Which is a primary color?", a:"Green", b:"Purple", c:"Orange", d:"Blue", correct:"D" },
+      { q: "What is the capital of Puerto Rico?", a:"Ponce", b:"San Juan", c:"Mayagüez", d:"Arecibo", correct:"B" },
+      { q: "Which is a JavaScript framework?", a:"Next.js", b:"Excel", c:"Word", d:"PowerPoint", correct:"A" },
+      { q: "What is 9 × 3?", a:"18", b:"21", c:"27", d:"30", correct:"C" },
+      { q: "Which animal barks?", a:"Cat", b:"Dog", c:"Cow", d:"Fish", correct:"B" },
+      { q: "What does HTML stand for?", a:"HyperText Markup Language", b:"HighText Machine Language", c:"Hyper Tool Multi Language", d:"Home Text Markup Link", correct:"A" },
+      { q: "What is the opposite of 'hot'?", a:"Warm", b:"Boiling", c:"Cold", d:"Spicy", correct:"C" },
+      { q: "Which is larger: KB or MB?", a:"KB", b:"MB", c:"Same", d:"Neither", correct:"B" },
+      { q: "How many days are in a week?", a:"5", b:"6", c:"7", d:"8", correct:"C" },
+      { q: "Which one is a fruit?", a:"Carrot", b:"Potato", c:"Apple", d:"Lettuce", correct:"C" },
+      { q: "What is 100 / 4?", a:"20", b:"25", c:"30", d:"40", correct:"B" },
+      { q: "Which is an ocean?", a:"Sahara", b:"Amazon", c:"Pacific", d:"Himalaya", correct:"C" },
+      { q: "Which device is used to take photos?", a:"Camera", b:"Toaster", c:"Blender", d:"Printer", correct:"A" },
+      { q: "End question: select D", a:"A", b:"B", c:"C", d:"D", correct:"D" },
     ];
 
-    const root = document.getElementById("root");
-    const connPill = document.getElementById("connPill");
-    const roomPill = document.getElementById("roomPill");
-    const scorePill = document.getElementById("scorePill");
-    const qPill = document.getElementById("qPill");
-    const toast = document.getElementById("toast");
+    // ====== Config ======
+    const QUESTION_SECONDS = 30;
+    const POLL_MS = 650;
+    const REVEAL_MS = 250; // tiny flash before advancing
 
-    const state = {
-      phase: "splash", // splash | countdown | question | finished
-      roomCode: null,
-      connected: false,
+    // ====== Elements ======
+    const statusPill = document.getElementById("statusPill");
+    const splashOverlay = document.getElementById("splashOverlay");
+    const endOverlay = document.getElementById("endOverlay");
+    const roomCodeEl = document.getElementById("roomCodeEl");
+    const overlayFooter = document.getElementById("overlayFooter");
 
-      qIndex: 0,
-      score: 0,
+    const qProgress = document.getElementById("qProgress");
+    const scoreLine = document.getElementById("scoreLine");
+    const timerValue = document.getElementById("timerValue");
+    const subline = document.getElementById("subline");
+    const questionText = document.getElementById("questionText");
 
-      locked: false,            // lock after first answer this question
-      lastChoice: null,         // "A"|"B"|"C"|"D"
-      lastCorrect: null,        // true/false
-    };
+    const ansA = document.getElementById("ansA");
+    const ansB = document.getElementById("ansB");
+    const ansC = document.getElementById("ansC");
+    const ansD = document.getElementById("ansD");
+    const ansAText = document.getElementById("ansAText");
+    const ansBText = document.getElementById("ansBText");
+    const ansCText = document.getElementById("ansCText");
+    const ansDText = document.getElementById("ansDText");
+    const endScore = document.getElementById("endScore");
 
-    function randRoomCode(len = 6){
-      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no confusing O/0 I/1
-      let out = "";
-      for(let i=0;i<len;i++) out += chars[Math.floor(Math.random()*chars.length)];
-      return out;
+    const answerEls = { A: ansA, B: ansB, C: ansC, D: ansD };
+
+    // ====== State ======
+    let roomCode = null;
+    let hostToken = null;
+
+    let qIndex = 0;
+    let score = 0;
+    let questionEndsAt = 0;
+    let timerTickId = null;
+
+    let lastEventId = 0; // for poll-answer dedupe
+    let pollId = null;
+
+    let controllerConnected = false;
+    let isRunning = false;
+    let isAdvancing = false;
+
+    // ====== Helpers ======
+    function setStatus(text, type=null){
+      statusPill.textContent = text;
+      statusPill.classList.remove("danger","success");
+      if(type === "danger") statusPill.classList.add("danger");
+      if(type === "success") statusPill.classList.add("success");
     }
 
-    function setToast(msg, ms=1400){
-      toast.textContent = msg;
-      toast.classList.add("show");
-      window.clearTimeout(setToast._t);
-      setToast._t = window.setTimeout(()=>toast.classList.remove("show"), ms);
+    function resetAnswerClasses(){
+      [ansA, ansB, ansC, ansD].forEach(el=>{
+        el.classList.remove("correct","incorrect","active");
+      });
     }
 
-    function setPills(){
-      connPill.textContent = state.connected ? "Connected" : "Connecting…";
-      connPill.className = "pill " + (state.connected ? "good" : "warn");
+    function renderQuestion(){
+      const total = QUESTIONS.length;
+      const q = QUESTIONS[qIndex];
 
-      roomPill.textContent = state.roomCode ? `Room: ${state.roomCode}` : "Room: —";
-      qPill.textContent = state.phase === "question" || state.phase === "finished"
-        ? `Q: ${Math.min(state.qIndex+1, QUESTIONS.length)}/${QUESTIONS.length}`
-        : "Q: —";
+      qProgress.textContent = `QUESTION ${qIndex + 1} / ${total}`;
+      scoreLine.textContent = `SCORE: ${score}`;
+      subline.textContent = controllerConnected ? "ANSWER ON YOUR PHONE" : "WAITING FOR CONTROLLER…";
+      questionText.textContent = q.q;
 
-      scorePill.textContent = `Score: ${state.score}`;
+      ansAText.textContent = q.a;
+      ansBText.textContent = q.b;
+      ansCText.textContent = q.c;
+      ansDText.textContent = q.d;
+
+      resetAnswerClasses();
     }
 
-    function render(){
-      setPills();
+    function startTimer(){
+      clearInterval(timerTickId);
+      questionEndsAt = Date.now() + QUESTION_SECONDS * 1000;
+      tickTimer();
+      timerTickId = setInterval(tickTimer, 250);
+    }
 
-      if(state.phase === "splash"){
-        const code = state.roomCode || "------";
-        root.innerHTML = `
-          <div class="splash">
-            <h1>TriviaApp</h1>
-            <p>
-              Pair a phone to this screen using the room code.
-              Once paired, hit <b>Ready</b> here to begin the countdown.
-            </p>
+    function tickTimer(){
+      const msLeft = Math.max(0, questionEndsAt - Date.now());
+      const sLeft = Math.ceil(msLeft / 1000);
+      timerValue.textContent = `${sLeft}s`;
+      timerValue.classList.toggle("low", sLeft <= 7);
 
-            <div class="bigCode">
-              <div class="hint">ROOM CODE</div>
-              <div class="codeBox" id="codeBox">${code}</div>
-              <div class="hint" style="opacity:.9;">Open the User App → enter code → join</div>
-            </div>
-
-            <div class="row">
-              <button class="btn primary" id="readyBtn" ${state.connected && state.roomCode ? "" : "disabled"}>Ready</button>
-              <button class="btn" id="newCodeBtn" ${state.connected ? "" : "disabled"}>New Code</button>
-              <button class="btn danger" id="resetBtn" ${state.connected ? "" : "disabled"}>Reset Game</button>
-            </div>
-          </div>
-        `;
-
-        document.getElementById("readyBtn").onclick = () => startCountdown();
-        document.getElementById("newCodeBtn").onclick = () => createRoom(true);
-        document.getElementById("resetBtn").onclick = () => resetGame(true);
-        return;
-      }
-
-      if(state.phase === "countdown"){
-        root.innerHTML = `
-          <div class="centerBig">
-            <div class="countdown" id="countNum">3</div>
-            <div class="smallText">Get ready…</div>
-          </div>
-        `;
-        return;
-      }
-
-      if(state.phase === "question"){
-        const qObj = QUESTIONS[state.qIndex];
-        const labels = ["A","B","C","D"];
-        const cards = labels.map((L, idx) => {
-          const text = qObj.a[idx];
-          return `
-            <div class="answer ${L}" data-letter="${L}">
-              <div class="label">${L}</div>
-              <div class="text">${escapeHtml(text)}</div>
-              <div class="tag"></div>
-            </div>
-          `;
-        }).join("");
-
-        root.innerHTML = `
-          <div class="game">
-            <div class="qHeader">
-              <div>
-                <p class="sub">Question ${state.qIndex+1} of ${QUESTIONS.length}</p>
-                <div class="question">${escapeHtml(qObj.q)}</div>
-              </div>
-              <div class="qMeta">
-                <span class="pill muted">Room: <b>${state.roomCode || "—"}</b></span>
-                <span class="pill">Score: <b>${state.score}</b></span>
-              </div>
-            </div>
-
-            <div class="answers" id="answersGrid">
-              ${cards}
-            </div>
-
-            <div class="footerRow">
-              <div>Waiting for phone answer…</div>
-              <div>${state.locked ? "Locked (answer received)" : "Unlocked"}</div>
-            </div>
-          </div>
-        `;
-
-        // Apply visual state if we already received an answer
-        if(state.lastChoice){
-          markSelection(state.lastChoice, state.lastCorrect, QUESTIONS[state.qIndex].correct);
+      if(msLeft <= 0){
+        clearInterval(timerTickId);
+        timerTickId = null;
+        // timeout => incorrect +0, auto-advance
+        if(isRunning && !isAdvancing){
+          handleAnswer({ choice: null, timeout: true });
         }
-        return;
-      }
-
-      if(state.phase === "finished"){
-        root.innerHTML = `
-          <div class="centerBig">
-            <div style="font-size: clamp(34px, 4vw, 54px); font-weight: 1000; letter-spacing:.4px;">
-              Game Over
-            </div>
-            <div style="margin-top:10px; color: var(--muted); font-weight:800;">
-              Final Score
-            </div>
-            <div class="countdown" style="font-size: clamp(74px, 12vw, 150px); margin-top: 6px;">
-              ${state.score}
-            </div>
-
-            <div class="row" style="margin-top: 18px;">
-              <button class="btn primary" id="playAgainBtn">Play Again</button>
-              <button class="btn" id="backSplashBtn">Back to Splash</button>
-            </div>
-          </div>
-        `;
-        document.getElementById("playAgainBtn").onclick = () => resetGame(false, true);
-        document.getElementById("backSplashBtn").onclick = () => {
-          resetGame(false, false);
-          state.phase = "splash";
-          render();
-          broadcastState();
-        };
-        return;
       }
     }
 
-    function escapeHtml(s){
-      return String(s)
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
+    async function api(url, opts={}){
+      const res = await fetch(url, {
+        ...opts,
+        headers: {
+          "Content-Type":"application/json",
+          ...(opts.headers || {})
+        }
+      });
+      const text = await res.text();
+      let data = {};
+      try { data = text ? JSON.parse(text) : {}; } catch(_) {}
+      if(!res.ok){
+        const msg = data && data.error ? data.error : `HTTP ${res.status}`;
+        throw new Error(msg);
+      }
+      return data;
     }
 
-    function markSelection(choice, wasCorrect, correctLetter){
-      const grid = document.getElementById("answersGrid");
-      if(!grid) return;
+    async function createRoom(){
+      setStatus("STATUS: CREATING SESSION…");
+      overlayFooter.textContent = "Creating session…";
+      roomCodeEl.textContent = "—";
+      splashOverlay.classList.remove("hidden");
+      endOverlay.classList.add("hidden");
 
-      [...grid.querySelectorAll(".answer")].forEach(el => {
-        el.classList.remove("selected","correct","wrong");
+      const data = await api("/api/create-room", { method:"POST" });
+      roomCode = data.roomCode;
+      hostToken = data.hostToken;
+
+      qIndex = 0;
+      score = 0;
+      lastEventId = 0;
+      controllerConnected = false;
+      isRunning = false;
+      isAdvancing = false;
+
+      roomCodeEl.textContent = roomCode;
+      overlayFooter.textContent = "Waiting for phone to join…";
+      setStatus("STATUS: WAITING FOR PHONE…", "danger");
+
+      // write initial host state snapshot (optional but good for resume)
+      await pushHostState({ phase:"splash" });
+    }
+
+    async function pushHostState(extra={}){
+      if(!roomCode || !hostToken) return;
+      const payload = {
+        roomCode,
+        hostToken,
+        state: {
+          qIndex,
+          score,
+          total: QUESTIONS.length,
+          questionEndsAt,
+          isRunning,
+          controllerConnected,
+          ...extra
+        }
+      };
+      try{
+        await api("/api/host-state", { method:"POST", body: JSON.stringify(payload) });
+      }catch(e){
+        // keep silent; UI should not crash if host-state fails temporarily
+        console.warn("host-state failed:", e.message);
+      }
+    }
+
+    function startGame(){
+      splashOverlay.classList.add("hidden");
+      isRunning = true;
+      isAdvancing = false;
+      renderQuestion();
+      startTimer();
+      setStatus("STATUS: LIVE", "success");
+      pushHostState({ phase:"live" });
+    }
+
+    async function endGame(){
+      isRunning = false;
+      clearInterval(timerTickId);
+      timerTickId = null;
+
+      endScore.textContent = `SCORE: ${score} / ${QUESTIONS.length}`;
+      endOverlay.classList.remove("hidden");
+      setStatus("STATUS: FINISHED", "success");
+      await pushHostState({ phase:"finished" });
+
+      // short pause then reset
+      setTimeout(async ()=>{
+        try{
+          await api("/api/host-state", {
+            method:"POST",
+            body: JSON.stringify({
+              roomCode,
+              hostToken,
+              state: { qIndex: 0, score: 0, total: QUESTIONS.length, isRunning:false, controllerConnected:false, phase:"reset" }
+            })
+          });
+        }catch(_){}
+        // Create a fresh room for next player (simplest lock reset)
+        await createRoom();
+      }, 1800);
+    }
+
+    async function handleAnswer({ choice, timeout=false }){
+      if(isAdvancing) return;
+      isAdvancing = true;
+
+      clearInterval(timerTickId);
+      timerTickId = null;
+
+      const q = QUESTIONS[qIndex];
+      const correct = q.correct;
+
+      resetAnswerClasses();
+
+      if(choice){
+        answerEls[choice]?.classList.add("active");
+      }
+
+      // Determine correctness
+      const isCorrect = choice && (choice === correct);
+
+      // highlight chosen answer red/green, and (optionally) also show correct
+      if(choice){
+        answerEls[choice]?.classList.add(isCorrect ? "correct" : "incorrect");
+      } else {
+        // timeout: no choice — briefly flash correct answer as active/correct (optional)
+        answerEls[correct]?.classList.add("active","correct");
+      }
+
+      if(isCorrect) score += 1;
+
+      scoreLine.textContent = `SCORE: ${score}`;
+
+      await pushHostState({
+        phase: "reveal",
+        lastChoice: choice || null,
+        lastWasCorrect: !!isCorrect,
+        lastWasTimeout: !!timeout,
       });
 
-      const picked = grid.querySelector(`.answer[data-letter="${choice}"]`);
-      if(picked) picked.classList.add("selected");
+      // advance quickly
+      setTimeout(async ()=>{
+        qIndex += 1;
 
-      if(picked){
-        picked.classList.add(wasCorrect ? "correct" : "wrong");
-      }
+        if(qIndex >= QUESTIONS.length){
+          await endGame();
+          return;
+        }
 
-      // Optional: also mark the actual correct answer if user got it wrong (comment out if you don't want it)
-      if(!wasCorrect){
-        const correctEl = grid.querySelector(`.answer[data-letter="${correctLetter}"]`);
-        if(correctEl) correctEl.classList.add("correct");
-      }
+        isAdvancing = false;
+        renderQuestion();
+        startTimer();
+        await pushHostState({ phase:"live" });
+      }, REVEAL_MS);
     }
 
-    function resetPerQuestion(){
-      state.locked = false;
-      state.lastChoice = null;
-      state.lastCorrect = null;
-    }
+    async function pollAnswers(){
+      if(!roomCode || !hostToken) return;
 
-    function resetGame(keepSplash = true, autoStart = false){
-      state.qIndex = 0;
-      state.score = 0;
-      resetPerQuestion();
-      state.phase = keepSplash ? "splash" : "question";
-      render();
-      broadcastState();
+      try{
+        const data = await api("/api/poll-answer", {
+          method:"POST",
+          body: JSON.stringify({ roomCode, hostToken, since: lastEventId })
+        });
 
-      if(autoStart){
-        startCountdown();
-      }
-    }
+        // controller connection signal
+        if(data.controllerConnected && !controllerConnected){
+          controllerConnected = true;
+          overlayFooter.textContent = "Phone connected. Starting…";
+          setStatus("STATUS: PHONE CONNECTED", "success");
+          await pushHostState({ controllerConnected:true });
 
-    async function startCountdown(){
-      if(!state.roomCode) return;
+          // start immediately
+          setTimeout(()=> startGame(), 350);
+        }
 
-      state.phase = "countdown";
-      render();
-      broadcastState();
-
-      const numEl = () => document.getElementById("countNum");
-      const steps = ["3","2","1","GO!"];
-      for(let i=0;i<steps.length;i++){
-        if(numEl()) numEl().textContent = steps[i];
-        await sleep(i === steps.length-1 ? 500 : 850);
-      }
-
-      state.phase = "question";
-      state.qIndex = 0;
-      resetPerQuestion();
-      render();
-      broadcastState();
-      emitNextQuestion();
-    }
-
-    function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
-
-    function nextQuestion(){
-      state.qIndex += 1;
-      resetPerQuestion();
-
-      if(state.qIndex >= QUESTIONS.length){
-        state.phase = "finished";
-        render();
-        broadcastState();
-        return;
-      }
-
-      state.phase = "question";
-      render();
-      broadcastState();
-      emitNextQuestion();
-    }
-
-    /*********************** Socket.IO wiring *************************/
-    // By default this connects to same-origin. If your socket server is elsewhere:
-    // const socket = io("https://your-socket-domain.com", { transports:["websocket"] });
-    const socket = io({
-      transports: ["websocket", "polling"]
-    });
-
-    socket.on("connect", () => {
-      state.connected = true;
-      render();
-      createRoom(false);
-    });
-
-    socket.on("disconnect", () => {
-      state.connected = false;
-      render();
-    });
-
-    // Server confirms room created (optional)
-    socket.on("room_created", (payload) => {
-      if(payload && payload.roomCode) {
-        state.roomCode = payload.roomCode;
-        setToast(`Room created: ${state.roomCode}`);
-        render();
-        broadcastState();
-      }
-    });
-
-    // Phone joined (optional)
-    socket.on("room_joined", (payload) => {
-      if(payload && payload.roomCode === state.roomCode){
-        setToast("Phone paired ✅");
-      }
-    });
-
-    // Receive answer from phone
-    socket.on("user_answer", (payload) => {
-      if(!payload || payload.roomCode !== state.roomCode) return;
-      if(state.phase !== "question") return;
-      if(state.locked) return; // first answer wins
-
-      const choice = payload.choice;
-      if(!["A","B","C","D"].includes(choice)) return;
-
-      state.locked = true;
-      state.lastChoice = choice;
-
-      const correctLetter = QUESTIONS[state.qIndex].correct;
-      const isCorrect = (choice === correctLetter);
-      state.lastCorrect = isCorrect;
-
-      if(isCorrect) state.score += 1;
-
-      render();
-      markSelection(choice, isCorrect, correctLetter);
-      broadcastState();
-
-      // Move on no matter what
-      setTimeout(() => nextQuestion(), 1100);
-    });
-
-    function createRoom(forceNew){
-      if(!state.connected) return;
-
-      const newCode = randRoomCode(6);
-      if(forceNew || !state.roomCode){
-        state.roomCode = newCode;
-        state.phase = "splash";
-        resetGame(true);
-      }
-
-      // Ask server to create/join as host
-      socket.emit("host_create_room", { roomCode: state.roomCode });
-      render();
-      broadcastState();
-    }
-
-    function emitNextQuestion(){
-      if(!state.roomCode) return;
-      socket.emit("host_next_question", { roomCode: state.roomCode, qIndex: state.qIndex });
-    }
-
-    function broadcastState(){
-      if(!state.roomCode) return;
-
-      // Send a minimal snapshot for the user app (optional but helpful)
-      const snap = {
-        phase: state.phase,
-        qIndex: state.qIndex,
-        score: state.score,
-        roomCode: state.roomCode,
-        question: state.phase === "question" ? {
-          text: QUESTIONS[state.qIndex].q,
-          answers: {
-            A: QUESTIONS[state.qIndex].a[0],
-            B: QUESTIONS[state.qIndex].a[1],
-            C: QUESTIONS[state.qIndex].a[2],
-            D: QUESTIONS[state.qIndex].a[3],
+        // new answer event
+        if(data.event && data.event.id){
+          if(data.event.id > lastEventId){
+            lastEventId = data.event.id;
           }
-        } : null,
-        // after answer:
-        locked: state.locked,
-        lastChoice: state.lastChoice,
-        lastCorrect: state.lastCorrect
-      };
+          if(isRunning && !isAdvancing){
+            const choice = data.event.choice; // "A"|"B"|"C"|"D"
+            handleAnswer({ choice, timeout:false });
+          }
+        }
 
-      socket.emit("host_state", { roomCode: state.roomCode, state: snap });
+      }catch(e){
+        // network blip: keep polling
+        console.warn("poll failed:", e.message);
+        setStatus("STATUS: NETWORK…", "danger");
+      }
     }
 
-    // Initial paint
-    render();
+    function startPolling(){
+      if(pollId) clearInterval(pollId);
+      pollId = setInterval(pollAnswers, POLL_MS);
+    }
+
+    // ====== Boot ======
+    (async function boot(){
+      try{
+        await createRoom();
+        startPolling();
+        setStatus("STATUS: READY", "danger");
+      }catch(e){
+        console.error(e);
+        overlayFooter.textContent = "Failed to create session. Check Vercel KV + API routes.";
+        setStatus("STATUS: ERROR", "danger");
+      }
+    })();
   </script>
 </body>
 </html>
