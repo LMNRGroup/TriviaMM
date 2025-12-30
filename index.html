@@ -516,7 +516,33 @@
       font-size:20px;
       color: var(--muted);
     }
-
+/* ===== FOOTER (Legal) ===== */
+.legalFooter{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:14px;
+  display:flex;
+  justify-content:center;
+  pointer-events:none;
+  z-index:6; /* above everything including overlay/final */
+}
+.legalFooter .inner{
+  max-width:92%;
+  text-align:center;
+  font-size:12px;
+  color: rgba(156,163,175,0.95);
+  letter-spacing:0.04em;
+  line-height:1.35;
+  padding:6px 14px;
+  border-radius:999px;
+  border:1px solid rgba(212,175,55,0.22);
+  background: rgba(2,11,27,0.40);
+  backdrop-filter: blur(2px);
+}
+@media (max-width: 1100px){
+  .legalFooter .inner{ font-size:10px; }
+}
     /* responsive safety */
     @media (max-width: 1100px){
       .logoText{ font-size:56px; }
@@ -629,6 +655,12 @@
       <p class="finalThanks">¡Gracias por participar!</p>
       <p class="finalSub">Reiniciando para el próximo invitado…</p>
     </div>
+    <!-- LEGAL FOOTER -->
+<div class="legalFooter" aria-hidden="true">
+  <div class="inner">
+    LuminarApps © 2025 · All rights reserved. · Municipio de Mayagüez
+  </div>
+</div>
   </div>
 
 <script>
@@ -840,6 +872,12 @@ function showFinal(){
   state.phase = "finished";
   state.questionEndsAt = null;
   hostPush();
+  // ✅ Always kill overlay before showing FINAL (overlay is higher z-index than final)
+overlay.classList.remove("show");
+bigResult.classList.remove("correct","wrong");
+bigResult.textContent = "—";
+pickBadge.textContent = "SELECCIÓN: —";
+clearHighlights();
 
   setView("final");
   finalScore.textContent = `${state.score} / ${TOTAL}`;
@@ -982,11 +1020,23 @@ async function pollAnswersLoop(){
       if (data.answer){
         const choice = String(data.answer.choice || "").toUpperCase();
 
-        // Support "start ping" (sent by phone immediately after PK success)
-        if (choice === "__START__"){
-          if (state.phase === "splash") startNewRound();
-          return;
-        }
+// Support "start ping" (sent by phone immediately after PK success)
+// ✅ start from splash OR reset OR finished (force restart)
+if (choice === "__START__"){
+
+  // If we are showing FINAL, clear it and immediately allow a new round
+  if (state.phase === "finished"){
+    resetToSplash();
+    setTimeout(()=> startNewRound(), 250);
+    return;
+  }
+
+  // If we're not already live, start
+  if (state.phase !== "live"){
+    startNewRound();
+  }
+  return;
+}
 
         // If splash, start on first real answer and apply it to Q1
         if (state.phase === "splash"){
