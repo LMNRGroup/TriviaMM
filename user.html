@@ -15,11 +15,13 @@
       --panel2:#020617;
       --border:rgba(212,175,55,0.35);
       --text:#F4F4F4;
+
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
       color: var(--text);
       background: var(--navy);
     }
     *{ box-sizing:border-box; }
+
     body{
       margin:0;
       min-height:100vh;
@@ -28,15 +30,18 @@
       justify-content:center;
       padding:14px 12px;
       background: radial-gradient(circle at top, #0f172a, var(--navy));
-      overflow-x:hidden;
+      overflow:hidden; /* no horizontal scroll */
     }
+
     .wrap{
       width:100%;
-      max-width:520px;
+      max-width:560px;
       display:flex;
       flex-direction:column;
       gap:12px;
     }
+
+    /* simple header */
     .header{
       display:flex;
       align-items:center;
@@ -44,9 +49,9 @@
       gap:10px;
       padding:10px 16px;
       border-radius:999px;
-      background: var(--panel);
+      background: rgba(2,11,27,0.92);
       border:1px solid var(--border);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.45);
     }
     .brand{
       font-size:14px;
@@ -67,6 +72,7 @@
       letter-spacing:0.14em;
       text-transform:uppercase;
       white-space:nowrap;
+      flex:0 0 auto;
     }
     .pill.bad{ border-color: var(--danger); color:#fecaca; }
     .pill.good{ border-color: rgba(16,185,129,0.9); color:#a7f3d0; }
@@ -75,36 +81,43 @@
       background: rgba(2,11,27,0.96);
       border-radius:18px;
       border:1px solid rgba(15,23,42,0.9);
-      box-shadow: 0 18px 45px rgba(0,0,0,0.7);
-      padding:14px 14px 16px;
+      box-shadow: 0 18px 45px rgba(0,0,0,0.65);
+      padding:16px;
       display:flex;
       flex-direction:column;
-      gap:12px;
+      gap:14px;
       min-height:0;
     }
 
-    /* lock screen */
+    /* ===== LOCK SCREEN (simple) ===== */
+    .lockCenter{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      padding:6px 2px 2px;
+    }
     .lockTitle{
       text-align:center;
-      font-size:16px;
+      font-size:18px;
+      font-weight:900;
       letter-spacing:0.14em;
       text-transform:uppercase;
-      color: var(--danger);
-      margin-top:2px;
+      color: var(--gold);
+      margin:0;
     }
     .lockSub{
       text-align:center;
       font-size:12px;
       color: var(--muted);
-      line-height:1.4;
-      margin-top:-6px;
+      line-height:1.45;
+      margin:0;
     }
     .input{
       width:100%;
       border-radius:999px;
-      border:1px solid #374151;
-      background: var(--panel2);
-      padding:12px 16px;
+      border:1px solid rgba(55,65,81,0.95);
+      background: rgba(2,6,23,0.78);
+      padding:13px 16px;
       color:#e5e7eb;
       font-size:18px;
       letter-spacing:0.28em;
@@ -112,7 +125,7 @@
     }
     .input::placeholder{
       font-size:13px;
-      letter-spacing:0.08em;
+      letter-spacing:0.10em;
       color:#4b5563;
     }
     .input:focus{
@@ -126,11 +139,11 @@
       background: var(--success);
       color:#022c22;
       font-size:13px;
-      font-weight:700;
+      font-weight:800;
       padding:12px 14px;
       cursor:pointer;
       text-transform:uppercase;
-      letter-spacing:0.12em;
+      letter-spacing:0.14em;
     }
     .btn:disabled{ opacity:0.6; cursor:default; }
     .err{
@@ -139,27 +152,35 @@
       font-size:11px;
       color: var(--danger);
     }
-
-    /* gameplay */
-    .topRow{
-      display:flex;
-      gap:10px;
-      align-items:stretch;
+    .smallNote{
+      text-align:center;
+      font-size:10px;
+      color: var(--muted);
+      line-height:1.5;
+      letter-spacing:0.04em;
     }
-    .stat{
-      flex:1;
-      background: radial-gradient(circle at top, var(--panel2), var(--panel));
-      border-radius:14px;
+
+    /* ===== GAME UI (simple, priorities: question + 4 big buttons + score + timer) ===== */
+    .hudRow{
+      display:flex;
+      align-items:stretch;
+      gap:10px;
+      flex-wrap:wrap; /* wraps on small screens (no overflow) */
+    }
+    .hudCard{
+      flex:1 1 120px;
+      min-width:120px;
+      background: radial-gradient(circle at top, rgba(2,6,23,0.92), rgba(2,11,27,0.92));
+      border-radius:16px;
       border:1px solid rgba(31,41,55,0.9);
       padding:10px 12px;
       display:flex;
       flex-direction:column;
       gap:4px;
-      min-width:0;
     }
     .k{
       font-size:10px;
-      letter-spacing:0.16em;
+      letter-spacing:0.18em;
       text-transform:uppercase;
       color: var(--muted);
       white-space:nowrap;
@@ -167,19 +188,21 @@
       text-overflow:ellipsis;
     }
     .v{
-      font-size:18px;
-      font-weight:800;
+      font-size:20px;
+      font-weight:900;
+      letter-spacing:0.04em;
       color: var(--text);
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
     }
+
     .timerbar{
       height:10px;
       border-radius:999px;
-      background: rgba(148,163,184,0.25);
+      background: rgba(148,163,184,0.20);
       overflow:hidden;
-      border:1px solid rgba(55,65,81,0.65);
+      border:1px solid rgba(55,65,81,0.55);
     }
     .timerfill{
       height:100%;
@@ -191,122 +214,199 @@
     }
 
     .questionBox{
-      background: rgba(2,6,23,0.55);
+      background: rgba(2,6,23,0.62);
       border:1px solid rgba(55,65,81,0.8);
       border-radius:16px;
-      padding:12px 12px;
+      padding:14px 14px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .qMeta{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      min-width:0;
     }
     .qLabel{
       font-size:11px;
-      letter-spacing:0.16em;
+      letter-spacing:0.18em;
       text-transform:uppercase;
       color: var(--gold);
-      margin-bottom:6px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
     .qText{
       font-size:18px;
-      font-weight:800;
-      line-height:1.2;
+      font-weight:900;
+      line-height:1.25;
       word-wrap:break-word;
       overflow-wrap:anywhere;
+      margin:0;
     }
 
+    /* 2x2 buttons */
     .grid{
       display:grid;
-      grid-template-columns:1fr;
-      gap:10px;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
     }
+
     .choiceBtn{
       width:100%;
-      border-radius:16px;
-      border:1px solid rgba(55,65,81,0.9);
-      background: rgba(2,6,23,0.75);
-      padding:14px 14px;
+      border-radius:18px;
+      border:1px solid rgba(55,65,81,0.92);
+      background: rgba(2,6,23,0.78);
+      padding:16px 14px;
       display:flex;
-      gap:12px;
-      align-items:flex-start;
+      align-items:center;
+      justify-content:center;
       cursor:pointer;
       box-shadow: 0 10px 26px rgba(0,0,0,0.35);
-      text-align:left;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+      min-height:86px; /* big buttons */
+      transition: transform 0.06s ease, filter 0.06s ease, border-color 0.12s ease;
     }
-    .choiceKey{
-      width:42px;
-      height:42px;
-      border-radius:14px;
+    .choiceBtn:active{ transform: scale(0.985); }
+    .choiceBtn:disabled{ opacity:0.55; cursor:default; }
+
+    /* ONLY letter on button */
+    .choiceKeyBig{
+      width:56px;
+      height:56px;
+      border-radius:18px;
       display:flex;
       align-items:center;
       justify-content:center;
       border:1px solid rgba(212,175,55,0.55);
       background: rgba(10,25,47,0.85);
       color: var(--gold);
-      font-weight:900;
-      flex:0 0 auto;
+      font-weight:1000;
+      font-size:22px;
+      letter-spacing:0.06em;
     }
-    .choiceText{
-      font-size:16px;
-      line-height:1.15;
-      color: var(--text);
+
+    /* optional feedback states if you ever want to toggle them */
+    .choiceBtn.good{ border-color: rgba(16,185,129,0.95); }
+    .choiceBtn.bad{ border-color: rgba(249,115,115,0.95); }
+
+    .answerList{
+      margin-top:-2px;
+      background: rgba(2,6,23,0.50);
+      border:1px solid rgba(55,65,81,0.60);
+      border-radius:16px;
+      padding:12px 12px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .ansRow{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      min-width:0;
+    }
+    .ansKey{
+      width:28px;
+      height:28px;
+      border-radius:10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border:1px solid rgba(212,175,55,0.45);
+      background: rgba(10,25,47,0.65);
+      color: var(--gold);
+      font-weight:900;
+      font-size:12px;
+      flex:0 0 auto;
+      margin-top:1px;
+    }
+    .ansText{
+      font-size:12px;
+      line-height:1.35;
+      color:#e5e7eb;
+      opacity:0.92;
       word-wrap:break-word;
       overflow-wrap:anywhere;
+      min-width:0;
     }
-    .choiceBtn:disabled{ opacity:0.55; cursor:default; }
 
-    .smallNote{
-      text-align:center;
-      font-size:10px;
-      color: var(--muted);
-      line-height:1.5;
-      letter-spacing:0.04em;
+    @media (max-width: 420px){
+      .grid{ grid-template-columns:1fr; }
+      .choiceBtn{ min-height:74px; }
+      .choiceKeyBig{ width:52px; height:52px; }
     }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="header">
-      <div class="brand">Trivia · Controller</div>
+      <div class="brand">TRIVIA · CONTROLLER</div>
       <div id="pill" class="pill">STATUS: LOCKED</div>
     </div>
 
+    <!-- LOCK -->
     <div class="card" id="lockCard">
-      <div class="lockTitle">Restricted access</div>
-      <div class="lockSub">Host enters the master passkey to start.</div>
-      <input id="passkey" class="input" type="password" placeholder="Master code" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-      <button id="enterBtn" class="btn">Enter</button>
-      <div id="err" class="err"></div>
-      <div class="smallNote">LMNR GROUP · One guest at a time</div>
+      <div class="lockCenter">
+        <h2 class="lockTitle">Master Passkey</h2>
+        <p class="lockSub">Host enters the master code to control the trivia.</p>
+        <input id="passkey" class="input" type="password" placeholder="Master code" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+        <button id="enterBtn" class="btn">Enter</button>
+        <div id="err" class="err"></div>
+        <div class="smallNote">One guest at a time · No join code shown on screen</div>
+      </div>
     </div>
 
+    <!-- GAME -->
     <div class="card" id="gameCard" style="display:none;">
-      <div class="topRow">
-        <div class="stat">
+      <div class="hudRow">
+        <div class="hudCard">
           <div class="k">Score</div>
           <div class="v" id="score">0</div>
         </div>
-        <div class="stat">
+        <div class="hudCard">
           <div class="k">Question</div>
           <div class="v" id="progress">—</div>
         </div>
-        <div class="stat">
+        <div class="hudCard">
           <div class="k">Seconds</div>
           <div class="v" id="seconds">—</div>
         </div>
+        <!-- keep this hidden but present for JS logic -->
+        <div id="mStatus" style="display:none;">WAITING</div>
       </div>
 
       <div class="timerbar"><div id="timerFill" class="timerfill"></div></div>
 
       <div class="questionBox">
-        <div class="qLabel" id="qLabel">WAITING…</div>
-        <div class="qText" id="qText">Look at the big screen.</div>
+        <div class="qMeta">
+          <div class="qLabel" id="qLabel">WAITING…</div>
+          <!-- optional tiny state pill if you ever want it -->
+          <div id="livePill" class="pill good" style="font-size:9px;padding:5px 10px;">LIVE</div>
+        </div>
+        <p class="qText" id="qText">Look at the big screen.</p>
       </div>
 
+      <!-- A/B/C/D big buttons ONLY letters -->
       <div class="grid">
-        <button class="choiceBtn" id="btnA"><div class="choiceKey">A</div><div class="choiceText" id="txtA">—</div></button>
-        <button class="choiceBtn" id="btnB"><div class="choiceKey">B</div><div class="choiceText" id="txtB">—</div></button>
-        <button class="choiceBtn" id="btnC"><div class="choiceKey">C</div><div class="choiceText" id="txtC">—</div></button>
-        <button class="choiceBtn" id="btnD"><div class="choiceKey">D</div><div class="choiceText" id="txtD">—</div></button>
+        <button class="choiceBtn" id="btnA" aria-label="Answer A"><div class="choiceKeyBig">A</div></button>
+        <button class="choiceBtn" id="btnB" aria-label="Answer B"><div class="choiceKeyBig">B</div></button>
+        <button class="choiceBtn" id="btnC" aria-label="Answer C"><div class="choiceKeyBig">C</div></button>
+        <button class="choiceBtn" id="btnD" aria-label="Answer D"><div class="choiceKeyBig">D</div></button>
       </div>
 
-      <div class="smallNote" id="footerNote">Answer on your phone. Big screen will highlight instantly.</div>
+      <!-- Answer text list (long answers live here, not on buttons) -->
+      <div class="answerList" aria-label="Answer choices">
+        <div class="ansRow"><div class="ansKey">A</div><div class="ansText" id="txtA">—</div></div>
+        <div class="ansRow"><div class="ansKey">B</div><div class="ansText" id="txtB">—</div></div>
+        <div class="ansRow"><div class="ansKey">C</div><div class="ansText" id="txtC">—</div></div>
+        <div class="ansRow"><div class="ansKey">D</div><div class="ansText" id="txtD">—</div></div>
+      </div>
+
+      <div class="smallNote" id="footerNote">Tap A/B/C/D. The big screen will reveal if it’s correct.</div>
     </div>
   </div>
 
@@ -496,22 +596,24 @@ function renderFromState(st){
   // live
   progressEl.textContent = `${Math.min(total, qIndex+1)}/${total}`;
   qLabel.textContent = `QUESTION ${Math.min(total, qIndex+1)} / ${total}`;
-  qText.textContent = "Choose A / B / C / D";
 
-  // If big screen sends answer text snapshot, show it.
+  // IMPORTANT: user should see the question
+  qText.textContent = st.questionText || st.q || st.question || "Choose A / B / C / D";
+
+  // long answers show here (NOT on buttons)
   if (st.answers){
-    txtA.textContent = st.answers.A || "A";
-    txtB.textContent = st.answers.B || "B";
-    txtC.textContent = st.answers.C || "C";
-    txtD.textContent = st.answers.D || "D";
+    txtA.textContent = st.answers.A || "—";
+    txtB.textContent = st.answers.B || "—";
+    txtC.textContent = st.answers.C || "—";
+    txtD.textContent = st.answers.D || "—";
   } else {
+    // fallback (keeps UI clean even if backend doesn't send answer text)
     txtA.textContent = "A";
     txtB.textContent = "B";
     txtC.textContent = "C";
     txtD.textContent = "D";
   }
 
-  // enable buttons only during live
   disableChoices(st.phase !== "live");
   if (st.phase === "live") lockedAnswer = false;
 }
@@ -567,7 +669,6 @@ function tick(){
   timerFill.style.transform = `scaleX(${pct})`;
 
   if (msLeft <= 0){
-    // big screen will advance; keep buttons disabled
     disableChoices(true);
   }
 }
@@ -588,12 +689,10 @@ function stopLoops(){
 // Auto-resume if token exists
 (async function bootstrap(){
   if (controllerToken){
-    // show game UI while we attempt state
     lockCard.style.display = "none";
     gameCard.style.display = "flex";
     setPill("STATUS: RESUMING…");
     startLoops();
-    // if controller lost, getState handler will bounce back to lock
   }
 })();
 </script>
