@@ -2,576 +2,728 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <title>TriviaApp - Controller</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TriviaApp - User Controller</title>
   <style>
     :root{
-      --bg:#0b0f1a;
-      --panel:#111a2e;
-      --text:#e9eefc;
-      --muted:#9fb0df;
-      --stroke:#233055;
-      --accent:#6aa6ff;
-      --good:#23c55e;
-      --bad:#ef4444;
-      --warn:#f59e0b;
-
-      --a:#2b4bff;
-      --b:#00d5cf;
-      --c:#ff4bd8;
-      --d:#ffd34b;
-
-      --radius: 18px;
-      --shadow: 0 18px 60px rgba(0,0,0,.45);
+      --navy:#0A192F;
+      --gold:#D4AF37;
+      --dark:#020617;
+      --panel:#020b1b;
+      --light:#F4F4F4;
+      --muted:#9CA3AF;
+      --danger:#F97373;
+      --success:#10B981;
+      --line:rgba(212,175,55,0.35);
+      --line2:rgba(55,65,81,0.75);
+      --shadow:0 18px 45px rgba(0,0,0,0.75);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--light);
+      background: var(--navy);
     }
 
     *{ box-sizing:border-box; }
-    html, body{ height:100%; margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background: radial-gradient(900px 700px at 50% 15%, #14204a 0%, var(--bg) 60%); color: var(--text); }
-    button, input{ font: inherit; }
-
-    .wrap{
-      min-height:100%;
-      display:grid;
-      place-items:center;
-      padding: 18px;
+    html, body { height:100%; }
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      align-items:stretch;
+      justify-content:center;
+      padding:16px 14px;
+      background: radial-gradient(circle at top, #0f172a, var(--navy));
+      color: var(--light);
+      overflow-x:hidden; /* no horizontal scroll ever */
     }
+
+    .page{
+      width:100%;
+      max-width:520px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-height:0;
+    }
+
+    /* Header pill */
+    .header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:10px 14px;
+      border-radius:999px;
+      background: var(--panel);
+      border:1px solid var(--line);
+      box-shadow:0 10px 30px rgba(0,0,0,0.55);
+      gap:10px;
+    }
+    .brand{
+      font-size:12px;
+      letter-spacing:0.22em;
+      text-transform:uppercase;
+      color:var(--gold);
+      white-space:nowrap;
+    }
+    .pill{
+      font-size:10px;
+      padding:6px 12px;
+      border-radius:999px;
+      border:1px solid rgba(212,175,55,0.6);
+      background: rgba(10,25,47,0.9);
+      color:var(--light);
+      letter-spacing:0.16em;
+      text-transform:uppercase;
+      white-space:nowrap;
+      max-width: 58%;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .pill.danger{ border-color: var(--danger); color:#fecaca; }
+    .pill.success{ border-color: rgba(16,185,129,0.9); color:#a7f3d0; }
 
     .card{
-      width: min(520px, 96vw);
-      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
-      border: 1px solid var(--stroke);
-      border-radius: 22px;
+      flex:1 1 auto;
+      background: rgba(2,11,27,0.96);
+      border-radius:20px;
       box-shadow: var(--shadow);
-      overflow:hidden;
+      border:1px solid rgba(15,23,42,0.9);
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-height:0;
     }
 
-    .top{
-      padding: 16px 18px;
+    .meta{
       display:flex;
+      align-items:center;
       justify-content:space-between;
-      align-items:center;
-      gap: 10px;
-      background: linear-gradient(90deg, rgba(106,166,255,.16), rgba(0,0,0,0));
-      border-bottom: 1px solid var(--stroke);
+      gap:10px;
+      flex-wrap:wrap;
     }
-
-    .brand{
+    .meta-left{
+      display:flex;
+      align-items:baseline;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .qprogress{
+      font-size:12px;
+      letter-spacing:0.16em;
+      text-transform:uppercase;
+      color:var(--gold);
+      white-space:nowrap;
+    }
+    .score{
+      font-size:12px;
+      letter-spacing:0.12em;
+      text-transform:uppercase;
+      color:var(--light);
+      white-space:nowrap;
+    }
+    .timer{
       display:flex;
       align-items:center;
-      gap: 10px;
-      min-width: 0;
+      gap:8px;
+      white-space:nowrap;
     }
-    .dot{
-      width: 12px; height: 12px;
-      border-radius: 999px;
-      background: var(--accent);
-      box-shadow: 0 0 0 6px rgba(106,166,255,.14);
-      flex: 0 0 auto;
+    .timer-label{
+      font-size:10px;
+      letter-spacing:0.16em;
+      text-transform:uppercase;
+      color:var(--muted);
     }
-    .title{
-      font-weight: 900;
-      letter-spacing: .3px;
-      white-space: nowrap;
-      overflow:hidden;
-      text-overflow: ellipsis;
+    .timer-value{
+      font-size:13px;
+      letter-spacing:0.10em;
+      text-transform:uppercase;
+      color:var(--light);
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--line2);
+      background:#020617;
+      min-width:64px;
+      text-align:center;
     }
-
-    .pill{
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--stroke);
-      background: rgba(0,0,0,.18);
-      color: var(--muted);
-      font-weight: 800;
-      letter-spacing: .2px;
-      white-space: nowrap;
-    }
-    .pill.good{ color: var(--text); border-color: rgba(35,197,94,.45); background: rgba(35,197,94,.10); }
-    .pill.bad{ color: var(--text); border-color: rgba(239,68,68,.45); background: rgba(239,68,68,.10); }
-    .pill.warn{ color: var(--text); border-color: rgba(245,158,11,.45); background: rgba(245,158,11,.10); }
-
-    .content{ padding: 18px; }
-
-    .join{
-      display:grid;
-      gap: 12px;
-      padding: 14px;
-      border: 1px solid var(--stroke);
-      border-radius: var(--radius);
-      background: rgba(0,0,0,.16);
+    .timer-value.low{
+      border-color: rgba(249,115,115,0.85);
+      color:#fecaca;
     }
 
-    .label{
-      color: var(--muted);
-      font-weight: 900;
-      letter-spacing: .35px;
-      font-size: 12px;
-      text-transform: uppercase;
+    .panel{
+      background: radial-gradient(circle at top, #020617, #020b1b);
+      border-radius:16px;
+      border:1px solid rgba(31,41,55,0.9);
+      padding:14px 14px 12px;
+      box-shadow:0 18px 40px rgba(0,0,0,0.55);
+    }
+    .panel-title{
+      margin:0 0 8px;
+      font-size:13px;
+      letter-spacing:0.18em;
+      text-transform:uppercase;
+      color:var(--gold);
+      font-weight:700;
+    }
+    .panel-sub{
+      margin:0;
+      font-size:12px;
+      color:var(--muted);
+      letter-spacing:0.02em;
+      line-height:1.45;
+      overflow-wrap:anywhere;
+      word-break:break-word;
     }
 
+    .form{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
     .row{
       display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
     }
-
-    input{
-      flex: 1 1 220px;
-      height: 48px;
-      padding: 0 14px;
-      border-radius: 14px;
-      border: 1px solid var(--stroke);
-      background: rgba(0,0,0,.24);
-      color: var(--text);
-      font-weight: 900;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      outline: none;
+    .input{
+      width:100%;
+      border-radius:999px;
+      border:1px solid #374151;
+      background:#020617;
+      padding:12px 14px;
+      color:#e5e7eb;
+      font-size:16px;
+      outline:none;
+      letter-spacing:0.06em;
     }
-    input::placeholder{
-      color: rgba(159,176,223,.6);
-      letter-spacing: 2px;
-      font-weight: 800;
-      text-transform:none;
+    .input::placeholder{
+      font-size:12px;
+      letter-spacing:0.04em;
+      color:#4b5563;
+    }
+    .input:focus{
+      border-color: var(--success);
+      box-shadow: 0 0 0 1px rgba(16,185,129,0.45);
     }
 
     .btn{
-      appearance:none;
-      border: 1px solid var(--stroke);
-      background: rgba(0,0,0,.18);
-      color: var(--text);
-      height: 48px;
-      padding: 0 16px;
-      border-radius: 14px;
-      font-weight: 900;
-      letter-spacing: .2px;
-      cursor: pointer;
-      transition: transform .08s ease, filter .08s ease;
-      flex: 0 0 auto;
+      width:100%;
+      border-radius:999px;
+      border:1px solid rgba(55,65,81,0.9);
+      padding:12px 14px;
+      font-size:12px;
+      font-weight:700;
+      cursor:pointer;
+      text-transform:uppercase;
+      letter-spacing:0.12em;
+      background:#111827;
+      color:#f9fafb;
     }
-    .btn:hover{ filter: brightness(1.08); }
-    .btn:active{ transform: translateY(1px); }
-    .btn.primary{ background: rgba(106,166,255,.18); border-color: rgba(106,166,255,.35); }
-    .btn:disabled{ opacity: .5; cursor:not-allowed; }
-
-    .meta{
-      margin-top: 12px;
-      display:flex;
-      justify-content:space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-      color: var(--muted);
-      font-weight: 800;
+    .btn:hover{ background:#1f2937; }
+    .btn.primary{
+      background: var(--success);
+      color:#022c22;
+      border-color: rgba(16,185,129,0.9);
     }
+    .btn.primary:hover{ filter: brightness(1.05); }
+    .btn:disabled{ opacity:0.55; cursor:default; }
 
-    .questionBox{
-      margin-top: 14px;
-      padding: 16px 14px;
-      border-radius: var(--radius);
-      border: 1px solid var(--stroke);
-      background: rgba(0,0,0,.16);
-      display:grid;
-      gap: 8px;
-    }
-
-    .qNum{
-      display:flex;
-      justify-content:space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items:center;
-    }
-
-    .qText{
-      font-size: 20px;
-      font-weight: 1000;
-      line-height: 1.15;
-      margin:0;
-    }
-
-    .sub{
-      color: var(--muted);
-      font-weight: 900;
-      letter-spacing: .25px;
-      font-size: 13px;
-      margin:0;
+    .error{
+      font-size:11px;
+      color:var(--danger);
+      min-height:14px;
+      letter-spacing:0.02em;
+      text-align:center;
     }
 
     .answers{
-      margin-top: 14px;
       display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      grid-template-columns: 1fr;
+      gap:10px;
+      margin-top:2px;
     }
 
-    .ansBtn{
-      min-height: 94px;
-      border-radius: 18px;
-      border: 1px solid var(--stroke);
-      background: rgba(0,0,0,.18);
-      color: var(--text);
-      font-weight: 1000;
-      letter-spacing: .4px;
-      font-size: 22px;
+    .answer-btn{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      border-radius:18px;
+      border:1px solid rgba(55,65,81,0.9);
+      background:#020617;
+      color:var(--light);
+      padding:14px 14px;
       cursor:pointer;
-      position: relative;
-      overflow:hidden;
-      transition: transform .08s ease, filter .08s ease, border-color .12s ease;
+      box-shadow:0 14px 35px rgba(0,0,0,0.42);
+      user-select:none;
+      text-align:left;
+      width:100%;
+    }
+    .answer-btn:active{ transform: translateY(1px); }
+    .badge{
+      flex:0 0 auto;
+      width:44px;
+      height:44px;
+      border-radius:999px;
       display:flex;
       align-items:center;
       justify-content:center;
-      user-select:none;
-      -webkit-tap-highlight-color: transparent;
+      border:1px solid rgba(212,175,55,0.55);
+      color:var(--gold);
+      letter-spacing:0.12em;
+      font-weight:800;
+      background: rgba(10,25,47,0.75);
     }
-    .ansBtn:active{ transform: translateY(1px); }
-    .ansBtn:disabled{ opacity:.6; cursor:not-allowed; }
-
-    .ansBtn span{
-      position: relative;
-      z-index: 2;
-    }
-
-    .ansBtn::before{
-      content:"";
-      position:absolute;
-      inset: 0;
-      opacity: .25;
-    }
-    .ansBtn.A::before{ background: radial-gradient(700px 250px at 20% 10%, var(--a), transparent 55%); }
-    .ansBtn.B::before{ background: radial-gradient(700px 250px at 20% 10%, var(--b), transparent 55%); }
-    .ansBtn.C::before{ background: radial-gradient(700px 250px at 20% 10%, var(--c), transparent 55%); }
-    .ansBtn.D::before{ background: radial-gradient(700px 250px at 20% 10%, var(--d), transparent 55%); }
-
-    .ansBtn.selected{
-      border-color: rgba(106,166,255,.6);
-      filter: brightness(1.06);
+    .answer-text{
+      flex:1 1 auto;
+      font-size:16px;
+      line-height:1.22;
+      letter-spacing:0.01em;
+      overflow-wrap:anywhere;
+      word-break:break-word;
     }
 
-    .footer{
-      margin-top: 14px;
-      padding-top: 14px;
-      border-top: 1px solid var(--stroke);
+    /* lock overlay */
+    .overlay{
+      position:fixed;
+      inset:0;
+      background: radial-gradient(circle at top, rgba(2,6,23,0.96), rgba(2,6,23,0.98));
       display:flex;
-      justify-content:space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-      color: var(--muted);
-      font-weight: 900;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:50;
     }
-
-    .toast{
-      position: fixed;
-      left: 50%;
-      bottom: 16px;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,.60);
-      border: 1px solid var(--stroke);
-      padding: 10px 14px;
-      border-radius: 14px;
-      color: var(--text);
-      font-weight: 900;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .16s ease, transform .16s ease;
-      max-width: min(520px, 92vw);
+    .overlay.hidden{ display:none; }
+    .overlay-card{
+      width:100%;
+      max-width:460px;
+      background:#020617;
+      border-radius:20px;
+      border:1px solid rgba(212,175,55,0.55);
+      box-shadow:0 22px 55px rgba(0,0,0,0.85);
+      padding:18px 16px 16px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
       text-align:center;
     }
-    .toast.show{
-      opacity: 1;
-      transform: translateX(-50%) translateY(-4px);
+    .overlay-title{
+      margin:0;
+      font-size:18px;
+      letter-spacing:0.16em;
+      text-transform:uppercase;
+      color:var(--gold);
+      font-weight:800;
+    }
+    .overlay-sub{
+      margin:0;
+      font-size:12px;
+      color:var(--muted);
+      letter-spacing:0.04em;
+      line-height:1.55;
+    }
+    .mini{
+      font-size:10px;
+      color:var(--muted);
+      letter-spacing:0.12em;
+      text-transform:uppercase;
+      margin-top:4px;
     }
 
-    @media (max-width: 420px){
-      .answers{ grid-template-columns: 1fr; }
+    .footer-note{
+      font-size:10px;
+      color:rgba(156,163,175,0.85);
+      letter-spacing:0.12em;
+      text-transform:uppercase;
+      text-align:center;
+      margin-top:auto;
+      padding-top:6px;
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <div class="top">
-        <div class="brand">
-          <div class="dot"></div>
-          <div class="title">TriviaApp · Controller</div>
+  <div class="page">
+    <header class="header">
+      <div class="brand">LMNR TRIVIA</div>
+      <div id="statusPill" class="pill">STATUS: LOCKED</div>
+    </header>
+
+    <main class="card">
+      <div class="meta">
+        <div class="meta-left">
+          <div id="qProgress" class="qprogress">QUESTION — / 20</div>
+          <div id="scoreLine" class="score">SCORE: 0</div>
         </div>
-        <div class="pill warn" id="connPill">Connecting…</div>
+        <div class="timer">
+          <div class="timer-label">Timer</div>
+          <div id="timerValue" class="timer-value">—</div>
+        </div>
       </div>
 
-      <div class="content">
-        <div class="join">
-          <div class="label">Room Code</div>
-          <div class="row">
-            <input id="roomInput" placeholder="Enter code shown on TV" maxlength="6" autocomplete="off" />
-            <button class="btn primary" id="joinBtn">Join</button>
-          </div>
-          <div class="meta">
-            <div>Room: <span id="roomLabel">—</span></div>
-            <div>Score: <span id="scoreLabel">0</span></div>
-          </div>
-        </div>
+      <section class="panel">
+        <div class="panel-title" id="panelTitle">Controller</div>
+        <p class="panel-sub" id="panelSub">
+          Enter the passkey + session code shown on the big screen.
+        </p>
+      </section>
 
-        <div class="questionBox" id="questionBox" style="display:none;">
-          <div class="qNum">
-            <p class="sub" id="qCount">Question —</p>
-            <p class="sub" id="phaseLabel">Waiting…</p>
-          </div>
-          <p class="qText" id="qText">—</p>
-        </div>
+      <section class="answers" id="answers">
+        <button class="answer-btn" id="btnA" disabled>
+          <div class="badge">A</div>
+          <div class="answer-text" id="txtA">Answer A</div>
+        </button>
+        <button class="answer-btn" id="btnB" disabled>
+          <div class="badge">B</div>
+          <div class="answer-text" id="txtB">Answer B</div>
+        </button>
+        <button class="answer-btn" id="btnC" disabled>
+          <div class="badge">C</div>
+          <div class="answer-text" id="txtC">Answer C</div>
+        </button>
+        <button class="answer-btn" id="btnD" disabled>
+          <div class="badge">D</div>
+          <div class="answer-text" id="txtD">Answer D</div>
+        </button>
+      </section>
 
-        <div class="answers" id="answers" style="display:none;">
-          <button class="ansBtn A" data-letter="A"><span>A</span></button>
-          <button class="ansBtn B" data-letter="B"><span>B</span></button>
-          <button class="ansBtn C" data-letter="C"><span>C</span></button>
-          <button class="ansBtn D" data-letter="D"><span>D</span></button>
-        </div>
+      <div class="footer-note">Refresh-safe • one controller per session</div>
+    </main>
+  </div>
 
-        <div class="footer">
-          <div>Status: <span id="statusLabel">Not joined</span></div>
-          <div>Pick: <span id="pickLabel">—</span></div>
-        </div>
+  <!-- LOCK / JOIN OVERLAY -->
+  <div id="joinOverlay" class="overlay">
+    <div class="overlay-card">
+      <h1 class="overlay-title">Restricted access</h1>
+      <p class="overlay-sub">Enter the event passkey and the session code displayed on the big screen.</p>
+
+      <div class="form">
+        <input id="passkeyInput" class="input" type="password" placeholder="Passkey (host)" autocomplete="off" />
+        <input id="roomCodeInput" class="input" type="text" placeholder="Session code (e.g., A1B2C3)" autocomplete="off" autocapitalize="characters" />
+        <button id="joinBtn" class="btn primary">ENTER</button>
+        <div id="errorEl" class="error"></div>
+        <div class="mini">One player at a time • if session is active, others are blocked</div>
       </div>
     </div>
   </div>
 
-  <div class="toast" id="toast"></div>
-
-  <!-- Socket.IO CDN -->
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
   <script>
-    /******************************************************************
-     * USER CONTROLLER (Phone) — paste-ready.
-     *
-     * Flow:
-     * 1) User enters room code shown on TV
-     * 2) User taps A/B/C/D
-     * 3) We emit "user_answer" { roomCode, choice }
-     *
-     * We also listen for "host_state" so the phone can display:
-     * - current question text (optional)
-     * - lock state (disable buttons after answering)
-     ******************************************************************/
+    /**
+     * Phone controller logic
+     * - User enters passkey + roomCode
+     * - validate passkey via /api/validate-passkey
+     * - join room via /api/join-room => controllerToken
+     * - store sessionId + controllerToken + roomCode in localStorage to resume
+     * - poll /api/get-state to show: score, progress, timer, answers
+     * - send answers via /api/answer (controllerToken)
+     */
 
-    const connPill = document.getElementById("connPill");
-    const toast = document.getElementById("toast");
+    // ====== Config ======
+    const POLL_MS = 800;
 
-    const roomInput = document.getElementById("roomInput");
+    // ====== Storage keys ======
+    const LS_ROOM = "trivia_roomCode_v1";
+    const LS_CTRL_TOKEN = "trivia_controllerToken_v1";
+    const LS_SESSION_ID = "trivia_sessionId_v1";
+
+    // ====== Elements ======
+    const statusPill = document.getElementById("statusPill");
+    const joinOverlay = document.getElementById("joinOverlay");
+    const passkeyInput = document.getElementById("passkeyInput");
+    const roomCodeInput = document.getElementById("roomCodeInput");
     const joinBtn = document.getElementById("joinBtn");
+    const errorEl = document.getElementById("errorEl");
 
-    const roomLabel = document.getElementById("roomLabel");
-    const scoreLabel = document.getElementById("scoreLabel");
-    const statusLabel = document.getElementById("statusLabel");
-    const pickLabel = document.getElementById("pickLabel");
+    const qProgress = document.getElementById("qProgress");
+    const scoreLine = document.getElementById("scoreLine");
+    const timerValue = document.getElementById("timerValue");
 
-    const questionBox = document.getElementById("questionBox");
-    const answersWrap = document.getElementById("answers");
-    const qCount = document.getElementById("qCount");
-    const qText = document.getElementById("qText");
-    const phaseLabel = document.getElementById("phaseLabel");
+    const panelTitle = document.getElementById("panelTitle");
+    const panelSub = document.getElementById("panelSub");
 
-    const ansButtons = [...document.querySelectorAll(".ansBtn")];
+    const btnA = document.getElementById("btnA");
+    const btnB = document.getElementById("btnB");
+    const btnC = document.getElementById("btnC");
+    const btnD = document.getElementById("btnD");
 
-    const state = {
-      connected: false,
-      roomCode: null,
-      joined: false,
+    const txtA = document.getElementById("txtA");
+    const txtB = document.getElementById("txtB");
+    const txtC = document.getElementById("txtC");
+    const txtD = document.getElementById("txtD");
 
-      // Per question
-      locked: false,
-      picked: null, // "A"|"B"|"C"|"D"
+    // ====== Local state ======
+    let roomCode = null;
+    let controllerToken = null;
+    let sessionId = null;
+    let pollId = null;
 
-      // From host snapshot
-      phase: "splash",
-      score: 0,
-      qIndex: 0,
-      total: 20, // used for display only
-    };
+    let lastPhase = null;
+    let lastQIndex = null;
 
-    function setToast(msg, ms=1200){
-      toast.textContent = msg;
-      toast.classList.add("show");
-      window.clearTimeout(setToast._t);
-      setToast._t = window.setTimeout(()=>toast.classList.remove("show"), ms);
+    function setStatus(text, type=null){
+      statusPill.textContent = text;
+      statusPill.classList.remove("danger","success");
+      if(type === "danger") statusPill.classList.add("danger");
+      if(type === "success") statusPill.classList.add("success");
     }
 
-    function normalizeCode(s){
-      return String(s || "")
-        .toUpperCase()
-        .replace(/[^A-Z0-9]/g, "")
-        .slice(0,6);
+    function disableAnswers(disabled=true){
+      [btnA,btnB,btnC,btnD].forEach(b=> b.disabled = disabled);
     }
 
-    function setUI(){
-      connPill.textContent = state.connected ? "Connected" : "Connecting…";
-      connPill.className = "pill " + (state.connected ? "good" : "warn");
+    function makeSessionId(){
+      // local unique id (resume identity)
+      return "sess_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
 
-      roomLabel.textContent = state.roomCode || "—";
-      scoreLabel.textContent = String(state.score);
+    async function api(url, opts={}){
+      const res = await fetch(url, {
+        ...opts,
+        headers: {
+          "Content-Type":"application/json",
+          ...(opts.headers || {})
+        }
+      });
+      const text = await res.text();
+      let data = {};
+      try { data = text ? JSON.parse(text) : {}; } catch(_) {}
+      if(!res.ok){
+        const msg = (data && data.error) ? data.error : `HTTP ${res.status}`;
+        const err = new Error(msg);
+        err.status = res.status;
+        throw err;
+      }
+      return data;
+    }
 
-      if(!state.joined){
-        statusLabel.textContent = "Not joined";
-        phaseLabel.textContent = "Waiting…";
-        pickLabel.textContent = "—";
-        questionBox.style.display = "none";
-        answersWrap.style.display = "none";
-        setButtonsDisabled(true);
-        joinBtn.disabled = !state.connected;
+    function openJoin(message=""){
+      joinOverlay.classList.remove("hidden");
+      joinOverlay.style.display = "flex";
+      errorEl.textContent = message || "";
+      disableAnswers(true);
+      setStatus("STATUS: LOCKED", "danger");
+    }
+
+    function closeJoin(){
+      joinOverlay.classList.add("hidden");
+      joinOverlay.style.display = "none";
+    }
+
+    async function doJoin(){
+      const passkey = (passkeyInput.value || "").trim();
+      const code = (roomCodeInput.value || "").trim().toUpperCase();
+
+      if(!passkey || !code){
+        errorEl.textContent = "Enter passkey and session code.";
         return;
       }
 
       joinBtn.disabled = true;
+      errorEl.textContent = "";
 
-      statusLabel.textContent = state.locked ? "Locked (answered)" : "Ready";
-      pickLabel.textContent = state.picked || "—";
+      try{
+        // 1) validate passkey
+        await api("/api/validate-passkey", {
+          method:"POST",
+          body: JSON.stringify({ passkey })
+        });
 
-      // Show question only once host is in question phase
-      if(state.phase === "question"){
-        questionBox.style.display = "grid";
-        answersWrap.style.display = "grid";
-        phaseLabel.textContent = "Answer now";
-        setButtonsDisabled(state.locked);
-      } else if(state.phase === "countdown"){
-        questionBox.style.display = "grid";
-        answersWrap.style.display = "none";
-        phaseLabel.textContent = "Countdown…";
-        setButtonsDisabled(true);
-      } else if(state.phase === "finished"){
-        questionBox.style.display = "grid";
-        answersWrap.style.display = "none";
-        phaseLabel.textContent = "Finished";
-        setButtonsDisabled(true);
-      } else {
-        // splash or unknown
-        questionBox.style.display = "grid";
-        answersWrap.style.display = "none";
-        phaseLabel.textContent = "Waiting for host…";
-        setButtonsDisabled(true);
+        // 2) ensure sessionId exists
+        sessionId = localStorage.getItem(LS_SESSION_ID) || makeSessionId();
+        localStorage.setItem(LS_SESSION_ID, sessionId);
+
+        // 3) join room (controller lock)
+        const data = await api("/api/join-room", {
+          method:"POST",
+          body: JSON.stringify({ roomCode: code, passkey, sessionId })
+        });
+
+        roomCode = code;
+        controllerToken = data.controllerToken;
+
+        localStorage.setItem(LS_ROOM, roomCode);
+        localStorage.setItem(LS_CTRL_TOKEN, controllerToken);
+
+        closeJoin();
+        setStatus("STATUS: CONNECTED", "success");
+
+        startPolling();
+      }catch(e){
+        errorEl.textContent = e.message || "Join failed.";
+        setStatus("STATUS: DENIED", "danger");
+      }finally{
+        joinBtn.disabled = false;
       }
     }
 
-    function setButtonsDisabled(disabled){
-      ansButtons.forEach(b => b.disabled = !!disabled);
+    function formatTimerMs(msLeft){
+      const s = Math.max(0, Math.ceil(msLeft / 1000));
+      return `${s}s`;
     }
 
-    function clearSelected(){
-      ansButtons.forEach(b => b.classList.remove("selected"));
-    }
+    function renderFromState(state){
+      const total = state.total || 20;
+      const qIndex = typeof state.qIndex === "number" ? state.qIndex : 0;
+      const score = typeof state.score === "number" ? state.score : 0;
+      const phase = state.phase || (state.isRunning ? "live" : "splash");
 
-    function selectButton(letter){
-      clearSelected();
-      const btn = ansButtons.find(b => b.dataset.letter === letter);
-      if(btn) btn.classList.add("selected");
-    }
+      scoreLine.textContent = `SCORE: ${score}`;
+      qProgress.textContent = `QUESTION ${Math.min(qIndex + 1, total)} / ${total}`;
 
-    // Socket wiring
-    // If your socket server is elsewhere:
-    // const socket = io("https://your-socket-domain.com", { transports:["websocket"] });
-    const socket = io({ transports: ["websocket", "polling"] });
-
-    socket.on("connect", () => {
-      state.connected = true;
-      setUI();
-    });
-
-    socket.on("disconnect", () => {
-      state.connected = false;
-      setUI();
-    });
-
-    // Server confirms join (optional)
-    socket.on("room_joined", (payload) => {
-      if(payload && payload.roomCode && payload.roomCode === state.roomCode){
-        setToast("Paired ✅");
-      }
-    });
-
-    // Receive host state snapshots (this is how phone knows question + lock)
-    socket.on("host_state", (payload) => {
-      if(!payload || !payload.roomCode) return;
-      if(!state.roomCode || payload.roomCode !== state.roomCode) return;
-
-      const snap = payload.state || {};
-      state.phase = snap.phase || state.phase;
-
-      // score + q index
-      if(typeof snap.score === "number") state.score = snap.score;
-      if(typeof snap.qIndex === "number") state.qIndex = snap.qIndex;
-
-      // When the host advances, unlock for the next question
-      // (Host will set locked=false, lastChoice=null)
-      if(typeof snap.locked === "boolean") state.locked = snap.locked;
-
-      if(!state.locked){
-        state.picked = null;
-        clearSelected();
+      // timer
+      if(state.questionEndsAt){
+        const msLeft = state.questionEndsAt - Date.now();
+        timerValue.textContent = formatTimerMs(msLeft);
+        timerValue.classList.toggle("low", Math.ceil(msLeft/1000) <= 7);
+      }else{
+        timerValue.textContent = "—";
+        timerValue.classList.remove("low");
       }
 
-      // Question display (optional)
-      if(snap.question && snap.question.text){
-        qText.textContent = snap.question.text;
-      } else if(state.phase === "finished"){
-        qText.textContent = "Game Over";
-      } else {
-        qText.textContent = "—";
+      // phase handling
+      if(phase !== lastPhase){
+        lastPhase = phase;
       }
 
-      // Question count text
-      const qNum = state.phase === "question" ? (state.qIndex + 1) : state.qIndex;
-      qCount.textContent = `Question ${state.phase === "question" ? (state.qIndex + 1) : "—"}`;
-
-      setUI();
-    });
-
-    // Join room
-    function joinRoom(){
-      const code = normalizeCode(roomInput.value);
-      if(code.length !== 6){
-        setToast("Enter a valid 6-character code");
-        return;
+      if(phase === "splash"){
+        panelTitle.textContent = "Waiting…";
+        panelSub.textContent = "Big screen is waiting for a new session.";
+        disableAnswers(true);
+        setStatus("STATUS: WAITING", "danger");
+      } else if(phase === "live"){
+        panelTitle.textContent = "Answer now";
+        panelSub.textContent = "Tap A / B / C / D on your phone.";
+        disableAnswers(false);
+        setStatus("STATUS: LIVE", "success");
+      } else if(phase === "reveal"){
+        panelTitle.textContent = "Locked";
+        panelSub.textContent = "Answer received. Next question loading…";
+        disableAnswers(true);
+        setStatus("STATUS: LOCKED", "danger");
+      } else if(phase === "finished"){
+        panelTitle.textContent = "Finished";
+        panelSub.textContent = `Final score: ${score} / ${total}`;
+        disableAnswers(true);
+        setStatus("STATUS: FINISHED", "success");
+      } else if(phase === "reset"){
+        panelTitle.textContent = "Resetting…";
+        panelSub.textContent = "Big screen is resetting for next player.";
+        disableAnswers(true);
+        setStatus("STATUS: RESET", "danger");
       }
 
-      state.roomCode = code;
-      state.joined = true;
-      state.locked = false;
-      state.picked = null;
-      clearSelected();
+      // (Optional) display answers if provided in state (we’ll support it)
+      // If backend/host-state doesn’t include answers, we keep placeholders.
+      if(state.answers && typeof state.answers === "object"){
+        txtA.textContent = state.answers.A || "A";
+        txtB.textContent = state.answers.B || "B";
+        txtC.textContent = state.answers.C || "C";
+        txtD.textContent = state.answers.D || "D";
+      }
 
-      roomInput.value = code;
-      setUI();
-
-      socket.emit("user_join_room", { roomCode: code });
-      setToast("Joining…");
+      // If question index changes, re-enable (only if phase live)
+      if(lastQIndex !== qIndex){
+        lastQIndex = qIndex;
+      }
     }
 
-    joinBtn.addEventListener("click", joinRoom);
-    roomInput.addEventListener("input", (e) => {
-      const v = normalizeCode(e.target.value);
-      if(v !== e.target.value) e.target.value = v;
-    });
-    roomInput.addEventListener("keydown", (e) => {
-      if(e.key === "Enter") joinRoom();
-    });
+    async function pollState(){
+      if(!roomCode || !controllerToken) return;
 
-    // Send answer
-    function sendAnswer(letter){
-      if(!state.joined) return;
-      if(state.locked) return;
-      if(!["A","B","C","D"].includes(letter)) return;
+      try{
+        const data = await api("/api/get-state", {
+          method:"POST",
+          body: JSON.stringify({ roomCode, controllerToken, sessionId })
+        });
 
-      state.locked = true;
-      state.picked = letter;
-      selectButton(letter);
-      setUI();
+        // If controller lock lost, show join overlay.
+        if(data && data.errorCode === "controller_lost"){
+          openJoin("This session is already controlled by another phone.");
+          stopPolling();
+          return;
+        }
 
-      socket.emit("user_answer", { roomCode: state.roomCode, choice: letter });
+        if(data && data.state){
+          renderFromState(data.state);
+        }else{
+          // no state => session ended or invalid
+          openJoin("Session not found. Enter a new session code.");
+          stopPolling();
+        }
+      }catch(e){
+        // If unauthorized, force re-join
+        if(e.status === 401 || e.status === 403){
+          openJoin("Session expired. Enter passkey + session code again.");
+          stopPolling();
+          return;
+        }
+        // otherwise keep polling
+        setStatus("STATUS: NETWORK…", "danger");
+      }
     }
 
-    ansButtons.forEach(btn => {
-      btn.addEventListener("click", () => sendAnswer(btn.dataset.letter));
-    });
+    function startPolling(){
+      stopPolling();
+      pollState(); // immediate
+      pollId = setInterval(pollState, POLL_MS);
+    }
 
-    // Initial UI
-    setUI();
+    function stopPolling(){
+      if(pollId){
+        clearInterval(pollId);
+        pollId = null;
+      }
+    }
+
+    async function sendAnswer(choice){
+      if(!roomCode || !controllerToken) return;
+      disableAnswers(true);
+
+      try{
+        await api("/api/answer", {
+          method:"POST",
+          body: JSON.stringify({ roomCode, controllerToken, sessionId, choice })
+        });
+        // keep UI locked until big screen advances (poll will show reveal/live)
+      }catch(e){
+        if(e.status === 401 || e.status === 403){
+          openJoin("Session expired. Enter passkey + session code again.");
+          stopPolling();
+          return;
+        }
+        // on errors, allow retry
+        disableAnswers(false);
+      }
+    }
+
+    // ====== Wire buttons ======
+    btnA.addEventListener("click", ()=> sendAnswer("A"));
+    btnB.addEventListener("click", ()=> sendAnswer("B"));
+    btnC.addEventListener("click", ()=> sendAnswer("C"));
+    btnD.addEventListener("click", ()=> sendAnswer("D"));
+
+    joinBtn.addEventListener("click", doJoin);
+    roomCodeInput.addEventListener("keydown", (e)=> { if(e.key === "Enter") doJoin(); });
+    passkeyInput.addEventListener("keydown", (e)=> { if(e.key === "Enter") doJoin(); });
+
+    // ====== Boot / Resume ======
+    (function boot(){
+      // Restore previous session if available
+      const savedRoom = localStorage.getItem(LS_ROOM);
+      const savedToken = localStorage.getItem(LS_CTRL_TOKEN);
+      const savedSess = localStorage.getItem(LS_SESSION_ID);
+
+      if(savedSess) sessionId = savedSess;
+
+      if(savedRoom && savedToken){
+        roomCode = savedRoom;
+        controllerToken = savedToken;
+        setStatus("STATUS: RESUMING…", "danger");
+        closeJoin();
+        startPolling();
+      }else{
+        openJoin("");
+      }
+    })();
   </script>
 </body>
 </html>
