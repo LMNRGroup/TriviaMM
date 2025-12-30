@@ -109,12 +109,14 @@
       90%{ transform: translateX(5px); }
     }
 
-    /* ===== LOCK SCREEN (more TV trivia vibes) ===== */
+    /* ===== LOCK SCREEN ===== */
     .lockCenter{
       display:flex;
       flex-direction:column;
       gap:12px;
       padding:8px 2px 2px;
+      position:relative;
+      z-index:2; /* ensures inputs are on top */
     }
 
     .marquee{
@@ -126,6 +128,7 @@
       box-shadow: 0 18px 45px rgba(0,0,0,0.55);
       overflow:hidden;
       text-align:center;
+      z-index:1;
     }
     .marquee::before{
       content:"";
@@ -149,6 +152,11 @@
         radial-gradient(circle at 88% 88%, rgba(212,175,55,0.95) 0 3px, transparent 4px);
       animation: bulbs 1.15s ease-in-out infinite;
       filter: drop-shadow(0 0 8px rgba(212,175,55,0.35));
+      z-index:0; /* decoration behind content */
+    }
+    .marquee > *{
+      position:relative;
+      z-index:1; /* content above decoration */
     }
     @keyframes bulbs{ 0%,100%{ opacity:0.35; } 50%{ opacity:0.85; } }
 
@@ -165,14 +173,27 @@
       box-shadow: 0 18px 45px rgba(0,0,0,0.55);
       position:relative;
       overflow:hidden;
+      padding:10px;
     }
-    .lockBadge span{
+
+    /* logo inside the badge */
+    .lockLogo{
+      max-width:100%;
+      max-height:100%;
+      width:72px;
+      height:auto;
+      display:block;
+      object-fit:contain;
+      filter: drop-shadow(0 10px 20px rgba(0,0,0,0.45));
+      user-select:none;
+      -webkit-user-drag:none;
+      pointer-events:none;
+    }
+    .goFallback{
       font-size:32px;
       font-weight:1000;
       color: var(--gold);
       letter-spacing:0.14em;
-      position:relative;
-      z-index:1;
       text-shadow: 0 12px 24px rgba(0,0,0,0.55);
     }
 
@@ -193,7 +214,6 @@
       margin:0;
     }
 
-    /* code-strip look (still one input) */
     .codeStrip{
       display:flex;
       gap:10px;
@@ -224,6 +244,8 @@
       text-align:center;
       text-transform:uppercase;
       box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+      position:relative;
+      z-index:5; /* key: stays clickable */
     }
     .input::placeholder{
       font-size:12px;
@@ -249,6 +271,8 @@
       text-transform:uppercase;
       letter-spacing:0.18em;
       box-shadow: 0 14px 30px rgba(0,0,0,0.35);
+      position:relative;
+      z-index:5; /* stays clickable */
     }
     .btn:active{ transform: scale(0.99); }
     .btn:disabled{ opacity:0.6; cursor:default; }
@@ -259,6 +283,8 @@
       font-size:11px;
       color: var(--danger);
       letter-spacing:0.04em;
+      position:relative;
+      z-index:5;
     }
 
     /* ===== GAME HUD ===== */
@@ -624,17 +650,27 @@
     <div class="card" id="lockCard">
       <div class="lockCenter">
         <div class="marquee">
-          <div class="lockBadge" aria-hidden="true"><span>GO</span></div>
-          <h2 class="lockTitle">ENTER THE CODE</h2>
-          <p class="lockSub">Type the passkey and get ready — look at the big screen.</p>
+          <div class="lockBadge" aria-hidden="true" id="lockBadge">
+            <img
+              class="lockLogo"
+              src="Assets/Logo_MM_Text.png"
+              alt="Municipio de Mayagüez"
+              draggable="false"
+              onerror="this.remove(); document.getElementById('lockBadge').innerHTML='<span class=&quot;goFallback&quot;>GO</span>';"
+            />
+          </div>
+
+          <h2 class="lockTitle">ENTRA EL CÓDIGO</h2>
+          <p class="lockSub">Escribe el passkey y prepárate — mira la pantalla grande.</p>
           <div class="codeStrip" aria-hidden="true">
             <div class="codeBox"></div><div class="codeBox"></div><div class="codeBox"></div>
             <div class="codeBox"></div><div class="codeBox"></div><div class="codeBox"></div>
           </div>
         </div>
 
-        <input id="passkey" class="input" type="password" placeholder="PASSKEY" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-        <button id="enterBtn" class="btn">START GAME</button>
+        <input id="passkey" class="input" type="password" placeholder="PASSKEY"
+               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" />
+        <button id="enterBtn" class="btn">COMENZAR</button>
         <div id="err" class="err"></div>
       </div>
     </div>
@@ -700,22 +736,15 @@
     <!-- FINAL OVERLAY -->
     <div class="finalOverlay" id="finalOverlay" aria-live="polite">
       <div class="finalCard">
-        <div class="finalLabel">FINAL SCORE</div>
+        <div class="finalLabel">PUNTUACIÓN FINAL</div>
         <div class="finalScoreBig" id="finalScoreBig">0 / 20</div>
-        <p class="finalSub" id="finalSub">Nice run 🔥</p>
-        <p class="finalHint">Waiting for the next player…</p>
+        <p class="finalSub" id="finalSub">Buen intento 🔥</p>
+        <p class="finalHint">Esperando al próximo jugador…</p>
       </div>
     </div>
   </div>
 
 <script>
-/**
- * Controller (user.html)
- * - Sends "__START__" ONCE after successful join (big screen listens for it)
- * - Shows real question + answers
- * - Locks after tap; unlocks on next qIndex (robust with lastQIndexSeen)
- */
-
 const ROOM_CODE = "ACTIVE";
 const QUESTION_SECONDS = 30;
 
@@ -768,16 +797,19 @@ function getOrMakeSessionId(){
 let sessionId = getOrMakeSessionId();
 let controllerToken = localStorage.getItem(CTRL_TOKEN_KEY) || "";
 
-let statePoll = null;
 let tickTimer = null;
 let lastState = null;
 let lockedAnswer = false;
-
-// robust unlock
 let lastQIndexSeen = -1;
-
-// prevent repeated shakes
 let shakenTimeoutForQ = -1;
+
+let pollerRunning = false;
+let pollerTimeout = null;
+
+function getStatePollMs(){
+  if (lastState && lastState.phase === "live") return 900;
+  return 1500;
+}
 
 function disableChoices(disabled){
   [btnA,btnB,btnC,btnD].forEach(b => b.disabled = !!disabled);
@@ -793,13 +825,12 @@ function shakeGame(){
 function showFinalOverlay(score, total){
   finalScoreBig.textContent = `${score} / ${total}`;
 
-  // small flavor line
   const pct = total > 0 ? (score/total) : 0;
-  let msg = "GG 🔥";
-  if (pct >= 0.9) msg = "LEGENDARY 🏆";
-  else if (pct >= 0.7) msg = "STRONG RUN 💪";
-  else if (pct >= 0.4) msg = "NOT BAD 😄";
-  else msg = "YOU’LL GET IT NEXT TIME 😎";
+  let msg = "Buen juego 🔥";
+  if (pct >= 0.9) msg = "¡LEGENDARIO! 🏆";
+  else if (pct >= 0.7) msg = "¡TREMENDO! 💪";
+  else if (pct >= 0.4) msg = "Nada mal 😄";
+  else msg = "¡Pa’ la próxima! 😎";
   finalSub.textContent = msg;
 
   finalOverlay.classList.add("show");
@@ -812,14 +843,13 @@ function hideFinalOverlay(){
 async function validateAndJoin(){
   const pk = passkeyEl.value.trim();
   if (!pk){
-    errEl.textContent = "Enter the passkey to start.";
+    errEl.textContent = "Escribe el passkey para comenzar.";
     return;
   }
   errEl.textContent = "";
   enterBtn.disabled = true;
 
   try{
-    // 1) validate passkey
     const v = await fetch("/api/validate-passkey",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
@@ -830,7 +860,6 @@ async function validateAndJoin(){
       throw new Error(vd.error || "invalid_passkey");
     }
 
-    // 2) join fixed room
     const j = await fetch("/api/join-room",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
@@ -849,7 +878,6 @@ async function validateAndJoin(){
     controllerToken = jd.controllerToken;
     localStorage.setItem(CTRL_TOKEN_KEY, controllerToken);
 
-    // AUTO-START ping
     try{
       await fetch("/api/answer",{
         method:"POST",
@@ -863,10 +891,9 @@ async function validateAndJoin(){
       });
     }catch(_){}
 
-    // show game UI
     lockCard.style.display = "none";
     gameCard.style.display = "flex";
-    setPill("STATUS: CONNECTED", "good");
+    setPill("ESTADO: CONECTADO", "good");
     hideFinalOverlay();
 
     passkeyEl.value = "";
@@ -878,11 +905,11 @@ async function validateAndJoin(){
   }catch(err){
     const code = String(err.message || err);
     if (code === "controller_taken"){
-      errEl.textContent = "Another phone is already controlling this trivia.";
+      errEl.textContent = "Otro teléfono ya está controlando este trivia.";
     } else {
-      errEl.textContent = "Access denied. Check the passkey.";
+      errEl.textContent = "Acceso denegado. Verifica el passkey.";
     }
-    setPill("STATUS: LOCKED", "bad");
+    setPill("ESTADO: BLOQUEADO", "bad");
   }finally{
     enterBtn.disabled = false;
   }
@@ -916,8 +943,8 @@ async function getState(){
       hideFinalOverlay();
       lockCard.style.display = "flex";
       gameCard.style.display = "none";
-      setPill("STATUS: LOCKED", "bad");
-      errEl.textContent = "Session ended. Next player can start.";
+      setPill("ESTADO: BLOQUEADO", "bad");
+      errEl.textContent = "Sesión terminada. El próximo jugador puede comenzar.";
     }
     return null;
   }
@@ -934,8 +961,8 @@ function renderFromState(st){
   scoreEl.textContent = String(score);
 
   if (st.phase === "splash"){
-    qLabel.textContent = "WAITING…";
-    qText.textContent = "Look at the big screen.";
+    qLabel.textContent = "ESPERANDO…";
+    qText.textContent = "Mira la pantalla grande.";
     disableChoices(true);
     lockedAnswer = false;
 
@@ -956,8 +983,8 @@ function renderFromState(st){
   }
 
   if (st.phase === "finished"){
-    qLabel.textContent = "DONE";
-    qText.textContent = "Game finished on the big screen.";
+    qLabel.textContent = "FINALIZADO";
+    qText.textContent = "El juego terminó en la pantalla grande.";
     disableChoices(true);
     lockedAnswer = true;
 
@@ -967,19 +994,15 @@ function renderFromState(st){
 
     lastQIndexSeen = -1;
 
-    // ✅ BIG FINAL SCORE ON PHONE TOO
     showFinalOverlay(score, total);
     return;
   }
 
-  // live
   hideFinalOverlay();
 
   const n = Math.min(total, qIndex + 1);
-  qLabel.textContent = `QUESTION ${n} / ${total}`;
-
-  // show question if backend provides it, else keep instruction
-  qText.textContent = st.questionText || st.q || st.question || "Look at the big screen.";
+  qLabel.textContent = `PREGUNTA ${n} / ${total}`;
+  qText.textContent = st.questionText || st.q || st.question || "Mira la pantalla grande.";
 
   if (st.answers){
     txtA.textContent = st.answers.A || "—";
@@ -1023,7 +1046,6 @@ async function stateLoop(){
   const st = await getState();
   if (!st) return;
 
-  // robust unlock when qIndex changes
   if (st.phase === "live" && typeof st.qIndex === "number"){
     if (lastQIndexSeen !== st.qIndex){
       lastQIndexSeen = st.qIndex;
@@ -1065,26 +1087,38 @@ function tick(){
   }
 }
 
+async function pollerTick(){
+  if (!pollerRunning) return;
+
+  await stateLoop();
+  pollerTimeout = setTimeout(pollerTick, getStatePollMs());
+}
+
 function startLoops(){
   stopLoops();
-  statePoll = setInterval(stateLoop, 350);
+
+  pollerRunning = true;
+  pollerTimeout = setTimeout(pollerTick, getStatePollMs());
+
   tickTimer = setInterval(tick, 100);
   stateLoop();
 }
 
 function stopLoops(){
-  if (statePoll) clearInterval(statePoll);
+  pollerRunning = false;
+
+  if (pollerTimeout) clearTimeout(pollerTimeout);
   if (tickTimer) clearInterval(tickTimer);
-  statePoll = null;
+
+  pollerTimeout = null;
   tickTimer = null;
 }
 
-// auto-resume
 (function bootstrap(){
   if (controllerToken){
     lockCard.style.display = "none";
     gameCard.style.display = "flex";
-    setPill("STATUS: RESUMING…");
+    setPill("ESTADO: REANUDANDO…");
     startLoops();
   }
 })();
