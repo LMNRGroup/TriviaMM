@@ -714,6 +714,10 @@
  * - Sends "__START__" ONCE after successful join (big screen listens for it)
  * - Shows real question + answers
  * - Locks after tap; unlocks on next qIndex (robust with lastQIndexSeen)
+ *
+ * CHANGE in this version:
+ * - Adaptive polling for /api/get-state using setTimeout chain (live: 900ms, splash/finished: 1500ms)
+ * - Stop-safe: prevents multiple overlapping poll loops (fixes Upstash/Redis hammering)
  */
 
 const ROOM_CODE = "ACTIVE";
@@ -768,7 +772,6 @@ function getOrMakeSessionId(){
 let sessionId = getOrMakeSessionId();
 let controllerToken = localStorage.getItem(CTRL_TOKEN_KEY) || "";
 
-let statePoll = null;
 let tickTimer = null;
 let lastState = null;
 let lockedAnswer = false;
@@ -778,6 +781,15 @@ let lastQIndexSeen = -1;
 
 // prevent repeated shakes
 let shakenTimeoutForQ = -1;
+
+// ===== Adaptive poller (setTimeout chain) =====
+let pollerRunning = false;
+let pollerTimeout = null;
+
+function getStatePollMs(){
+  if (lastState && lastState.phase === "live") return 900;
+  return 1500; // splash/finished/unknown
+}
 
 function disableChoices(disabled){
   [btnA,btnB,btnC,btnD].forEach(b => b.disabled = !!disabled);
@@ -793,7 +805,6 @@ function shakeGame(){
 function showFinalOverlay(score, total){
   finalScoreBig.textContent = `${score} / ${total}`;
 
-  // small flavor line
   const pct = total > 0 ? (score/total) : 0;
   let msg = "GG 🔥";
   if (pct >= 0.9) msg = "LEGENDARY 🏆";
@@ -967,7 +978,6 @@ function renderFromState(st){
 
     lastQIndexSeen = -1;
 
-    // ✅ BIG FINAL SCORE ON PHONE TOO
     showFinalOverlay(score, total);
     return;
   }
@@ -978,7 +988,6 @@ function renderFromState(st){
   const n = Math.min(total, qIndex + 1);
   qLabel.textContent = `QUESTION ${n} / ${total}`;
 
-  // show question if backend provides it, else keep instruction
   qText.textContent = st.questionText || st.q || st.question || "Look at the big screen.";
 
   if (st.answers){
@@ -1065,17 +1074,33 @@ function tick(){
   }
 }
 
+// ===== Adaptive loops (FIX) =====
+async function pollerTick(){
+  if (!pollerRunning) return;
+
+  await stateLoop();
+  pollerTimeout = setTimeout(pollerTick, getStatePollMs());
+}
+
 function startLoops(){
   stopLoops();
-  statePoll = setInterval(stateLoop, 350);
+
+  pollerRunning = true;
+  pollerTimeout = setTimeout(pollerTick, getStatePollMs());
+
+  // keep timer smooth (no Redis)
   tickTimer = setInterval(tick, 100);
-  stateLoop();
+
+  stateLoop(); // immediate paint
 }
 
 function stopLoops(){
-  if (statePoll) clearInterval(statePoll);
+  pollerRunning = false;
+
+  if (pollerTimeout) clearTimeout(pollerTimeout);
   if (tickTimer) clearInterval(tickTimer);
-  statePoll = null;
+
+  pollerTimeout = null;
   tickTimer = null;
 }
 
