@@ -1,65 +1,50 @@
-import { kv } from "@vercel/kv";
+const { kv } = require("@vercel/kv");
 
-function json(res, status, obj) {
+const ROOM_CODE_FIXED = "ACTIVE";
+const TTL_SECONDS = 60 * 60 * 2; // 2h
+
+function json(res, status, payload) {
   res.status(status).setHeader("Content-Type", "application/json");
-  res.end(JSON.stringify(obj));
+  res.end(JSON.stringify(payload));
 }
 
-const ROOM_TTL_SECONDS = 60 * 60 * 2;
-
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   if (req.method !== "POST") return json(res, 405, { ok: false, error: "method_not_allowed" });
 
   try {
-    const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
-    const roomCode = String(body.roomCode || "").trim().toUpperCase();
-    const controllerToken = String(body.controllerToken || "").trim();
-    const sessionId = String(body.sessionId || "").trim();
-    const choice = String(body.choice || "").trim().toUpperCase();
+    const { controllerToken, sessionId, choice } = req.body || {};
+    const ct = (controllerToken || "").trim();
+    const sid = (sessionId || "").trim();
+    const ch = String(choice || "").trim().toUpperCase();
 
-    if (!roomCode) return json(res, 400, { ok: false, error: "missing_roomCode" });
-    if (!controllerToken) return json(res, 400, { ok: false, error: "missing_controllerToken" });
-    if (!sessionId) return json(res, 400, { ok: false, error: "missing_sessionId" });
-    if (!["A", "B", "C", "D"].includes(choice)) return json(res, 400, { ok: false, error: "invalid_choice" });
+    if (!ct) return json(res, 400, { ok: false, error: "missing_controllerToken" });
+    if (!sid) return json(res, 400, { ok: false, error: "missing_sessionId" });
+    if (!["A", "B", "C", "D"].includes(ch)) return json(res, 400, { ok: false, error: "invalid_choice" });
 
-    const metaKey = `trivia:room:${roomCode}:meta`;
-    const stateKey = `trivia:room:${roomCode}:state`;
-    const answerKey = `trivia:room:${roomCode}:lastAnswer`;
+    const roomCode = ROOM_CODE_FIXED;
 
-    const meta = await kv.get(metaKey);
-    if (!meta || !meta.active) return json(res, 404, { ok: false, error: "room_not_found" });
-
-    // controller enforcement
-    if (!meta.controllerToken || meta.controllerToken !== controllerToken || meta.controllerSessionId !== sessionId) {
-      return json(res, 403, { ok: false, error: "controller_not_authorized", errorCode: "controller_lost" });
+    const controllerKey = `trivia:controller:${roomCode}`;
+    const ctrl = await kv.get(controllerKey);
+    if (!ctrl || !ctrl.controllerToken) {
+      return json(res, 403, { ok: false, error: "controller_lost", errorCode: "controller_lost" });
+    }
+    if (ctrl.controllerToken !== ct || ctrl.sessionId !== sid) {
+      return json(res, 403, { ok: false, error: "invalid_controllerToken", errorCode: "controller_lost" });
     }
 
-    // Optional: only accept during live phase
-    const curState = await kv.get(stateKey);
-    if (!curState) return json(res, 404, { ok: false, error: "room_state_missing" });
-    if (curState.phase !== "live") {
-      return json(res, 409, { ok: false, error: "not_accepting_answers" });
-    }
+    // Increment seq and store last answer
+    const seqKey = `trivia:seq:${roomCode}`;
+    const answerKey = `trivia:answer:${roomCode}`;
 
-    const last = (await kv.get(answerKey)) || { seq: 0, answer: null };
-    const nextSeq = (typeof last.seq === "number" ? last.seq : 0) + 1;
+    const seq = await kv.incr(seqKey);
+    await kv.expire(seqKey, TTL_SECONDS);
 
-    const payload = {
-      seq: nextSeq,
-      answer: {
-        choice,
-        sessionId,
-        clientAt: Date.now()
-      }
-    };
+    const payload = { seq, choice: ch, sessionId: sid, ts: Date.now() };
+    await kv.set(answerKey, payload, { ex: TTL_SECONDS });
 
-    meta.controllerLastSeenAt = Date.now();
-
-    await kv.set(metaKey, meta, { ex: ROOM_TTL_SECONDS });
-    await kv.set(answerKey, payload, { ex: ROOM_TTL_SECONDS });
-
-    return json(res, 200, { ok: true, seq: nextSeq });
-  } catch (e) {
-    return json(res, 400, { ok: false, error: "bad_json" });
+    return json(res, 200, { ok: true, seq });
+  } catch (err) {
+    console.error("answer error:", err);
+    return json(res, 500, { ok: false, error: "server_error" });
   }
-}
+};
