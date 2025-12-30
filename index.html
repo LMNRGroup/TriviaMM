@@ -36,7 +36,6 @@
       overflow:hidden; /* no horizontal scroll ever */
     }
 
-    /* 1920x1080 stage */
     .stage{
       width:1920px;
       height:1080px;
@@ -51,7 +50,6 @@
       display:flex;
     }
 
-    /* Subtle moving shine */
     .stage::before{
       content:"";
       position:absolute;
@@ -65,7 +63,6 @@
       50%{ transform: translate(4%, -2%) rotate(2deg); }
     }
 
-    /* ===== SPLASH ===== */
     .splash{
       position:absolute;
       inset:0;
@@ -136,7 +133,6 @@
       text-overflow:ellipsis;
     }
 
-    /* animated dots */
     .dots{ display:inline-flex; gap:6px; align-items:center; }
     .dot{
       width:7px; height:7px; border-radius:999px;
@@ -153,16 +149,14 @@
       100%{ opacity:0.18; transform: translateY(0); }
     }
 
-    /* ===== LIVE ===== */
     .liveWrap{
       position:absolute;
       inset:0;
-      display:none; /* toggled by JS */
+      display:none;
       padding:46px 58px 54px;
       z-index:2;
     }
 
-    /* HUD (timer centered) */
     .hud{
       display:grid;
       grid-template-columns: 1fr auto 1fr;
@@ -193,7 +187,6 @@
       white-space:nowrap;
     }
 
-    /* BIG values */
     .hudValue{
       font-size:44px;
       font-weight:1000;
@@ -207,7 +200,6 @@
       font-weight:1000;
     }
 
-    /* Timer centerpiece */
     .timerCenter{
       display:flex;
       align-items:center;
@@ -258,7 +250,6 @@
     .pill.bad{ border-color: var(--danger); color:#fecaca; }
     .pill.good{ border-color: rgba(16,185,129,0.9); color:#a7f3d0; }
 
-    /* timer bar */
     .timerbar{
       margin-top:12px;
       height:12px;
@@ -275,13 +266,11 @@
       transform: scaleX(1);
       transition: transform 0.1s linear;
     }
-    /* add danger glow on low time */
     .timerbar.danger{
       box-shadow: 0 0 0 2px rgba(249,115,115,0.14), 0 10px 26px rgba(0,0,0,0.35);
       border-color: rgba(249,115,115,0.6);
     }
 
-    /* QA area */
     .qa{
       margin-top:28px;
       height: calc(100% - 120px);
@@ -292,7 +281,6 @@
       position:relative;
     }
 
-    /* question block with bulbs */
     .qBlock{
       margin:0 auto;
       width:min(1540px, 100%);
@@ -342,7 +330,6 @@
       text-shadow: 0 18px 55px rgba(0,0,0,0.55);
     }
 
-    /* choices */
     .choices{
       margin:0 auto;
       width:min(1580px, 100%);
@@ -398,7 +385,6 @@
       padding-top:6px;
     }
 
-    /* highlight states */
     .choice.correct{
       border-color: rgba(16,185,129,0.95);
       box-shadow: 0 0 0 3px rgba(16,185,129,0.18), 0 18px 55px rgba(0,0,0,0.55);
@@ -416,7 +402,6 @@
       color:#fecaca;
     }
 
-    /* ===== OVERLAY FEEDBACK ===== */
     .overlay{
       position:absolute;
       inset:0;
@@ -473,11 +458,10 @@
       100%{ transform: scale(1); opacity:1; }
     }
 
-    /* ===== FINAL ===== */
     .final{
       position:absolute;
       inset:0;
-      display:none; /* toggled by JS */
+      display:none;
       align-items:center;
       justify-content:center;
       flex-direction:column;
@@ -516,34 +500,34 @@
       font-size:20px;
       color: var(--muted);
     }
-/* ===== FOOTER (Legal) ===== */
-.legalFooter{
-  position:absolute;
-  left:0;
-  right:0;
-  bottom:14px;
-  display:flex;
-  justify-content:center;
-  pointer-events:none;
-  z-index:6; /* above everything including overlay/final */
-}
-.legalFooter .inner{
-  max-width:92%;
-  text-align:center;
-  font-size:12px;
-  color: rgba(156,163,175,0.95);
-  letter-spacing:0.04em;
-  line-height:1.35;
-  padding:6px 14px;
-  border-radius:999px;
-  border:1px solid rgba(212,175,55,0.22);
-  background: rgba(2,11,27,0.40);
-  backdrop-filter: blur(2px);
-}
-@media (max-width: 1100px){
-  .legalFooter .inner{ font-size:10px; }
-}
-    /* responsive safety */
+
+    .legalFooter{
+      position:absolute;
+      left:0;
+      right:0;
+      bottom:14px;
+      display:flex;
+      justify-content:center;
+      pointer-events:none;
+      z-index:6;
+    }
+    .legalFooter .inner{
+      max-width:92%;
+      text-align:center;
+      font-size:12px;
+      color: rgba(156,163,175,0.95);
+      letter-spacing:0.04em;
+      line-height:1.35;
+      padding:6px 14px;
+      border-radius:999px;
+      border:1px solid rgba(212,175,55,0.22);
+      background: rgba(2,11,27,0.40);
+      backdrop-filter: blur(2px);
+    }
+    @media (max-width: 1100px){
+      .legalFooter .inner{ font-size:10px; }
+    }
+
     @media (max-width: 1100px){
       .logoText{ font-size:56px; }
       .qText{ font-size:42px; }
@@ -574,10 +558,9 @@
 </head>
 <body>
   <div class="stage" id="stage">
-    <!-- SPLASH -->
     <div class="splash" id="splash">
       <h1 class="logoText">TRIVIA</h1>
-      <p class="tagline">¿Puedes contestar las 20 preguntas correctamente?</p>
+      <p class="tagline" id="tagline">¿Puedes contestar las 5 preguntas correctamente?</p>
       <p class="subline">Un invitado a la vez. El host inicia desde el control en el teléfono.</p>
 
       <div class="bottomStatus">
@@ -592,7 +575,6 @@
       </div>
     </div>
 
-    <!-- LIVE -->
     <section class="liveWrap" id="live">
       <div class="hud">
         <div class="hudGroup left">
@@ -642,116 +624,69 @@
       </div>
     </section>
 
-    <!-- FEEDBACK OVERLAY -->
     <div class="overlay" id="overlay">
       <div class="pickBadge" id="pickBadge">SELECCIÓN: —</div>
       <h2 class="bigResult" id="bigResult">—</h2>
     </div>
 
-    <!-- FINAL -->
     <div class="final" id="final">
       <div class="finalLabel">Puntuación Final</div>
-      <h2 class="bigScore" id="finalScore">0 / 20</h2>
+      <h2 class="bigScore" id="finalScore">0 / 5</h2>
       <p class="finalThanks">¡Gracias por participar!</p>
       <p class="finalSub">Reiniciando para el próximo invitado…</p>
     </div>
-    <!-- LEGAL FOOTER -->
-<div class="legalFooter" aria-hidden="true">
-  <div class="inner">
-    LuminarApps © 2025 · All rights reserved. · Municipio de Mayagüez
-  </div>
-</div>
+
+    <div class="legalFooter" aria-hidden="true">
+      <div class="inner">
+        LuminarApps © 2025 · All rights reserved. · Municipio de Mayagüez
+      </div>
+    </div>
   </div>
 
 <script>
-/**
- * Key goals:
- * - Never get stuck: auto-advance on timeout, always.
- * - Game show feel: big score/progress, big overlays on correct/incorrect.
- * - Spanish UI (visible text), English code/comments.
- *
- * NOTE: Auto-start on PK requires the phone to send a "__START__" ping right after join.
- * This file already supports it (it will start the round immediately when it sees "__START__").
- */
-
 const ROOM_CODE = "ACTIVE";
 const QUESTION_SECONDS = 30;
-const FINAL_HOLD_MS = 30000;     // 30 seconds on final screen
+const FINAL_HOLD_MS = 30000;
 
-// Overlay timing (longer)
-const FEEDBACK_PICK_MS = 450;    // show selection
-const FEEDBACK_RESULT_MS = 2000; // show CORRECTA/INCORRECTA longer (~2s)
-const ADVANCE_AFTER_FEEDBACK_MS = 250; // small beat then next question
+// Overlay timing
+const FEEDBACK_PICK_MS = 450;
+const FEEDBACK_RESULT_MS = 2000;     // <-- CHANGE THIS to control "Correcta/Incorrecta" duration
+const ADVANCE_AFTER_FEEDBACK_MS = 250;
 
-// ====== Your Mayagüez question set (with your answer key) ======
+// New game length
+const GAME_QUESTION_COUNT = 5;
+
+// ====== Question bank (keep all 20) ======
 const QUESTIONS = [
-  { q:"¿En qué año fue fundado el municipio de Mayagüez?",
-    a:{A:"1703",B:"1760",C:"1805",D:"1823"}, correct:"B" },
-
-  { q:"¿Quién fue el fundador de Mayagüez?",
-    a:{A:"Juan Ponce de León",B:"Faustino Martínez",C:"Cristóbal Colón",D:"Diego Salcedo"}, correct:"B" },
-
-  { q:"¿Qué evento natural destruyó gran parte de la ciudad en 1918?",
-    a:{A:"Un huracán",B:"Un maremoto",C:"Un terremoto",D:"Una erupción volcánica"}, correct:"C" },
-
-  { q:"¿Cómo se llamaba originalmente Mayagüez?",
-    a:{A:"Nuestra Señora de la Candelaria",B:"El Pueblo del Oeste",C:"Mayagüez del Mar",D:"Las Claras"}, correct:"A" },
-
-  { q:"¿Por qué Mayagüez fue conocida como la “Sultana del Oeste”?",
-    a:{A:"Por su arquitectura árabe",B:"Por su importancia económica y cultural",C:"Por su clima cálido",D:"Por su puerto militar"}, correct:"B" },
-
-  { q:"¿Qué catedral se encuentra en la Plaza Colón de Mayagüez?",
-    a:{A:"Catedral San Juan Bautista",B:"Catedral Nuestra Señora de la Candelaria",C:"Catedral del Carmen",D:"Catedral San Germán"}, correct:"B" },
-
-  { q:"¿Cuál es una de las fiestas patronales más importantes de Mayagüez?",
-    a:{A:"San Sebastián",B:"Virgen del Carmen",C:"Nuestra Señora de la Candelaria",D:"Reyes Magos"}, correct:"C" },
-
-  { q:"¿Qué teatro histórico es uno de los íconos culturales de la ciudad?",
-    a:{A:"Teatro Tapia",B:"Teatro Yagüez",C:"Teatro Alejandro Tapia",D:"Teatro de Bellas Artes"}, correct:"B" },
-
-  { q:"¿Qué universidad pública tiene su sede principal en Mayagüez?",
-    a:{A:"Universidad Interamericana",B:"Universidad del Sagrado Corazón",C:"Universidad de Puerto Rico, Recinto de Mayagüez",D:"Universidad Metropolitana"}, correct:"C" },
-
-  { q:"¿Qué apodo reciben los residentes de Mayagüez?",
-    a:{A:"Capitalinos",B:"Mayagüezanos",C:"Isleños",D:"Mayos"}, correct:"B" },
-
-  { q:"¿Cómo se llama el equipo de baloncesto de Mayagüez en el BSN?",
-    a:{A:"Piratas",B:"Mets",C:"Leones",D:"Indios"}, correct:"D" },
-
-  { q:"¿En qué año los Indios de Mayagüez ganaron su campeonato más reciente?",
-    a:{A:"2008",B:"2010",C:"2012",D:"2015"}, correct:"C" },
-
-  { q:"¿Qué evento deportivo internacional se celebró en Mayagüez en 2010?",
-    a:{A:"Juegos Olímpicos",B:"Juegos Panamericanos",C:"Juegos Centroamericanos y del Caribe",D:"Juegos del Caribe"}, correct:"C" },
-
-  { q:"¿Cómo se llama el estadio de béisbol de la ciudad?",
-    a:{A:"Estadio Roberto Clemente",B:"Estadio Isidoro García",C:"Estadio Francisco Pagán",D:"Estadio Juan Ramón Loubriel"}, correct:"B" },
-
-  { q:"¿Qué deporte universitario destaca históricamente en el RUM?",
-    a:{A:"Natación",B:"Atletismo",C:"Baloncesto",D:"Fútbol"}, correct:"C" },
-
-  { q:"¿Qué educador y filósofo puertorriqueño nació en Mayagüez en 1839?",
-    a:{A:"Eugenio María de Hostos",B:"Luis Muñoz Rivera",C:"José Celso Barbosa",D:"Ramón Emeterio Betances"}, correct:"A" },
-
-  { q:"¿Qué cantante y compositor salsero nació en Mayagüez?",
-    a:{A:"Héctor Lavoe",B:"Frankie Ruiz",C:"Willie Colón",D:"Gilberto Santa Rosa"}, correct:"B" },
-
-  { q:"¿Qué poeta del siglo XIX estuvo vinculado a Mayagüez?",
-    a:{A:"Julia de Burgos",B:"Lola Rodríguez de Tió",C:"José Gautier Benítez",D:"Luis Palés Matos"}, correct:"C" },
-
-  { q:"¿Por qué es reconocido el Recinto Universitario de Mayagüez?",
-    a:{A:"Artes y música",B:"Ciencias e ingeniería",C:"Derecho",D:"Medicina"}, correct:"B" },
-
-  { q:"¿Qué rol ha tenido Mayagüez en el desarrollo deportivo de Puerto Rico?",
-    a:{A:"Sede de eventos internacionales",B:"Capital del béisbol profesional",C:"Única ciudad con estadio olímpico",D:"Centro exclusivo del boxeo"}, correct:"A" }
+  { q:"¿En qué año fue fundado el municipio de Mayagüez?", a:{A:"1703",B:"1760",C:"1805",D:"1823"}, correct:"B" },
+  { q:"¿Quién fue el fundador de Mayagüez?", a:{A:"Juan Ponce de León",B:"Faustino Martínez",C:"Cristóbal Colón",D:"Diego Salcedo"}, correct:"B" },
+  { q:"¿Qué evento natural destruyó gran parte de la ciudad en 1918?", a:{A:"Un huracán",B:"Un maremoto",C:"Un terremoto",D:"Una erupción volcánica"}, correct:"C" },
+  { q:"¿Cómo se llamaba originalmente Mayagüez?", a:{A:"Nuestra Señora de la Candelaria",B:"El Pueblo del Oeste",C:"Mayagüez del Mar",D:"Las Claras"}, correct:"A" },
+  { q:"¿Por qué Mayagüez fue conocida como la “Sultana del Oeste”?", a:{A:"Por su arquitectura árabe",B:"Por su importancia económica y cultural",C:"Por su clima cálido",D:"Por su puerto militar"}, correct:"B" },
+  { q:"¿Qué catedral se encuentra en la Plaza Colón de Mayagüez?", a:{A:"Catedral San Juan Bautista",B:"Catedral Nuestra Señora de la Candelaria",C:"Catedral del Carmen",D:"Catedral San Germán"}, correct:"B" },
+  { q:"¿Cuál es una de las fiestas patronales más importantes de Mayagüez?", a:{A:"San Sebastián",B:"Virgen del Carmen",C:"Nuestra Señora de la Candelaria",D:"Reyes Magos"}, correct:"C" },
+  { q:"¿Qué teatro histórico es uno de los íconos culturales de la ciudad?", a:{A:"Teatro Tapia",B:"Teatro Yagüez",C:"Teatro Alejandro Tapia",D:"Teatro de Bellas Artes"}, correct:"B" },
+  { q:"¿Qué universidad pública tiene su sede principal en Mayagüez?", a:{A:"Universidad Interamericana",B:"Universidad del Sagrado Corazón",C:"Universidad de Puerto Rico, Recinto de Mayagüez",D:"Universidad Metropolitana"}, correct:"C" },
+  { q:"¿Qué apodo reciben los residentes de Mayagüez?", a:{A:"Capitalinos",B:"Mayagüezanos",C:"Isleños",D:"Mayos"}, correct:"B" },
+  { q:"¿Cómo se llama el equipo de baloncesto de Mayagüez en el BSN?", a:{A:"Piratas",B:"Mets",C:"Leones",D:"Indios"}, correct:"D" },
+  { q:"¿En qué año los Indios de Mayagüez ganaron su campeonato más reciente?", a:{A:"2008",B:"2010",C:"2012",D:"2015"}, correct:"C" },
+  { q:"¿Qué evento deportivo internacional se celebró en Mayagüez en 2010?", a:{A:"Juegos Olímpicos",B:"Juegos Panamericanos",C:"Juegos Centroamericanos y del Caribe",D:"Juegos del Caribe"}, correct:"C" },
+  { q:"¿Cómo se llama el estadio de béisbol de la ciudad?", a:{A:"Estadio Roberto Clemente",B:"Estadio Isidoro García",C:"Estadio Francisco Pagán",D:"Estadio Juan Ramón Loubriel"}, correct:"B" },
+  { q:"¿Qué deporte universitario destaca históricamente en el RUM?", a:{A:"Natación",B:"Atletismo",C:"Baloncesto",D:"Fútbol"}, correct:"C" },
+  { q:"¿Qué educador y filósofo puertorriqueño nació en Mayagüez en 1839?", a:{A:"Eugenio María de Hostos",B:"Luis Muñoz Rivera",C:"José Celso Barbosa",D:"Ramón Emeterio Betances"}, correct:"A" },
+  { q:"¿Qué cantante y compositor salsero nació en Mayagüez?", a:{A:"Héctor Lavoe",B:"Frankie Ruiz",C:"Willie Colón",D:"Gilberto Santa Rosa"}, correct:"B" },
+  { q:"¿Qué poeta del siglo XIX estuvo vinculado a Mayagüez?", a:{A:"Julia de Burgos",B:"Lola Rodríguez de Tió",C:"José Gautier Benítez",D:"Luis Palés Matos"}, correct:"C" },
+  { q:"¿Por qué es reconocido el Recinto Universitario de Mayagüez?", a:{A:"Artes y música",B:"Ciencias e ingeniería",C:"Derecho",D:"Medicina"}, correct:"B" },
+  { q:"¿Qué rol ha tenido Mayagüez en el desarrollo deportivo de Puerto Rico?", a:{A:"Sede de eventos internacionales",B:"Capital del béisbol profesional",C:"Única ciudad con estadio olímpico",D:"Centro exclusivo del boxeo"}, correct:"A" }
 ];
 
-const TOTAL = QUESTIONS.length;
+const BANK_TOTAL = QUESTIONS.length;
 
 // ====== DOM ======
 const splash = document.getElementById("splash");
 const live = document.getElementById("live");
 const final = document.getElementById("final");
+const tagline = document.getElementById("tagline");
 
 const mQ = document.getElementById("mQ");
 const mS = document.getElementById("mS");
@@ -775,23 +710,45 @@ const bigResult = document.getElementById("bigResult");
 
 const finalScore = document.getElementById("finalScore");
 
+// ====== Helpers (random unique 5) ======
+function makeRandomIndexSet(bankLen, pickN){
+  const n = Math.max(1, Math.min(pickN, bankLen));
+  const arr = Array.from({length: bankLen}, (_, i) => i);
+  // Fisher-Yates shuffle
+  for (let i = arr.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr.slice(0, n);
+}
+
+// ====== Runtime round selection ======
+let roundOrder = makeRandomIndexSet(BANK_TOTAL, GAME_QUESTION_COUNT); // array of indices into QUESTIONS
+
+function getCurrentQuestion(){
+  const bankIndex = roundOrder[state.qIndex];
+  return QUESTIONS[bankIndex];
+}
+
 // ====== State ======
 let hostToken = localStorage.getItem("trivia_hostToken") || "";
 let state = {
-  phase: "splash",       // splash | live | finished
-  total: TOTAL,
+  phase: "splash",       // splash | live | feedback | finished
+  total: GAME_QUESTION_COUNT,
   qIndex: 0,
   score: 0,
-  questionEndsAt: null
+  questionEndsAt: null,
+  // for controller UI:
+  questionText: "",
+  answers: null
 };
 
 let tickTimer = null;
 let lastSeq = 0;
 
-// Locks to prevent duplicate scoring/advancing
-let resolving = false;          // true while showing overlay/processing
-let advancedForQ = -1;          // ensures only one advance per question index
-let timeoutHandledForQ = -1;    // ensures timeout triggers once per question
+let resolving = false;
+let advancedForQ = -1;
+let timeoutHandledForQ = -1;
 
 function setView(which){
   splash.style.display = which === "splash" ? "flex" : "none";
@@ -803,26 +760,33 @@ function clearHighlights(){
   [cA,cB,cC,cD].forEach(el=> el.classList.remove("correct","wrong"));
 }
 
+function syncStateForController(){
+  const q = getCurrentQuestion();
+  state.questionText = q.q;
+  state.answers = { ...q.a };
+  state.total = GAME_QUESTION_COUNT;
+}
+
 function renderQuestion(){
-  const q = QUESTIONS[state.qIndex];
+  syncStateForController();
+  const q = getCurrentQuestion();
+
   qText.textContent = q.q;
   tA.textContent = q.a.A;
   tB.textContent = q.a.B;
   tC.textContent = q.a.C;
   tD.textContent = q.a.D;
 
-  // Big, crowd-friendly HUD
-  mQ.textContent = `${state.qIndex+1}/${TOTAL}`;
+  mQ.textContent = `${state.qIndex+1}/${GAME_QUESTION_COUNT}`;
   mS.textContent = `${state.score}`;
+
   clearHighlights();
 
-  // Reset overlay
   overlay.classList.remove("show");
   bigResult.classList.remove("correct","wrong");
   bigResult.textContent = "—";
   pickBadge.textContent = "SELECCIÓN: —";
 
-  // Reset locks for this question
   resolving = false;
   timeoutHandledForQ = -1;
   advancedForQ = -1;
@@ -849,7 +813,6 @@ async function ensureRoom(){
     const data = await res.json().catch(()=> ({}));
     if (!res.ok || !data.ok) throw new Error(data.error || "create_room_failed");
 
-    // IMPORTANT: we MUST have a hostToken for polling
     if (data.hostToken) {
       hostToken = data.hostToken;
       localStorage.setItem("trivia_hostToken", hostToken);
@@ -857,7 +820,6 @@ async function ensureRoom(){
 
     if (!hostToken){
       console.error("NO hostToken available. Big screen cannot poll answers.");
-      // Show splash, but don't pretend we're running.
       setView("splash");
       return;
     }
@@ -870,9 +832,13 @@ async function ensureRoom(){
 }
 
 function startNewRound(){
+  // new random order every round
+  roundOrder = makeRandomIndexSet(BANK_TOTAL, GAME_QUESTION_COUNT);
+
   state.phase = "live";
   state.qIndex = 0;
   state.score = 0;
+  state.total = GAME_QUESTION_COUNT;
   state.questionEndsAt = Date.now() + QUESTION_SECONDS*1000;
 
   setView("live");
@@ -884,22 +850,20 @@ function showFinal(){
   state.phase = "finished";
   state.questionEndsAt = null;
   hostPush();
-  // ✅ Always kill overlay before showing FINAL (overlay is higher z-index than final)
-overlay.classList.remove("show");
-bigResult.classList.remove("correct","wrong");
-bigResult.textContent = "—";
-pickBadge.textContent = "SELECCIÓN: —";
-clearHighlights();
+
+  overlay.classList.remove("show");
+  bigResult.classList.remove("correct","wrong");
+  bigResult.textContent = "—";
+  pickBadge.textContent = "SELECCIÓN: —";
+  clearHighlights();
 
   setView("final");
-  finalScore.textContent = `${state.score} / ${TOTAL}`;
+  finalScore.textContent = `${state.score} / ${GAME_QUESTION_COUNT}`;
 
-  // Hold for 30 seconds, then reset
   setTimeout(()=> resetToSplash(), FINAL_HOLD_MS);
 }
 
 async function resetToSplash(){
-  // If we don't have hostToken, we can't reset backend. Try to recover once.
   if (!hostToken){
     await ensureRoom();
     if (!hostToken){
@@ -908,17 +872,14 @@ async function resetToSplash(){
     }
   }
 
-  // Release controller/session in backend
-  state = { phase:"reset", total:TOTAL, qIndex:0, score:0, questionEndsAt:null, reset:true };
+  state = { phase:"reset", total:GAME_QUESTION_COUNT, qIndex:0, score:0, questionEndsAt:null, reset:true };
   await hostPush();
 
-  // Back to splash
-  state = { phase:"splash", total:TOTAL, qIndex:0, score:0, questionEndsAt:null };
+  state = { phase:"splash", total:GAME_QUESTION_COUNT, qIndex:0, score:0, questionEndsAt:null };
   await hostPush();
 
   setView("splash");
 
-  // Reset visual HUD
   mQ.textContent = "—";
   mS.textContent = "0";
   mT.textContent = "—";
@@ -928,11 +889,13 @@ async function resetToSplash(){
   clearHighlights();
   overlay.classList.remove("show");
 
-  // Reset locks
   resolving = false;
   lastSeq = 0;
   advancedForQ = -1;
   timeoutHandledForQ = -1;
+
+  // refresh splash tagline (in case you ever change GAME_QUESTION_COUNT)
+  tagline.textContent = `¿Puedes contestar las ${GAME_QUESTION_COUNT} preguntas correctamente?`;
 }
 
 function pickToChoiceEl(choice){
@@ -945,18 +908,28 @@ function setTimerDanger(on){
 }
 
 function scheduleAdvance(){
-  // Always advance exactly once per question
   if (advancedForQ === state.qIndex) return;
   advancedForQ = state.qIndex;
-
   setTimeout(()=> advance(), ADVANCE_AFTER_FEEDBACK_MS);
+}
+
+function freezeTimerNow(){
+  // KEY FIX: stop timer everywhere immediately (host + phone)
+  state.questionEndsAt = Date.now(); // or null
+}
+
+function enterFeedbackPhase(){
+  // KEY FIX: phase is no longer live => phone tick stops instantly
+  state.phase = "feedback";
+  freezeTimerNow();
+  hostPush();
 }
 
 function showOverlayPick(choice){
   overlay.classList.add("show");
   pickBadge.textContent = `SELECCIÓN: ${choice}`;
   bigResult.classList.remove("correct","wrong");
-  bigResult.textContent = ""; // show pick first
+  bigResult.textContent = "";
 }
 
 function showOverlayResult(isCorrect, text){
@@ -967,27 +940,27 @@ function showOverlayResult(isCorrect, text){
 
 function applyAnswer(choice){
   if (state.phase !== "live") return;
-  if (resolving) return; // don't double score while overlay is active
+  if (resolving) return;
   resolving = true;
 
-  const q = QUESTIONS[state.qIndex];
+  // stop timer immediately
+  enterFeedbackPhase();
+
+  const q = getCurrentQuestion();
   const isCorrect = (choice === q.correct);
 
-  // Highlight chosen choice
   const chosenEl = pickToChoiceEl(choice);
   if (chosenEl) chosenEl.classList.add(isCorrect ? "correct" : "wrong");
 
-  // Score
   if (isCorrect) state.score += 1;
   mS.textContent = `${state.score}`;
 
-  // Overlay sequence: pick -> result -> advance
   showOverlayPick(choice);
 
   setTimeout(()=>{
     showOverlayResult(isCorrect, isCorrect ? "CORRECTA" : "INCORRECTA");
-    hostPush();
-    setTimeout(()=> scheduleAdvance(), FEEDBACK_RESULT_MS); // keep result visible longer
+    hostPush(); // push score/phase
+    setTimeout(()=> scheduleAdvance(), FEEDBACK_RESULT_MS);
   }, FEEDBACK_PICK_MS);
 }
 
@@ -998,6 +971,10 @@ function applyTimeout(){
 
   if (!resolving){
     resolving = true;
+
+    // stop timer immediately
+    enterFeedbackPhase();
+
     showOverlayPick("—");
     setTimeout(()=>{
       showOverlayResult(false, "TIEMPO");
@@ -1010,14 +987,16 @@ function applyTimeout(){
 }
 
 function advance(){
-  if (state.phase !== "live") return;
+  // allow advancing out of live OR feedback (because we moved to feedback)
+  if (state.phase !== "live" && state.phase !== "feedback") return;
 
-  if (state.qIndex >= TOTAL - 1){
+  if (state.qIndex >= GAME_QUESTION_COUNT - 1){
     showFinal();
     return;
   }
 
   state.qIndex += 1;
+  state.phase = "live";
   state.questionEndsAt = Date.now() + QUESTION_SECONDS*1000;
 
   renderQuestion();
@@ -1025,7 +1004,6 @@ function advance(){
 }
 
 async function pollAnswersLoop(){
-  // Self-heal: if token vanished, try to re-ensure room
   if (!hostToken){
     await ensureRoom();
     if (!hostToken) return;
@@ -1048,31 +1026,24 @@ async function pollAnswersLoop(){
     const choice = String(data.answer.choice || "").trim().toUpperCase();
     const validChoice = ["A","B","C","D"].includes(choice);
 
-    // Support "start ping"
     if (choice === "__START__"){
-
-      // If we are showing FINAL, clear it and immediately allow a new round
       if (state.phase === "finished"){
         resetToSplash();
         setTimeout(()=> startNewRound(), 250);
         return;
       }
-
-      // If we're not already live, start
-      if (state.phase !== "live"){
+      if (state.phase !== "live" && state.phase !== "feedback"){
         startNewRound();
       }
       return;
     }
 
-    // If splash, start on first real answer and apply it to Q1
     if (state.phase === "splash"){
       startNewRound();
       if (validChoice) applyAnswer(choice);
       return;
     }
 
-    // Normal live answer
     if (state.phase === "live" && validChoice){
       applyAnswer(choice);
     }
@@ -1092,7 +1063,6 @@ function tick(){
   const msLeft = state.questionEndsAt - Date.now();
   const sLeft = Math.max(0, Math.ceil(msLeft/1000));
 
-  // Timer color rules (big and centered)
   mT.textContent = `${sLeft}`;
   mT.classList.remove("warn","danger");
   if (sLeft <= 5) mT.classList.add("danger");
@@ -1101,29 +1071,24 @@ function tick(){
   const pct = Math.max(0, Math.min(1, msLeft/(QUESTION_SECONDS*1000)));
   timerFill.style.transform = `scaleX(${pct})`;
 
-  // Bar danger glow under 10 seconds
   setTimerDanger(sLeft <= 10);
 
-  // Hard guarantee: if time is up, force timeout handling once
   if (msLeft <= 0){
     applyTimeout();
   }
-} 
+}
 
 let pollerRunning = false;
 let pollerTimeout = null;
 
 function getPollMs(){
-  // live: 500ms, splash/final: 1200ms
-  if (state.phase === "live") return 500;
+  if (state.phase === "live" || state.phase === "feedback") return 500;
   return 1200;
 }
 
 async function pollerTick(){
   if (!pollerRunning) return;
-
   await pollAnswersLoop();
-
   pollerTimeout = setTimeout(pollerTick, getPollMs());
 }
 
@@ -1134,26 +1099,18 @@ function startPoller(){
   pollerTimeout = setTimeout(pollerTick, getPollMs());
 }
 
-function stopPoller(){
-  pollerRunning = false;
-  if (pollerTimeout) clearTimeout(pollerTimeout);
-  pollerTimeout = null;
-}
 async function bootstrap(){
   setView("splash");
+  tagline.textContent = `¿Puedes contestar las ${GAME_QUESTION_COUNT} preguntas correctamente?`;
 
-  // Always (re)create/claim room so we get a fresh hostToken if needed
   await ensureRoom();
 
-  // HARD RESET ON LOAD:
-  // If you refresh the big screen, we want to kick any stuck controller + return to splash clean.
+  // keep your “hard reset on load” behavior
   await resetToSplash();
 
-  // Start loops ONCE
-  startPoller(); // adaptive poller
+  startPoller();
   if (!tickTimer) tickTimer = setInterval(tick, 100);
 
-  // Spacebar fallback
   window.addEventListener("keydown",(e)=>{
     if (e.code === "Space"){
       e.preventDefault();
