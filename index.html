@@ -849,11 +849,24 @@ async function ensureRoom(){
     });
     const data = await res.json().catch(()=> ({}));
     if (!res.ok || !data.ok) throw new Error(data.error || "create_room_failed");
-    hostToken = data.hostToken || hostToken;
-    localStorage.setItem("trivia_hostToken", hostToken);
+
+    // IMPORTANT: we MUST have a hostToken for polling
+    if (data.hostToken) {
+      hostToken = data.hostToken;
+      localStorage.setItem("trivia_hostToken", hostToken);
+    }
+
+    if (!hostToken){
+      console.error("NO hostToken available. Big screen cannot poll answers.");
+      // Show splash, but don't pretend we're running.
+      setView("splash");
+      return;
+    }
+
     await hostPush();
   }catch(err){
     console.error("ensureRoom error:", err);
+    setView("splash");
   }
 }
 
@@ -887,6 +900,15 @@ clearHighlights();
 }
 
 async function resetToSplash(){
+  // If we don't have hostToken, we can't reset backend. Try to recover once.
+  if (!hostToken){
+    await ensureRoom();
+    if (!hostToken){
+      setView("splash");
+      return;
+    }
+  }
+
   // Release controller/session in backend
   state = { phase:"reset", total:TOTAL, qIndex:0, score:0, questionEndsAt:null, reset:true };
   await hostPush();
@@ -1004,53 +1026,58 @@ function advance(){
 }
 
 async function pollAnswersLoop(){
-  if (!hostToken) return;
+  // Self-heal: if token vanished, try to re-ensure room
+  if (!hostToken){
+    await ensureRoom();
+    if (!hostToken) return;
+  }
 
   try{
     const url = `/api/poll-answer?roomCode=${encodeURIComponent(ROOM_CODE)}&hostToken=${encodeURIComponent(hostToken)}&afterSeq=${encodeURIComponent(lastSeq)}`;
     const res = await fetch(url);
     const data = await res.json().catch(()=> ({}));
 
-    if (res.ok && data.ok){
-      if (typeof data.seq === "number") {
-        if (data.seq <= lastSeq) return;
-        lastSeq = data.seq;
-      }
+    if (!res.ok || !data.ok) return;
 
-      if (data.answer){
-        const choice = String(data.answer.choice || "").toUpperCase();
-
-// Support "start ping" (sent by phone immediately after PK success)
-// ✅ start from splash OR reset OR finished (force restart)
-if (choice === "__START__"){
-
-  // If we are showing FINAL, clear it and immediately allow a new round
-  if (state.phase === "finished"){
-    resetToSplash();
-    setTimeout(()=> startNewRound(), 250);
-    return;
-  }
-
-  // If we're not already live, start
-  if (state.phase !== "live"){
-    startNewRound();
-  }
-  return;
-}
-
-        // If splash, start on first real answer and apply it to Q1
-        if (state.phase === "splash"){
-          startNewRound();
-          if (choice) applyAnswer(choice);
-          return;
-        }
-
-        // Normal live answer
-        if (state.phase === "live" && choice){
-          applyAnswer(choice);
-        }
-      }
+    if (typeof data.seq === "number") {
+      if (data.seq <= lastSeq) return;
+      lastSeq = data.seq;
     }
+
+    if (!data.answer) return;
+
+    const choice = String(data.answer.choice || "").trim().toUpperCase();
+    const validChoice = ["A","B","C","D"].includes(choice);
+
+    // Support "start ping"
+    if (choice === "__START__"){
+
+      // If we are showing FINAL, clear it and immediately allow a new round
+      if (state.phase === "finished"){
+        resetToSplash();
+        setTimeout(()=> startNewRound(), 250);
+        return;
+      }
+
+      // If we're not already live, start
+      if (state.phase !== "live"){
+        startNewRound();
+      }
+      return;
+    }
+
+    // If splash, start on first real answer and apply it to Q1
+    if (state.phase === "splash"){
+      startNewRound();
+      if (validChoice) applyAnswer(choice);
+      return;
+    }
+
+    // Normal live answer
+    if (state.phase === "live" && validChoice){
+      applyAnswer(choice);
+    }
+
   }catch(_){}
 }
 
@@ -1083,14 +1110,19 @@ function tick(){
     applyTimeout();
   }
 }
-
 async function bootstrap(){
   setView("splash");
-  await ensureRoom();
-  await hostPush();
 
-  pollTimer = setInterval(pollAnswersLoop, 250);
-  tickTimer = setInterval(tick, 100);
+  // Always (re)create/claim room so we get a fresh hostToken if needed
+  await ensureRoom();
+
+  // HARD RESET ON LOAD:
+  // If you refresh the big screen, we want to kick any stuck controller + return to splash clean.
+  await resetToSplash();
+
+  // Start loops ONCE
+  if (!pollTimer) pollTimer = setInterval(pollAnswersLoop, 250);
+  if (!tickTimer) tickTimer = setInterval(tick, 100);
 
   // Spacebar fallback
   window.addEventListener("keydown",(e)=>{
