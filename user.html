@@ -669,7 +669,21 @@ async function validateAndJoin(){
 
     controllerToken = jd.controllerToken;
     localStorage.setItem(CTRL_TOKEN_KEY, controllerToken);
-
+    
+// ✅ AUTO-START: trigger big screen to start immediately
+try{
+  await fetch("/api/answer",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      roomCode: ROOM_CODE,
+      controllerToken: jd.controllerToken, // use the fresh token
+      sessionId,
+      choice: "__START__"
+    })
+  });
+}catch(_){}
+    
     // show game UI
     lockCard.style.display = "none";
     gameCard.style.display = "flex";
