@@ -35,19 +35,15 @@ module.exports = async (req, res) => {
     const safeState = state && typeof state === "object" ? state : {};
     const stateKey = `trivia:state:${roomCode}`;
 
-    // If host signals reset OR returns to splash, release controller for next guest
-    const shouldRelease =
-      safeState.reset === true || safeState.phase === "reset" || safeState.phase === "splash";
+    // ✅ IMPORTANT:
+    // Only release controller on an explicit reset signal.
+    const shouldRelease = safeState.reset === true || safeState.phase === "reset";
 
     if (shouldRelease) {
       await releaseController(roomCode);
     }
 
-    await kv.set(
-      stateKey,
-      { ...safeState, updatedAt: Date.now() },
-      { ex: TTL_SECONDS }
-    );
+    await kv.set(stateKey, { ...safeState, updatedAt: Date.now() }, { ex: TTL_SECONDS });
 
     return json(res, 200, { ok: true });
   } catch (err) {
