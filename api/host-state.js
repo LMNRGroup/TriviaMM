@@ -1,60 +1,57 @@
-import { kv } from "@vercel/kv";
+const { kv } = require("@vercel/kv");
 
-function json(res, status, obj) {
+const ROOM_CODE_FIXED = "ACTIVE";
+const TTL_SECONDS = 60 * 60 * 2; // 2h
+
+function json(res, status, payload) {
   res.status(status).setHeader("Content-Type", "application/json");
-  res.end(JSON.stringify(obj));
+  res.end(JSON.stringify(payload));
 }
 
-const ROOM_TTL_SECONDS = 60 * 60 * 2;
+async function releaseController(roomCode) {
+  const controllerKey = `trivia:controller:${roomCode}`;
+  const answerKey = `trivia:answer:${roomCode}`;
+  const seqKey = `trivia:seq:${roomCode}`;
+  await kv.del(controllerKey);
+  await kv.del(answerKey);
+  await kv.del(seqKey);
+}
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   if (req.method !== "POST") return json(res, 405, { ok: false, error: "method_not_allowed" });
 
   try {
-    const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
-    const roomCode = String(body.roomCode || "").trim().toUpperCase();
-    const hostToken = String(body.hostToken || "").trim();
-    const state = body.state;
+    const { hostToken, state } = req.body || {};
+    const ht = (hostToken || "").trim();
+    if (!ht) return json(res, 400, { ok: false, error: "missing_hostToken" });
 
-    if (!roomCode) return json(res, 400, { ok: false, error: "missing_roomCode" });
-    if (!hostToken) return json(res, 400, { ok: false, error: "missing_hostToken" });
-    if (!state || typeof state !== "object") return json(res, 400, { ok: false, error: "missing_state" });
+    const roomCode = ROOM_CODE_FIXED;
 
-    const metaKey = `trivia:room:${roomCode}:meta`;
-    const stateKey = `trivia:room:${roomCode}:state`;
-    const answerKey = `trivia:room:${roomCode}:lastAnswer`;
+    const hostKey = `trivia:host:${roomCode}`;
+    const host = await kv.get(hostKey);
+    if (!host || !host.hostToken) return json(res, 409, { ok: false, error: "room_not_ready" });
+    if (host.hostToken !== ht) return json(res, 403, { ok: false, error: "invalid_hostToken" });
 
-    const meta = await kv.get(metaKey);
-    if (!meta || !meta.active) return json(res, 404, { ok: false, error: "room_not_found" });
-    if (meta.hostToken !== hostToken) return json(res, 403, { ok: false, error: "invalid_hostToken" });
+    const safeState = state && typeof state === "object" ? state : {};
+    const stateKey = `trivia:state:${roomCode}`;
 
-    const now = Date.now();
+    // If host signals reset OR returns to splash, release controller for next guest
+    const shouldRelease =
+      safeState.reset === true || safeState.phase === "reset" || safeState.phase === "splash";
 
-    // Optional host-driven reset (clears controller lock + last answer)
-    if (state.phase === "reset" || state.reset === true) {
-      meta.controllerToken = null;
-      meta.controllerSessionId = null;
-      meta.controllerLastSeenAt = null;
-      await kv.set(answerKey, { seq: 0, answer: null }, { ex: ROOM_TTL_SECONDS });
+    if (shouldRelease) {
+      await releaseController(roomCode);
     }
 
-    meta.hostLastSeenAt = now;
-
-    const safeState = {
-      phase: String(state.phase || "splash"),
-      total: typeof state.total === "number" ? state.total : 20,
-      qIndex: typeof state.qIndex === "number" ? state.qIndex : 0,
-      score: typeof state.score === "number" ? state.score : 0,
-      questionEndsAt: typeof state.questionEndsAt === "number" ? state.questionEndsAt : null,
-      answers: state.answers && typeof state.answers === "object" ? state.answers : null,
-      lastUpdateAt: now
-    };
-
-    await kv.set(metaKey, meta, { ex: ROOM_TTL_SECONDS });
-    await kv.set(stateKey, safeState, { ex: ROOM_TTL_SECONDS });
+    await kv.set(
+      stateKey,
+      { ...safeState, updatedAt: Date.now() },
+      { ex: TTL_SECONDS }
+    );
 
     return json(res, 200, { ok: true });
-  } catch (e) {
-    return json(res, 400, { ok: false, error: "bad_json" });
+  } catch (err) {
+    console.error("host-state error:", err);
+    return json(res, 500, { ok: false, error: "server_error" });
   }
-}
+};
