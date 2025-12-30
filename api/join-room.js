@@ -4,6 +4,9 @@ const { kv } = require("@vercel/kv");
 const ROOM_CODE_FIXED = "ACTIVE";
 const TTL_SECONDS = 60 * 60 * 2; // 2h
 
+// If controller hasn't checked in for this long, allow a new phone to take over
+const STALE_MS = 45 * 1000;
+
 function json(res, status, payload) {
   res.status(status).setHeader("Content-Type", "application/json");
   res.end(JSON.stringify(payload));
@@ -32,29 +35,46 @@ module.exports = async (req, res) => {
     // Room must have a host created (big screen should call create-room first)
     const hostKey = `trivia:host:${roomCode}`;
     const host = await kv.get(hostKey);
-    if (!host || !host.hostToken) {
-      return json(res, 409, { ok: false, error: "room_not_ready" });
-    }
+    if (!host || !host.hostToken) return json(res, 409, { ok: false, error: "room_not_ready" });
 
     const controllerKey = `trivia:controller:${roomCode}`;
     const existingCtrl = await kv.get(controllerKey);
 
-    // Enforce only one active controller (but allow SAME sessionId to resume)
     if (existingCtrl && existingCtrl.controllerToken) {
+      // Resume same sessionId
       if (existingCtrl.sessionId === sid) {
-        // Resume same controller
         await kv.set(
           controllerKey,
-          { controllerToken: existingCtrl.controllerToken, sessionId: sid, joinedAt: existingCtrl.joinedAt || Date.now() },
+          { ...existingCtrl, sessionId: sid, lastSeen: Date.now() },
           { ex: TTL_SECONDS }
         );
         return json(res, 200, { ok: true, roomCode, controllerToken: existingCtrl.controllerToken, resumed: true });
       }
-      return json(res, 409, { ok: false, error: "controller_taken" });
+
+      // Stale takeover
+      const lastSeen = Number(existingCtrl.lastSeen || existingCtrl.joinedAt || 0);
+      const stale = !lastSeen || (Date.now() - lastSeen) > STALE_MS;
+
+      if (!stale) {
+        return json(res, 409, { ok: false, error: "controller_taken" });
+      }
+
+      // Takeover allowed
+      const controllerToken = randToken("ctrl");
+      await kv.set(
+        controllerKey,
+        { controllerToken, sessionId: sid, joinedAt: Date.now(), lastSeen: Date.now() },
+        { ex: TTL_SECONDS }
+      );
+      return json(res, 200, { ok: true, roomCode, controllerToken, resumed: false, takeover: true });
     }
 
     const controllerToken = randToken("ctrl");
-    await kv.set(controllerKey, { controllerToken, sessionId: sid, joinedAt: Date.now() }, { ex: TTL_SECONDS });
+    await kv.set(
+      controllerKey,
+      { controllerToken, sessionId: sid, joinedAt: Date.now(), lastSeen: Date.now() },
+      { ex: TTL_SECONDS }
+    );
 
     return json(res, 200, { ok: true, roomCode, controllerToken, resumed: false });
   } catch (err) {
