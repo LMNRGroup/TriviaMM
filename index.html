@@ -785,7 +785,6 @@ let state = {
   questionEndsAt: null
 };
 
-let pollTimer = null;
 let tickTimer = null;
 let lastSeq = 0;
 
@@ -1109,6 +1108,36 @@ function tick(){
   if (msLeft <= 0){
     applyTimeout();
   }
+} 
+
+let pollerRunning = false;
+let pollerTimeout = null;
+
+function getPollMs(){
+  // live: 500ms, splash/final: 1200ms
+  if (state.phase === "live") return 500;
+  return 1200;
+}
+
+async function pollerTick(){
+  if (!pollerRunning) return;
+
+  await pollAnswersLoop();
+
+  pollerTimeout = setTimeout(pollerTick, getPollMs());
+}
+
+function startPoller(){
+  if (pollerRunning) return;
+  pollerRunning = true;
+  if (pollerTimeout) clearTimeout(pollerTimeout);
+  pollerTimeout = setTimeout(pollerTick, getPollMs());
+}
+
+function stopPoller(){
+  pollerRunning = false;
+  if (pollerTimeout) clearTimeout(pollerTimeout);
+  pollerTimeout = null;
 }
 async function bootstrap(){
   setView("splash");
@@ -1121,7 +1150,7 @@ async function bootstrap(){
   await resetToSplash();
 
   // Start loops ONCE
-  if (!pollTimer) pollTimer = setInterval(pollAnswersLoop, 250);
+  startPoller(); // adaptive poller
   if (!tickTimer) tickTimer = setInterval(tick, 100);
 
   // Spacebar fallback
