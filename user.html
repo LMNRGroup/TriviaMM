@@ -166,13 +166,14 @@
       position:relative;
       overflow:hidden;
     }
-
-    /* ✅ NEW: logo inside the badge */
-    .lockLogo{
-      width:72px;
-      height:auto;
-      display:block;
-      filter: drop-shadow(0 10px 20px rgba(0,0,0,0.45));
+    .lockBadge span{
+      font-size:32px;
+      font-weight:1000;
+      color: var(--gold);
+      letter-spacing:0.14em;
+      position:relative;
+      z-index:1;
+      text-shadow: 0 12px 24px rgba(0,0,0,0.55);
     }
 
     .lockTitle{
@@ -623,11 +624,7 @@
     <div class="card" id="lockCard">
       <div class="lockCenter">
         <div class="marquee">
-          <!-- ✅ REPLACED GO with your logo -->
-          <div class="lockBadge" aria-hidden="true">
-            <img class="lockLogo" src="assets/Logo_MM_Text.png" alt="Mayagüez logo" />
-          </div>
-
+          <div class="lockBadge" aria-hidden="true"><span>GO</span></div>
           <h2 class="lockTitle">ENTER THE CODE</h2>
           <p class="lockSub">Type the passkey and get ready — look at the big screen.</p>
           <div class="codeStrip" aria-hidden="true">
