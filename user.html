@@ -30,7 +30,7 @@
       height:100%;
       overscroll-behavior: none;
       -webkit-text-size-adjust: 100%;
-      touch-action: manipulation; /* stops double-tap zoom on most browsers */
+      touch-action: manipulation;
     }
 
     body{
@@ -44,14 +44,15 @@
         radial-gradient(circle at top, rgba(212,175,55,0.10), transparent 45%),
         radial-gradient(circle at 20% 20%, rgba(16,185,129,0.08), transparent 40%),
         radial-gradient(circle at top, #0f172a, var(--navy));
-      overflow:hidden; /* no horizontal scroll ever */
+      overflow:hidden; /* ✅ no horizontal scroll ever */
     }
 
-    /* ====== STAGE (like big screen, but mobile friendly) ====== */
+    /* ====== STAGE ====== */
     .stage{
       isolation:isolate;
       width:100%;
       max-width:560px;
+      height: calc(100svh - 28px);     /* ✅ real height lock */
       min-height: calc(100svh - 28px);
       background: rgba(2,11,27,0.96);
       border-radius: 22px;
@@ -61,7 +62,7 @@
       overflow:hidden;
       display:flex;
       flex-direction:column;
-      padding:12px 14px 14px; /* slightly tighter */
+      padding:12px 14px 14px;
     }
 
     /* NYE bg behind everything */
@@ -169,7 +170,6 @@
       opacity:0.95;
     }
 
-    /* subtle moving shine layer */
     .stage::before{
       content:"";
       position:absolute;
@@ -199,16 +199,16 @@
       z-index:2;
     }
 
-    /* ====== TOP (MM logo always visible) ====== */
+    /* ====== TOP ====== */
     .topBar{
       display:flex;
       align-items:center;
       justify-content:center;
-      padding:4px 6px 8px;  /* ✅ tighter */
+      padding:4px 6px 8px;
       flex:0 0 auto;
     }
     .mmLogo{
-      width: min(220px, 66%); /* ✅ smaller logo */
+      width: min(220px, 66%);
       height:auto;
       object-fit:contain;
       display:block;
@@ -239,7 +239,16 @@
       overflow:hidden;
     }
 
-    /* ===== SHAKE (feedback) ===== */
+    /* ✅ KEY FIX: allow the GAME card to scroll vertically if needed */
+    #gameCard{
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow:auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+
+    /* ===== SHAKE ===== */
     .shake{ animation: shake 420ms ease-in-out; }
     @keyframes shake{
       0%,100%{ transform: translateX(0); }
@@ -366,7 +375,7 @@
       letter-spacing:0.04em;
     }
 
-    /* ===== GAME META (small, no big top HUD) ===== */
+    /* ===== GAME META ===== */
     .metaRow{
       display:flex;
       align-items:center;
@@ -419,7 +428,7 @@
     .pill.bad{ border-color: var(--danger); color:#fecaca; }
     .pill.good{ border-color: rgba(16,185,129,0.9); color:#a7f3d0; }
 
-    /* ===== Timer mini (inside question card, not taking top space) ===== */
+    /* ===== Timer ===== */
     .timerWrap{
       display:flex;
       align-items:center;
@@ -438,21 +447,17 @@
       min-width:0;
     }
     .timerNum{
-      font-size:44px;
+      font-size: clamp(36px, 10vw, 44px); /* ✅ responsive */
       font-weight:1000;
       letter-spacing:0.06em;
       line-height:1;
       text-shadow: 0 10px 28px rgba(0,0,0,0.55);
       white-space:nowrap;
     }
-    .timerNum.warn{
-      color: #FDE68A;
-      text-shadow: 0 0 18px rgba(212,175,55,0.35), 0 10px 28px rgba(0,0,0,0.55);
-    }
+    .timerNum.warn{ color: #FDE68A; }
     .timerNum.danger{
       color: #FCA5A5;
       animation: pulse 700ms ease-in-out infinite;
-      text-shadow: 0 0 18px rgba(249,115,115,0.35), 0 10px 28px rgba(0,0,0,0.55);
     }
     @keyframes pulse{
       0%,100%{ transform: scale(1); filter: brightness(1); }
@@ -539,43 +544,47 @@
     .qText{
       position:relative;
       z-index:1;
-      font-size:18px;
+      font-size: clamp(15px, 4.6vw, 18px); /* ✅ key fix */
       font-weight:1000;
-      line-height:1.25;
-      word-wrap:break-word;
-      overflow-wrap:anywhere;
+      line-height:1.22;
       margin:0;
+      word-break: break-word;
+      overflow-wrap:anywhere;
     }
 
-    /* ===== Answer Buttons ===== */
+    /* ===== Answer Buttons (✅ FIXED: no squares, no overlap) ===== */
     .grid{
       display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: clamp(10px, 2.6vw, 12px);
       align-content:start;
       flex: 1 1 auto;
       min-height:0;
+      padding-bottom: 2px;
     }
+
     .choiceBtn{
       width:100%;
       border-radius:18px;
       border:1px solid rgba(55,65,81,0.92);
       background: linear-gradient(180deg, rgba(2,6,23,0.82), rgba(2,6,23,0.68));
-      padding:14px 14px;
+      padding: clamp(10px, 2.6vw, 14px);
       display:flex;
-      align-items:center;
+      align-items:flex-start;
       justify-content:flex-start;
       gap:12px;
       cursor:pointer;
       box-shadow: 0 10px 26px rgba(0,0,0,0.35);
       user-select:none;
       -webkit-tap-highlight-color: transparent;
-      aspect-ratio: 1 / 1;
-      min-height:110px;
       transition: transform 0.06s ease, filter 0.06s ease, border-color 0.12s ease;
       position:relative;
       overflow:hidden;
-      touch-action: manipulation; /* ✅ prevents dbl-tap zoom on buttons */
+      touch-action: manipulation;
+
+      /* ✅ remove the square constraint that causes “stacking/clipping” on short screens */
+      aspect-ratio: auto;
+      min-height: 86px;
     }
     .choiceBtn::after{
       content:"";
@@ -589,8 +598,8 @@
     .choiceBtn:disabled{ opacity:0.55; cursor:default; }
 
     .choiceKeyBig{
-      width:54px;
-      height:54px;
+      width: clamp(44px, 12vw, 54px);
+      height: clamp(44px, 12vw, 54px);
       border-radius:18px;
       display:flex;
       align-items:center;
@@ -599,7 +608,7 @@
       background: rgba(10,25,47,0.85);
       color: var(--gold);
       font-weight:1000;
-      font-size:22px;
+      font-size: clamp(18px, 5vw, 22px);
       letter-spacing:0.06em;
       box-shadow: inset 0 0 0 1px rgba(212,175,55,0.15);
       position:relative;
@@ -609,15 +618,22 @@
     .choiceTxt{
       position:relative;
       z-index:1;
-      font-size:14px;
+      font-size: clamp(12px, 3.8vw, 14px); /* ✅ responsive */
       font-weight:900;
-      line-height:1.15;
+      line-height:1.18;
       color:#e5e7eb;
       opacity:0.98;
-      word-wrap:break-word;
-      overflow-wrap:anywhere;
       min-width:0;
       flex:1 1 auto;
+      word-break: break-word;
+      overflow-wrap:anywhere;
+    }
+
+    /* ✅ Ultra-short screens: switch to 1-column so nothing overlaps ever */
+    @media (max-height: 650px){
+      .grid{ grid-template-columns: 1fr; }
+      .choiceBtn{ min-height: 72px; }
+      .qText{ font-size: clamp(14px, 4.3vw, 16px); }
     }
 
     /* ===== Legal footer (always visible) ===== */
@@ -647,17 +663,19 @@
       box-shadow: 0 10px 26px rgba(0,0,0,0.28);
     }
 
-    /* Keep content above footer (no overlap) */
+    /* ✅ KEY FIX: content scrolls within stage, footer stays visible */
     .content{
       display:flex;
       flex-direction:column;
-      gap:10px;           /* ✅ slightly tighter */
+      gap:10px;
       flex:1 1 auto;
       min-height:0;
-      padding-bottom:60px; /* ✅ slightly smaller reserve */
+      overflow:auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 76px; /* reserve for footer */
     }
 
-    /* ===== Loading overlay between questions ===== */
+    /* ===== Loading overlay ===== */
     .loadingOverlay{
       position:absolute;
       inset:0;
@@ -739,29 +757,6 @@
       overflow:hidden;
       max-width:520px;
     }
-    .finalCard::before{
-      content:"";
-      position:absolute;
-      inset:-2px;
-      border-radius:24px;
-      pointer-events:none;
-      opacity:0.65;
-      background:
-        radial-gradient(circle at 8% 18%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
-        radial-gradient(circle at 18% 10%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
-        radial-gradient(circle at 30% 16%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
-        radial-gradient(circle at 70% 16%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
-        radial-gradient(circle at 82% 10%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
-        radial-gradient(circle at 92% 18%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
-        radial-gradient(circle at 12% 88%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
-        radial-gradient(circle at 24% 94%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
-        radial-gradient(circle at 36% 90%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
-        radial-gradient(circle at 64% 90%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
-        radial-gradient(circle at 76% 94%, rgba(212,175,55,0.95) 0 3px, transparent 4px),
-        radial-gradient(circle at 88% 88%, rgba(212,175,55,0.95) 0 3px, transparent 4px);
-      animation: bulbs 1.15s ease-in-out infinite;
-      filter: drop-shadow(0 0 10px rgba(212,175,55,0.35));
-    }
     .finalLabel{
       position:relative;
       z-index:1;
@@ -801,13 +796,12 @@
     }
 
     @media (max-width: 520px){
-      .choiceTxt{ font-size:13px; }
       .finalScoreBig{ font-size:72px; }
-      .timerNum{ font-size:46px; }
-      .mmLogo{ width:min(220px, 70%); } /* ✅ keep small on mobile too */
+      .mmLogo{ width:min(220px, 70%); }
     }
   </style>
 </head>
+
 <body>
   <div class="stage">
     <!-- NYE Animated Background -->
@@ -847,17 +841,17 @@
             <p class="lockSub">Escribe la contraseña y prepárate — mira la pantalla grande.</p>
           </div>
 
-  <input
-  id="passkey"
-  class="input"
-  type="password"
-  placeholder="CONTRASEÑA"
-  autocomplete="off"
-  autocorrect="off"
-  autocapitalize="off"
-  spellcheck="false"
-  inputmode="text"
-/>
+          <input
+            id="passkey"
+            class="input"
+            type="password"
+            placeholder="CONTRASEÑA"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+            inputmode="text"
+          />
 
           <button id="enterBtn" class="btn">COMENZAR</button>
           <div id="err" class="err"></div>
@@ -930,427 +924,424 @@
     </div>
   </div>
 
-<script>
-/* ✅ Hard-stop double-tap zoom quirks on some iOS Safari */
-document.addEventListener('dblclick', (e) => {
-  e.preventDefault();
-}, { passive: false });
+  <script>
+  /* ✅ Hard-stop double-tap zoom quirks on some iOS Safari */
+  document.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+  }, { passive: false });
 
-/* ✅ Optional: prevent multi-touch gesture zoom (iOS Safari) */
-document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive:false });
-document.addEventListener('gesturechange', (e) => e.preventDefault(), { passive:false });
-document.addEventListener('gestureend', (e) => e.preventDefault(), { passive:false });
+  /* ✅ Optional: prevent multi-touch gesture zoom (iOS Safari) */
+  document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive:false });
+  document.addEventListener('gesturechange', (e) => e.preventDefault(), { passive:false });
+  document.addEventListener('gestureend', (e) => e.preventDefault(), { passive:false });
 
-/* ✅ IMPORTANT FIX:
-   DO NOT strip characters. Your passkey must be sent EXACTLY as typed. */
-const passkeyEl = document.getElementById("passkey");
+  /* ✅ IMPORTANT FIX:
+     DO NOT strip characters. Your passkey must be sent EXACTLY as typed. */
+  const passkeyEl = document.getElementById("passkey");
 
-const ROOM_CODE = "ACTIVE";
-const QUESTION_SECONDS = 30;
+  const ROOM_CODE = "ACTIVE";
+  const QUESTION_SECONDS = 30;
 
-const lockCard = document.getElementById("lockCard");
-const gameCard = document.getElementById("gameCard");
-const enterBtn = document.getElementById("enterBtn");
-const errEl = document.getElementById("err");
+  const lockCard = document.getElementById("lockCard");
+  const gameCard = document.getElementById("gameCard");
+  const enterBtn = document.getElementById("enterBtn");
+  const errEl = document.getElementById("err");
 
-const scoreEl = document.getElementById("score");
-const qLabel = document.getElementById("qLabel");
-const qLabel2 = document.getElementById("qLabel2");
-const qText = document.getElementById("qText");
+  const scoreEl = document.getElementById("score");
+  const qLabel = document.getElementById("qLabel");
+  const qLabel2 = document.getElementById("qLabel2");
+  const qText = document.getElementById("qText");
 
-const livePill = document.getElementById("livePill");
+  const livePill = document.getElementById("livePill");
 
-const btnA = document.getElementById("btnA");
-const btnB = document.getElementById("btnB");
-const btnC = document.getElementById("btnC");
-const btnD = document.getElementById("btnD");
+  const btnA = document.getElementById("btnA");
+  const btnB = document.getElementById("btnB");
+  const btnC = document.getElementById("btnC");
+  const btnD = document.getElementById("btnD");
 
-const txtA = document.getElementById("txtA");
-const txtB = document.getElementById("txtB");
-const txtC = document.getElementById("txtC");
-const txtD = document.getElementById("txtD");
+  const txtA = document.getElementById("txtA");
+  const txtB = document.getElementById("txtB");
+  const txtC = document.getElementById("txtC");
+  const txtD = document.getElementById("txtD");
 
-const timerFill = document.getElementById("timerFill");
-const timerNum = document.getElementById("timerNum");
+  const timerFill = document.getElementById("timerFill");
+  const timerNum = document.getElementById("timerNum");
 
-const loadingOverlay = document.getElementById("loadingOverlay");
-const loadingText = document.getElementById("loadingText");
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  const loadingText = document.getElementById("loadingText");
 
-const finalOverlay = document.getElementById("finalOverlay");
-const finalScoreBig = document.getElementById("finalScoreBig");
-const finalSub = document.getElementById("finalSub");
+  const finalOverlay = document.getElementById("finalOverlay");
+  const finalScoreBig = document.getElementById("finalScoreBig");
+  const finalSub = document.getElementById("finalSub");
 
-const SESSION_ID_KEY = "trivia_controller_sessionId";
-const CTRL_TOKEN_KEY = "trivia_controller_token";
+  const SESSION_ID_KEY = "trivia_controller_sessionId";
+  const CTRL_TOKEN_KEY = "trivia_controller_token";
 
-function setLivePill(text, mode){
-  livePill.textContent = text;
-  livePill.classList.remove("bad","good");
-  if (mode) livePill.classList.add(mode);
-}
-
-function showLoading(msg){
-  loadingText.textContent = msg || "Cargando próxima pregunta";
-  loadingOverlay.classList.add("show");
-}
-function hideLoading(){
-  loadingOverlay.classList.remove("show");
-}
-
-function getOrMakeSessionId(){
-  let sid = localStorage.getItem(SESSION_ID_KEY);
-  if (!sid){
-    sid = "sess_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
-    localStorage.setItem(SESSION_ID_KEY, sid);
+  function setLivePill(text, mode){
+    livePill.textContent = text;
+    livePill.classList.remove("bad","good");
+    if (mode) livePill.classList.add(mode);
   }
-  return sid;
-}
 
-let sessionId = getOrMakeSessionId();
-let controllerToken = localStorage.getItem(CTRL_TOKEN_KEY) || "";
-
-let tickTimer = null;
-let lastState = null;
-let lockedAnswer = false;
-let lastQIndexSeen = -1;
-let shakenTimeoutForQ = -1;
-
-let pollerRunning = false;
-let pollerTimeout = null;
-
-function getStatePollMs(){
-  if (lastState && (lastState.phase === "live" || lastState.phase === "feedback")) return 900;
-  return 1300;
-}
-
-function disableChoices(disabled){
-  [btnA,btnB,btnC,btnD].forEach(b => b.disabled = !!disabled);
-}
-
-function shakeGame(){
-  gameCard.classList.remove("shake");
-  void gameCard.offsetWidth;
-  gameCard.classList.add("shake");
-  setTimeout(()=> gameCard.classList.remove("shake"), 520);
-}
-
-function showFinalOverlay(score, total){
-  finalScoreBig.textContent = `${score} / ${total}`;
-
-  const pct = total > 0 ? (score/total) : 0;
-  let msg = "Buen juego 🔥";
-  if (pct >= 0.9) msg = "¡LEGENDARIO! 🏆";
-  else if (pct >= 0.7) msg = "¡TREMENDO! 💪";
-  else if (pct >= 0.4) msg = "Nada mal 😄";
-  else msg = "¡Pa’ la próxima! 😎";
-  finalSub.textContent = msg;
-
-  finalOverlay.classList.add("show");
-}
-
-function hideFinalOverlay(){
-  finalOverlay.classList.remove("show");
-}
-
-async function validateAndJoin(){
-  // ✅ FIX: send EXACT string, no forced numeric, no uppercase transforms in JS
-  const pk = passkeyEl.value.trim();
-
-  if (!pk){
-    errEl.textContent = "Escribe la contraseña para comenzar.";
-    return;
+  function showLoading(msg){
+    loadingText.textContent = msg || "Cargando próxima pregunta";
+    loadingOverlay.classList.add("show");
   }
-  errEl.textContent = "";
-  enterBtn.disabled = true;
+  function hideLoading(){
+    loadingOverlay.classList.remove("show");
+  }
 
-  try{
-    const v = await fetch("/api/validate-passkey",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ passkey: pk })
-    });
-    const vd = await v.json().catch(()=> ({}));
-    if (!v.ok || !vd.ok){
-      throw new Error(vd.error || "invalid_passkey");
+  function getOrMakeSessionId(){
+    let sid = localStorage.getItem(SESSION_ID_KEY);
+    if (!sid){
+      sid = "sess_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem(SESSION_ID_KEY, sid);
     }
+    return sid;
+  }
 
-    const j = await fetch("/api/join-room",{
+  let sessionId = getOrMakeSessionId();
+  let controllerToken = localStorage.getItem(CTRL_TOKEN_KEY) || "";
+
+  let tickTimer = null;
+  let lastState = null;
+  let lockedAnswer = false;
+  let lastQIndexSeen = -1;
+  let shakenTimeoutForQ = -1;
+
+  let pollerRunning = false;
+  let pollerTimeout = null;
+
+  function getStatePollMs(){
+    if (lastState && (lastState.phase === "live" || lastState.phase === "feedback")) return 900;
+    return 1300;
+  }
+
+  function disableChoices(disabled){
+    [btnA,btnB,btnC,btnD].forEach(b => b.disabled = !!disabled);
+  }
+
+  function shakeGame(){
+    gameCard.classList.remove("shake");
+    void gameCard.offsetWidth;
+    gameCard.classList.add("shake");
+    setTimeout(()=> gameCard.classList.remove("shake"), 520);
+  }
+
+  function showFinalOverlay(score, total){
+    finalScoreBig.textContent = `${score} / ${total}`;
+
+    const pct = total > 0 ? (score/total) : 0;
+    let msg = "Buen juego 🔥";
+    if (pct >= 0.9) msg = "¡LEGENDARIO! 🏆";
+    else if (pct >= 0.7) msg = "¡TREMENDO! 💪";
+    else if (pct >= 0.4) msg = "Nada mal 😄";
+    else msg = "¡Pa’ la próxima! 😎";
+    finalSub.textContent = msg;
+
+    finalOverlay.classList.add("show");
+  }
+
+  function hideFinalOverlay(){
+    finalOverlay.classList.remove("show");
+  }
+
+  async function validateAndJoin(){
+    const pk = passkeyEl.value.trim();
+
+    if (!pk){
+      errEl.textContent = "Escribe la contraseña para comenzar.";
+      return;
+    }
+    errEl.textContent = "";
+    enterBtn.disabled = true;
+
+    try{
+      const v = await fetch("/api/validate-passkey",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ passkey: pk })
+      });
+      const vd = await v.json().catch(()=> ({}));
+      if (!v.ok || !vd.ok){
+        throw new Error(vd.error || "invalid_passkey");
+      }
+
+      const j = await fetch("/api/join-room",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({
+          roomCode: ROOM_CODE,
+          passkey: pk,
+          sessionId
+        })
+      });
+      const jd = await j.json().catch(()=> ({}));
+      if (!j.ok || !jd.ok){
+        if (jd.error === "controller_taken") throw new Error("controller_taken");
+        throw new Error(jd.error || "join_failed");
+      }
+
+      controllerToken = jd.controllerToken;
+      localStorage.setItem(CTRL_TOKEN_KEY, controllerToken);
+
+      try{
+        await fetch("/api/answer",{
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({
+            roomCode: ROOM_CODE,
+            controllerToken: jd.controllerToken,
+            sessionId,
+            choice: "__START__"
+          })
+        });
+      }catch(_){}
+
+      lockCard.style.display = "none";
+      gameCard.style.display = "flex";
+      hideFinalOverlay();
+
+      passkeyEl.value = "";
+      lockedAnswer = false;
+      lastQIndexSeen = -1;
+      shakenTimeoutForQ = -1;
+
+      setLivePill("CONECTADO", "good");
+      showLoading("Conectando…");
+
+      startLoops();
+    }catch(err){
+      const code = String(err.message || err);
+      if (code === "controller_taken"){
+        errEl.textContent = "Otro teléfono ya está controlando este trivia.";
+      } else {
+        errEl.textContent = "Acceso denegado. Verifica la contraseña.";
+      }
+    }finally{
+      enterBtn.disabled = false;
+    }
+  }
+
+  enterBtn.addEventListener("click", validateAndJoin);
+  passkeyEl.addEventListener("keydown",(e)=>{
+    if (e.key === "Enter") validateAndJoin();
+  });
+
+  async function getState(){
+    if (!controllerToken) return null;
+
+    const r = await fetch("/api/get-state",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({
         roomCode: ROOM_CODE,
-        passkey: pk,
+        controllerToken,
         sessionId
       })
     });
-    const jd = await j.json().catch(()=> ({}));
-    if (!j.ok || !jd.ok){
-      if (jd.error === "controller_taken") throw new Error("controller_taken");
-      throw new Error(jd.error || "join_failed");
+
+    const d = await r.json().catch(()=> ({}));
+
+    if (!r.ok || !d.ok){
+      if (d.errorCode === "controller_lost"){
+        controllerToken = "";
+        localStorage.removeItem(CTRL_TOKEN_KEY);
+        stopLoops();
+        hideFinalOverlay();
+        hideLoading();
+
+        lockCard.style.display = "flex";
+        gameCard.style.display = "none";
+        errEl.textContent = "Sesión terminada. El próximo jugador puede comenzar.";
+      }
+      return null;
+    }
+    return d.state;
+  }
+
+  function renderFromState(st){
+    lastState = st;
+
+    const score = typeof st.score === "number" ? st.score : 0;
+    const qIndex = typeof st.qIndex === "number" ? st.qIndex : 0;
+    const total = typeof st.total === "number" ? st.total : 20;
+
+    scoreEl.textContent = String(score);
+
+    if (st.phase === "finished"){
+      qLabel.textContent = "FINALIZADO";
+      qLabel2.textContent = "FINALIZADO";
+      qText.textContent = "El juego terminó en la pantalla grande.";
+      disableChoices(true);
+      lockedAnswer = true;
+
+      timerFill.style.transform = "scaleX(0)";
+      timerNum.textContent = "—";
+      timerNum.classList.remove("warn","danger");
+
+      hideLoading();
+      setLivePill("FINAL", "bad");
+      showFinalOverlay(score, total);
+      return;
     }
 
-    controllerToken = jd.controllerToken;
-    localStorage.setItem(CTRL_TOKEN_KEY, controllerToken);
+    hideFinalOverlay();
 
-    // Start signal
+    if (st.phase === "splash"){
+      qLabel.textContent = "CARGANDO…";
+      qLabel2.textContent = "CARGANDO…";
+      qText.textContent = "Mira la pantalla grande.";
+      disableChoices(true);
+      lockedAnswer = true;
+
+      timerFill.style.transform = "scaleX(0)";
+      timerNum.textContent = "—";
+      timerNum.classList.remove("warn","danger");
+
+      txtA.textContent = "—";
+      txtB.textContent = "—";
+      txtC.textContent = "—";
+      txtD.textContent = "—";
+
+      showLoading("Cargando próxima pregunta");
+      setLivePill("CARGANDO", "bad");
+      return;
+    }
+
+    hideLoading();
+    setLivePill(st.phase === "feedback" ? "RESULTADO" : "EN VIVO", st.phase === "feedback" ? "bad" : "good");
+
+    const n = Math.min(total, qIndex + 1);
+    qLabel.textContent = `PREGUNTA ${n} / ${total}`;
+    qLabel2.textContent = `PREGUNTA ${n} / ${total}`;
+    qText.textContent = st.questionText || st.q || st.question || "Mira la pantalla grande.";
+
+    if (st.answers){
+      txtA.textContent = st.answers.A || "—";
+      txtB.textContent = st.answers.B || "—";
+      txtC.textContent = st.answers.C || "—";
+      txtD.textContent = st.answers.D || "—";
+    } else {
+      txtA.textContent = "A";
+      txtB.textContent = "B";
+      txtC.textContent = "C";
+      txtD.textContent = "D";
+    }
+  }
+
+  async function sendAnswer(choice){
+    if (!controllerToken || lockedAnswer) return;
+
+    lockedAnswer = true;
+    disableChoices(true);
+
     try{
       await fetch("/api/answer",{
         method:"POST",
         headers:{ "Content-Type":"application/json" },
         body: JSON.stringify({
           roomCode: ROOM_CODE,
-          controllerToken: jd.controllerToken,
+          controllerToken,
           sessionId,
-          choice: "__START__"
+          choice
         })
       });
     }catch(_){}
+  }
 
-    lockCard.style.display = "none";
-    gameCard.style.display = "flex";
-    hideFinalOverlay();
+  btnA.addEventListener("click", ()=> sendAnswer("A"));
+  btnB.addEventListener("click", ()=> sendAnswer("B"));
+  btnC.addEventListener("click", ()=> sendAnswer("C"));
+  btnD.addEventListener("click", ()=> sendAnswer("D"));
 
-    passkeyEl.value = "";
-    lockedAnswer = false;
-    lastQIndexSeen = -1;
-    shakenTimeoutForQ = -1;
+  async function stateLoop(){
+    const st = await getState();
+    if (!st) return;
 
-    setLivePill("CONECTADO", "good");
-    showLoading("Conectando…");
-
-    startLoops();
-  }catch(err){
-    const code = String(err.message || err);
-    if (code === "controller_taken"){
-      errEl.textContent = "Otro teléfono ya está controlando este trivia.";
+    if (st.phase === "live" && typeof st.qIndex === "number"){
+      if (lastQIndexSeen !== st.qIndex){
+        lastQIndexSeen = st.qIndex;
+        lockedAnswer = false;
+        disableChoices(false);
+      }
     } else {
-      errEl.textContent = "Acceso denegado. Verifica la contraseña.";
+      lockedAnswer = true;
+      disableChoices(true);
     }
-  }finally{
-    enterBtn.disabled = false;
+
+    renderFromState(st);
   }
-}
 
-enterBtn.addEventListener("click", validateAndJoin);
-passkeyEl.addEventListener("keydown",(e)=>{
-  if (e.key === "Enter") validateAndJoin();
-});
-
-async function getState(){
-  if (!controllerToken) return null;
-
-  const r = await fetch("/api/get-state",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      roomCode: ROOM_CODE,
-      controllerToken,
-      sessionId
-    })
-  });
-
-  const d = await r.json().catch(()=> ({}));
-
-  if (!r.ok || !d.ok){
-    if (d.errorCode === "controller_lost"){
-      controllerToken = "";
-      localStorage.removeItem(CTRL_TOKEN_KEY);
-      stopLoops();
-      hideFinalOverlay();
-      hideLoading();
-
-      lockCard.style.display = "flex";
-      gameCard.style.display = "none";
-      errEl.textContent = "Sesión terminada. El próximo jugador puede comenzar.";
+  function tick(){
+    if (!lastState || lastState.phase !== "live" || !lastState.questionEndsAt){
+      timerNum.textContent = "—";
+      timerNum.classList.remove("warn","danger");
+      timerFill.style.transform = "scaleX(0)";
+      return;
     }
-    return null;
-  }
-  return d.state;
-}
 
-function renderFromState(st){
-  lastState = st;
+    const msLeft = lastState.questionEndsAt - Date.now();
+    const sLeft = Math.max(0, Math.ceil(msLeft/1000));
 
-  const score = typeof st.score === "number" ? st.score : 0;
-  const qIndex = typeof st.qIndex === "number" ? st.qIndex : 0;
-  const total = typeof st.total === "number" ? st.total : 20;
+    timerNum.textContent = String(sLeft);
 
-  scoreEl.textContent = String(score);
-
-  // FINISHED
-  if (st.phase === "finished"){
-    qLabel.textContent = "FINALIZADO";
-    qLabel2.textContent = "FINALIZADO";
-    qText.textContent = "El juego terminó en la pantalla grande.";
-    disableChoices(true);
-    lockedAnswer = true;
-
-    timerFill.style.transform = "scaleX(0)";
-    timerNum.textContent = "—";
     timerNum.classList.remove("warn","danger");
+    if (sLeft <= 5) timerNum.classList.add("danger");
+    else if (sLeft <= 15) timerNum.classList.add("warn");
 
-    hideLoading();
-    setLivePill("FINAL", "bad");
-    showFinalOverlay(score, total);
-    return;
-  }
+    const pct = Math.max(0, Math.min(1, msLeft/(QUESTION_SECONDS*1000)));
+    timerFill.style.transform = `scaleX(${pct})`;
 
-  hideFinalOverlay();
-
-  // Between questions
-  if (st.phase === "splash"){
-    qLabel.textContent = "CARGANDO…";
-    qLabel2.textContent = "CARGANDO…";
-    qText.textContent = "Mira la pantalla grande.";
-    disableChoices(true);
-    lockedAnswer = true;
-
-    timerFill.style.transform = "scaleX(0)";
-    timerNum.textContent = "—";
-    timerNum.classList.remove("warn","danger");
-
-    txtA.textContent = "—";
-    txtB.textContent = "—";
-    txtC.textContent = "—";
-    txtD.textContent = "—";
-
-    showLoading("Cargando próxima pregunta");
-    setLivePill("CARGANDO", "bad");
-    return;
-  }
-
-  // LIVE / FEEDBACK
-  hideLoading();
-  setLivePill(st.phase === "feedback" ? "RESULTADO" : "EN VIVO", st.phase === "feedback" ? "bad" : "good");
-
-  const n = Math.min(total, qIndex + 1);
-  qLabel.textContent = `PREGUNTA ${n} / ${total}`;
-  qLabel2.textContent = `PREGUNTA ${n} / ${total}`;
-  qText.textContent = st.questionText || st.q || st.question || "Mira la pantalla grande.";
-
-  if (st.answers){
-    txtA.textContent = st.answers.A || "—";
-    txtB.textContent = st.answers.B || "—";
-    txtC.textContent = st.answers.C || "—";
-    txtD.textContent = st.answers.D || "—";
-  } else {
-    txtA.textContent = "A";
-    txtB.textContent = "B";
-    txtC.textContent = "C";
-    txtD.textContent = "D";
-  }
-}
-
-async function sendAnswer(choice){
-  if (!controllerToken || lockedAnswer) return;
-
-  lockedAnswer = true;
-  disableChoices(true);
-
-  try{
-    await fetch("/api/answer",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({
-        roomCode: ROOM_CODE,
-        controllerToken,
-        sessionId,
-        choice
-      })
-    });
-  }catch(_){}
-}
-
-btnA.addEventListener("click", ()=> sendAnswer("A"));
-btnB.addEventListener("click", ()=> sendAnswer("B"));
-btnC.addEventListener("click", ()=> sendAnswer("C"));
-btnD.addEventListener("click", ()=> sendAnswer("D"));
-
-async function stateLoop(){
-  const st = await getState();
-  if (!st) return;
-
-  // unlock choices only when a NEW live question arrives
-  if (st.phase === "live" && typeof st.qIndex === "number"){
-    if (lastQIndexSeen !== st.qIndex){
-      lastQIndexSeen = st.qIndex;
-      lockedAnswer = false;
-      disableChoices(false);
-    }
-  } else {
-    lockedAnswer = true;
-    disableChoices(true);
-  }
-
-  renderFromState(st);
-}
-
-function tick(){
-  if (!lastState || lastState.phase !== "live" || !lastState.questionEndsAt){
-    timerNum.textContent = "—";
-    timerNum.classList.remove("warn","danger");
-    timerFill.style.transform = "scaleX(0)";
-    return;
-  }
-
-  const msLeft = lastState.questionEndsAt - Date.now();
-  const sLeft = Math.max(0, Math.ceil(msLeft/1000));
-
-  timerNum.textContent = String(sLeft);
-
-  timerNum.classList.remove("warn","danger");
-  if (sLeft <= 5) timerNum.classList.add("danger");
-  else if (sLeft <= 15) timerNum.classList.add("warn");
-
-  const pct = Math.max(0, Math.min(1, msLeft/(QUESTION_SECONDS*1000)));
-  timerFill.style.transform = `scaleX(${pct})`;
-
-  if (msLeft <= 0){
-    disableChoices(true);
-    const qIndex = typeof lastState.qIndex === "number" ? lastState.qIndex : -1;
-    if (shakenTimeoutForQ !== qIndex){
-      shakenTimeoutForQ = qIndex;
-      shakeGame();
+    if (msLeft <= 0){
+      disableChoices(true);
+      const qIndex = typeof lastState.qIndex === "number" ? lastState.qIndex : -1;
+      if (shakenTimeoutForQ !== qIndex){
+        shakenTimeoutForQ = qIndex;
+        gameCard.classList.remove("shake");
+        void gameCard.offsetWidth;
+        gameCard.classList.add("shake");
+        setTimeout(()=> gameCard.classList.remove("shake"), 520);
+      }
     }
   }
-}
 
-async function pollerTick(){
-  if (!pollerRunning) return;
+  async function pollerTick(){
+    if (!pollerRunning) return;
 
-  await stateLoop();
-  pollerTimeout = setTimeout(pollerTick, getStatePollMs());
-}
-
-function startLoops(){
-  stopLoops();
-
-  pollerRunning = true;
-  pollerTimeout = setTimeout(pollerTick, getStatePollMs());
-
-  tickTimer = setInterval(tick, 100);
-  stateLoop();
-}
-
-function stopLoops(){
-  pollerRunning = false;
-
-  if (pollerTimeout) clearTimeout(pollerTimeout);
-  if (tickTimer) clearInterval(tickTimer);
-
-  pollerTimeout = null;
-  tickTimer = null;
-}
-
-(function bootstrap(){
-  if (controllerToken){
-    lockCard.style.display = "none";
-    gameCard.style.display = "flex";
-    setLivePill("REANUDANDO…", "good");
-    showLoading("Reanudando…");
-    startLoops();
+    await stateLoop();
+    pollerTimeout = setTimeout(pollerTick, getStatePollMs());
   }
-})();
-</script>
+
+  function startLoops(){
+    stopLoops();
+
+    pollerRunning = true;
+    pollerTimeout = setTimeout(pollerTick, getStatePollMs());
+
+    tickTimer = setInterval(tick, 100);
+    stateLoop();
+  }
+
+  function stopLoops(){
+    pollerRunning = false;
+
+    if (pollerTimeout) clearTimeout(pollerTimeout);
+    if (tickTimer) clearInterval(tickTimer);
+
+    pollerTimeout = null;
+    tickTimer = null;
+  }
+
+  (function bootstrap(){
+    if (controllerToken){
+      lockCard.style.display = "none";
+      gameCard.style.display = "flex";
+      setLivePill("REANUDANDO…", "good");
+      showLoading("Reanudando…");
+      startLoops();
+    }
+  })();
+  </script>
 </body>
 </html>
