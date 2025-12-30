@@ -36,20 +36,25 @@
       overflow:hidden; /* no horizontal scroll ever */
     }
 
-    /* 1920x1080 stage */
-    .stage{
-      width:1920px;
-      height:1080px;
-      max-width:100%;
-      aspect-ratio: 16/9;
-      background: rgba(2,11,27,0.96);
-      border-radius: 22px;
-      border: 1px solid rgba(15, 23, 42, 0.9);
-      box-shadow: 0 18px 45px rgba(0,0,0,0.7);
-      position:relative;
-      overflow:hidden;
-      display:flex;
-    }
+/* 1920x1080 stage (scales to fit viewport) */
+.stage{
+  width: min(1920px, 100%);
+  aspect-ratio: 16 / 9;
+
+  /* KEY: never exceed available height (prevents footer getting cut) */
+  max-height: calc(100vh - 48px);
+
+  /* Let aspect-ratio decide the height */
+  height: auto;
+
+  background: rgba(2,11,27,0.96);
+  border-radius: 22px;
+  border: 1px solid rgba(15, 23, 42, 0.9);
+  box-shadow: 0 18px 45px rgba(0,0,0,0.7);
+  position:relative;
+  overflow:hidden;
+  display:flex;
+}
 
     /* Subtle moving shine */
     .stage::before{
