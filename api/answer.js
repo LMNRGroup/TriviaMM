@@ -3,13 +3,18 @@ const { kv } = require("@vercel/kv");
 const ROOM_CODE_FIXED = "ACTIVE";
 const TTL_SECONDS = 60 * 60 * 2; // 2h
 
+// Allow normal answers + control commands from controller
+const ALLOWED_CHOICES = new Set(["A", "B", "C", "D", "__START__", "__RESET__"]);
+
 function json(res, status, payload) {
   res.status(status).setHeader("Content-Type", "application/json");
   res.end(JSON.stringify(payload));
 }
 
 module.exports = async (req, res) => {
-  if (req.method !== "POST") return json(res, 405, { ok: false, error: "method_not_allowed" });
+  if (req.method !== "POST") {
+    return json(res, 405, { ok: false, error: "method_not_allowed" });
+  }
 
   try {
     const { controllerToken, sessionId, choice } = req.body || {};
@@ -19,12 +24,15 @@ module.exports = async (req, res) => {
 
     if (!ct) return json(res, 400, { ok: false, error: "missing_controllerToken" });
     if (!sid) return json(res, 400, { ok: false, error: "missing_sessionId" });
-    if (!["A", "B", "C", "D"].includes(ch)) return json(res, 400, { ok: false, error: "invalid_choice" });
+    if (!ALLOWED_CHOICES.has(ch)) {
+      return json(res, 400, { ok: false, error: "invalid_choice" });
+    }
 
     const roomCode = ROOM_CODE_FIXED;
 
     const controllerKey = `trivia:controller:${roomCode}`;
     const ctrl = await kv.get(controllerKey);
+
     if (!ctrl || !ctrl.controllerToken) {
       return json(res, 403, { ok: false, error: "controller_lost", errorCode: "controller_lost" });
     }
@@ -32,14 +40,21 @@ module.exports = async (req, res) => {
       return json(res, 403, { ok: false, error: "invalid_controllerToken", errorCode: "controller_lost" });
     }
 
-    // Increment seq and store last answer
+    // Increment seq and store last "answer" (including control commands)
     const seqKey = `trivia:seq:${roomCode}`;
     const answerKey = `trivia:answer:${roomCode}`;
 
     const seq = await kv.incr(seqKey);
     await kv.expire(seqKey, TTL_SECONDS);
 
-    const payload = { seq, choice: ch, sessionId: sid, ts: Date.now() };
+    const payload = {
+      seq,
+      choice: ch,
+      sessionId: sid,
+      ts: Date.now(),
+      kind: (ch === "A" || ch === "B" || ch === "C" || ch === "D") ? "answer" : "command",
+    };
+
     await kv.set(answerKey, payload, { ex: TTL_SECONDS });
 
     return json(res, 200, { ok: true, seq });
