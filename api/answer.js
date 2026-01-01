@@ -2,7 +2,7 @@ const { kv } = require("@vercel/kv");
 
 const ROOM_CODE_FIXED = "ACTIVE";
 const TTL_SECONDS = 60 * 60 * 2; // 2h
-
+// ughi
 // Allow normal answers + control commands from controller
 const ALLOWED_CHOICES = new Set(["A", "B", "C", "D", "__START__", "__RESET__"]);
 
