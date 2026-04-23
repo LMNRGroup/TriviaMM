@@ -7,7 +7,7 @@ type LeaderboardSheetRow = [
   leaderboardEntryId: string,
   playerId: string,
   playerName: string,
-  city: string,
+  country: string,
   matchesPlayed: string,
   wins: string,
   soloBestScore: string,
@@ -50,7 +50,7 @@ function parseLeaderboardRow(row: string[]): LeaderboardEntry | null {
     leaderboardEntryId: row[0] ?? row[1],
     playerId: row[1],
     playerName: row[2],
-    city: row[3] ?? "",
+    country: row[3] ?? "",
     matchesPlayed: Number(row[4] ?? 0),
     wins: Number(row[5] ?? 0),
     soloBestScore: Number(row[6] ?? 0),
@@ -67,7 +67,7 @@ function toLeaderboardRow(entry: LeaderboardEntry): LeaderboardSheetRow {
     entry.leaderboardEntryId,
     entry.playerId,
     entry.playerName,
-    entry.city,
+    entry.country,
     String(entry.matchesPlayed),
     String(entry.wins),
     String(entry.soloBestScore),
@@ -110,7 +110,7 @@ export async function getPlayerLeaderboardRank(playerId: string) {
 export async function upsertLeaderboardEntry(input: {
   playerId: string;
   playerName: string;
-  city: string;
+  country: string;
   matchScore: number;
   mode: "solo" | "battle";
   won: boolean;
@@ -137,7 +137,7 @@ export async function upsertLeaderboardEntry(input: {
     leaderboardEntryId: existing?.leaderboardEntryId ?? input.playerId,
     playerId: input.playerId,
     playerName: input.playerName,
-    city: input.city,
+    country: input.country,
     matchesPlayed: (existing?.matchesPlayed ?? 0) + 1,
     wins: (existing?.wins ?? 0) + (input.won ? 1 : 0),
     soloBestScore:

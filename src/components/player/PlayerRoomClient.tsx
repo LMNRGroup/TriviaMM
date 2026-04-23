@@ -1,54 +1,98 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
-import type { RoomState } from "@/lib/types/game";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import type { LeaderboardEntry, RoomMode, RoomState } from "@/lib/types/game";
 import { registrationSchema } from "@/lib/validation/registration";
-
-interface PlayerRoomClientProps {
-  roomCode: string;
-}
 
 interface PlayerSession {
   playerId: string;
   name: string;
-  city: string;
+  country: string;
+  age: number;
   email: string;
   controllerToken: string;
   sessionId: string;
-  instructionsDismissed: boolean;
+}
+
+interface RememberedPlayer {
+  playerId: string;
+  name: string;
+  country: string;
+  age: number;
+  email: string;
 }
 
 interface FormState {
   name: string;
-  city: string;
+  country: string;
   age: string;
   email: string;
   acceptedTerms: boolean;
   newsletterOptIn: boolean;
 }
 
+const STORAGE_KEY = "trivia:player:public";
+
 const initialFormState: FormState = {
   name: "",
-  city: "",
+  country: "",
   age: "",
   email: "",
   acceptedTerms: false,
-  newsletterOptIn: false,
+  newsletterOptIn: true,
 };
 
-function storageKey(roomCode: string) {
-  return `trivia:player:${roomCode}`;
+function formatSeconds(iso: string | null, now: number, decimals = 0) {
+  if (!iso) {
+    return decimals > 0 ? `0.${"0".repeat(decimals)}` : "0";
+  }
+
+  const remaining = Math.max(0, new Date(iso).getTime() - now) / 1000;
+  return remaining.toFixed(decimals);
 }
 
-export function PlayerRoomClient({ roomCode }: PlayerRoomClientProps) {
+function LeaderboardList({
+  entries,
+  rank,
+}: {
+  entries: LeaderboardEntry[];
+  rank?: number;
+}) {
+  return (
+    <div className="space-y-3">
+      {entries.map((entry) => (
+        <div
+          className="flex items-center justify-between rounded-[1.4rem] border border-white/10 bg-white/6 px-4 py-4"
+          key={entry.playerId}
+        >
+          <div>
+            <p className="font-display text-lg font-black uppercase">
+              #{entry.rank} {entry.playerName}
+            </p>
+            <p className="text-sm text-[color:var(--muted)]">{entry.country}</p>
+          </div>
+          <p className="font-display text-2xl font-black text-[color:var(--accent)]">{entry.lifetimePoints}</p>
+        </div>
+      ))}
+      {rank && !entries.some((entry) => entry.rank === rank) ? (
+        <div className="rounded-[1.4rem] border border-[color:var(--accent-cool)]/30 bg-[color:var(--panel-soft)] px-4 py-4 text-sm text-[color:var(--foreground)]">
+          Tu posición actual es <span className="font-display text-lg font-black">#{rank}</span>.
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function PlayerRoomClient() {
   const [room, setRoom] = useState<RoomState | null>(null);
+  const [rememberedPlayer, setRememberedPlayer] = useState<RememberedPlayer | null>(null);
   const [form, setForm] = useState<FormState>(initialFormState);
   const [session, setSession] = useState<PlayerSession | null>(() => {
     if (typeof window === "undefined") {
       return null;
     }
 
-    const raw = window.localStorage.getItem(storageKey(roomCode));
+    const raw = window.localStorage.getItem(STORAGE_KEY);
 
     if (!raw) {
       return null;
@@ -57,90 +101,15 @@ export function PlayerRoomClient({ roomCode }: PlayerRoomClientProps) {
     try {
       return JSON.parse(raw) as PlayerSession;
     } catch {
-      window.localStorage.removeItem(storageKey(roomCode));
+      window.localStorage.removeItem(STORAGE_KEY);
       return null;
     }
   });
-  const [selectedChoiceState, setSelectedChoiceState] = useState<{
-    questionIndex: number;
-    choice: string;
-  } | null>(null);
+  const [selectedChoiceState, setSelectedChoiceState] = useState<{ questionIndex: number; choice: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function refreshRoom() {
-      try {
-        const response = await fetch(`/api/rooms/${roomCode}/state`, {
-          cache: "no-store",
-        });
-        const payload = await response.json();
-
-        if (!response.ok || !payload.ok) {
-          throw new Error(payload.message ?? "Unable to load room.");
-        }
-
-        if (!cancelled) {
-          setRoom(payload.data.room as RoomState);
-        }
-      } catch (refreshError) {
-        if (!cancelled) {
-          setError(refreshError instanceof Error ? refreshError.message : "Unable to load room.");
-        }
-      }
-    }
-
-    refreshRoom();
-    const poll = window.setInterval(refreshRoom, 1000);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(poll);
-    };
-  }, [roomCode]);
-
-  useEffect(() => {
-    if (!session) {
-      return;
-    }
-
-    const interval = window.setInterval(() => {
-      void fetch(`/api/rooms/${roomCode}/presence`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          actorType: "player",
-          actorId: session.playerId,
-          token: session.controllerToken,
-        }),
-      });
-    }, 15_000);
-
-    return () => window.clearInterval(interval);
-  }, [roomCode, session]);
-
-  const validation = useMemo(() => {
-    const numericAge = Number(form.age);
-
-    return registrationSchema.safeParse({
-      roomCode,
-      name: form.name,
-      city: form.city,
-      age: Number.isFinite(numericAge) ? numericAge : Number.NaN,
-      email: form.email,
-      acceptedTerms: form.acceptedTerms,
-      newsletterOptIn: form.newsletterOptIn,
-    });
-  }, [form, roomCode]);
-
-  const selectedChoice =
-    selectedChoiceState && selectedChoiceState.questionIndex === room?.currentQuestion.questionIndex
-      ? selectedChoiceState.choice
-      : null;
+  const autoJoinAttempted = useRef<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   const playerSeat = room
     ? room.players.player1?.playerId === session?.playerId
@@ -150,10 +119,202 @@ export function PlayerRoomClient({ roomCode }: PlayerRoomClientProps) {
         : null
     : null;
 
-  const playerWarning =
-    playerSeat?.slot === 1
-      ? room?.warnings.player1AfkWarningVisible
-      : room?.warnings.player2AfkWarningVisible;
+  const selectedChoice =
+    selectedChoiceState && selectedChoiceState.questionIndex === room?.currentQuestion.questionIndex
+      ? selectedChoiceState.choice
+      : null;
+
+  function persistSession(nextSession: PlayerSession | null) {
+    if (nextSession) {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
+      setSession(nextSession);
+      return;
+    }
+
+    window.localStorage.removeItem(STORAGE_KEY);
+    setSession(null);
+  }
+
+  async function loadRoomState() {
+    const response = await fetch("/api/public/state", { cache: "no-store" });
+    const payload = await response.json();
+
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.message ?? "No se pudo cargar la sala.");
+    }
+
+    setRoom(payload.data.room as RoomState);
+    setRememberedPlayer((payload.data.rememberedPlayer as RememberedPlayer | null) ?? null);
+    setError(null);
+    return payload.data.room as RoomState;
+  }
+
+  const joinWithPlayer = useCallback(async (playerId: string, profile?: RememberedPlayer) => {
+    const sessionId = crypto.randomUUID();
+    const response = await fetch("/api/public/join", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        playerId,
+        sessionId,
+      }),
+    });
+    const payload = await response.json();
+
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.message ?? "No fue posible entrar a la sala.");
+    }
+
+    const joinedPlayer = payload.data.player;
+    persistSession({
+      playerId: joinedPlayer.playerId,
+      name: joinedPlayer.name,
+      country: joinedPlayer.country,
+      age: Number(profile?.age ?? form.age ?? 0),
+      email: profile?.email ?? form.email,
+      controllerToken: joinedPlayer.controllerToken,
+      sessionId,
+    });
+  }, [form.age, form.email]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function sync() {
+      try {
+        const nextRoom = await loadRoomState();
+
+        if (!cancelled && nextRoom.phase !== "idle" && nextRoom.phase !== "lobby") {
+          const tickResponse = await fetch("/api/public/tick", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          });
+          const tickPayload = await tickResponse.json();
+
+          if (tickResponse.ok && tickPayload.ok && !cancelled) {
+            setRoom(tickPayload.data.room as RoomState);
+          }
+        }
+      } catch (syncError) {
+        if (!cancelled) {
+          setError(syncError instanceof Error ? syncError.message : "No se pudo sincronizar la partida.");
+        }
+      }
+    }
+
+    void sync();
+    const poll = window.setInterval(() => {
+      void sync();
+    }, 900);
+    const timer = window.setInterval(() => setNow(Date.now()), 100);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(poll);
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+
+    const heartbeat = window.setInterval(() => {
+      void fetch("/api/public/presence", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          playerId: session.playerId,
+          controllerToken: session.controllerToken,
+        }),
+      });
+    }, 10_000);
+
+    return () => window.clearInterval(heartbeat);
+  }, [session]);
+
+  useEffect(() => {
+    if (!room || room.phase !== "idle" && room.phase !== "lobby") {
+      return;
+    }
+
+    const currentAttemptKey = session?.playerId ?? rememberedPlayer?.playerId ?? null;
+
+    if (!currentAttemptKey || autoJoinAttempted.current === currentAttemptKey) {
+      return;
+    }
+
+    const playerAlreadyInRoom =
+      room.players.player1?.playerId === currentAttemptKey || room.players.player2?.playerId === currentAttemptKey;
+
+    if (playerAlreadyInRoom) {
+      autoJoinAttempted.current = currentAttemptKey;
+      return;
+    }
+
+    const slotAvailable = !room.players.player1 || !room.players.player2;
+
+    if (!slotAvailable) {
+      return;
+    }
+
+    autoJoinAttempted.current = currentAttemptKey;
+
+    startTransition(async () => {
+      try {
+        if (session) {
+          await joinWithPlayer(session.playerId, {
+            playerId: session.playerId,
+            name: session.name,
+            country: session.country,
+            age: session.age,
+            email: session.email,
+          });
+        } else if (rememberedPlayer) {
+          setForm((current) => ({
+            ...current,
+            name: rememberedPlayer.name,
+            country: rememberedPlayer.country,
+            age: String(rememberedPlayer.age),
+            email: rememberedPlayer.email,
+            acceptedTerms: true,
+            newsletterOptIn: true,
+          }));
+          await joinWithPlayer(rememberedPlayer.playerId, rememberedPlayer);
+        }
+      } catch (autoJoinError) {
+        setError(autoJoinError instanceof Error ? autoJoinError.message : "No fue posible reconectar.");
+      }
+    });
+  }, [joinWithPlayer, rememberedPlayer, room, session]);
+
+  const validation = useMemo(() => {
+    const numericAge = Number(form.age);
+
+    return registrationSchema.safeParse({
+      roomCode: "PUBLICO",
+      name: form.name,
+      country: form.country,
+      age: Number.isFinite(numericAge) ? numericAge : Number.NaN,
+      email: form.email,
+      acceptedTerms: form.acceptedTerms,
+      newsletterOptIn: form.newsletterOptIn,
+    });
+  }, [form]);
+
+  const currentMode: RoomMode | null = room?.mode ?? null;
+  const countdown = room?.phase === "countdown" ? formatSeconds(room.countdown.endsAt, now, 0) : null;
+  const readCountdown = room?.phase === "question-read" ? formatSeconds(room.currentQuestion.answersVisibleAt, now, 1) : null;
+  const answerCountdown = room?.phase === "question" ? formatSeconds(room.currentQuestion.endsAt, now, 1) : null;
+  const waitingCountdown = room?.lobby.waitingEndsAt ? formatSeconds(room.lobby.waitingEndsAt, now, 0) : null;
+  const playerRank = playerSeat?.slot === 1 ? room?.leaderboard.player1Rank : room?.leaderboard.player2Rank;
+  const playerFeedback =
+    playerSeat?.slot === 1 ? room?.answerFeedback.player1 : playerSeat?.slot === 2 ? room?.answerFeedback.player2 : null;
 
   function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({
@@ -162,27 +323,11 @@ export function PlayerRoomClient({ roomCode }: PlayerRoomClientProps) {
     }));
   }
 
-  function persistSession(nextSession: PlayerSession) {
-    localStorage.setItem(storageKey(roomCode), JSON.stringify(nextSession));
-    setSession(nextSession);
-  }
-
-  function dismissInstructions() {
-    if (!session) {
-      return;
-    }
-
-    persistSession({
-      ...session,
-      instructionsDismissed: true,
-    });
-  }
-
   function submitRegistration(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!validation.success) {
-      setError(validation.error.issues[0]?.message ?? "Check your registration details.");
+      setError(validation.error.issues[0]?.message ?? "Revisa los datos del formulario.");
       return;
     }
 
@@ -198,40 +343,49 @@ export function PlayerRoomClient({ roomCode }: PlayerRoomClientProps) {
         const registrationPayload = await registrationResponse.json();
 
         if (!registrationResponse.ok || !registrationPayload.ok) {
-          throw new Error(registrationPayload.message ?? "Unable to save registration.");
+          throw new Error(registrationPayload.message ?? "No se pudo guardar el registro.");
         }
 
-        const sessionId = crypto.randomUUID();
-        const joinResponse = await fetch(`/api/rooms/${roomCode}/join`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            playerId: registrationPayload.data.player.playerId,
-            sessionId,
-          }),
+        const player = registrationPayload.data.player as RememberedPlayer;
+        autoJoinAttempted.current = player.playerId;
+        await joinWithPlayer(player.playerId, {
+          playerId: player.playerId,
+          name: form.name,
+          country: form.country,
+          age: Number(form.age),
+          email: form.email,
         });
-        const joinPayload = await joinResponse.json();
-
-        if (!joinResponse.ok || !joinPayload.ok) {
-          throw new Error(joinPayload.message ?? "Unable to join room.");
-        }
-
-        persistSession({
-          playerId: joinPayload.data.player.playerId,
-          name: joinPayload.data.player.name,
-          city: joinPayload.data.player.city,
-          email: registrationPayload.data.player.email,
-          controllerToken: joinPayload.data.player.controllerToken,
-          sessionId,
-          instructionsDismissed: false,
-        });
-        setError(null);
-      } catch (submissionError) {
-        setError(submissionError instanceof Error ? submissionError.message : "Unable to join room.");
+      } catch (registrationError) {
+        setError(registrationError instanceof Error ? registrationError.message : "No se pudo completar el registro.");
       }
     });
+  }
+
+  async function startMatch(mode: RoomMode) {
+    if (!session) {
+      return;
+    }
+
+    const response = await fetch("/api/public/start", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        playerId: session.playerId,
+        controllerToken: session.controllerToken,
+        mode,
+      }),
+    });
+    const payload = await response.json();
+
+    if (!response.ok || !payload.ok) {
+      setError(payload.message ?? "No se pudo iniciar la partida.");
+      return;
+    }
+
+    setRoom(payload.data.room as RoomState);
+    setError(null);
   }
 
   async function submitAnswer(choice: "A" | "B" | "C" | "D") {
@@ -244,7 +398,7 @@ export function PlayerRoomClient({ roomCode }: PlayerRoomClientProps) {
       choice,
     });
 
-    const response = await fetch(`/api/rooms/${roomCode}/answer`, {
+    const response = await fetch("/api/public/answer", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -260,28 +414,93 @@ export function PlayerRoomClient({ roomCode }: PlayerRoomClientProps) {
     const payload = await response.json();
 
     if (!response.ok || !payload.ok) {
-      setError(payload.message ?? "Unable to submit answer.");
+      setError(payload.message ?? "No se pudo registrar la respuesta.");
       setSelectedChoiceState(null);
+      return;
     }
+
+    setError(null);
+  }
+
+  if (!session && room && room.phase !== "idle" && room.phase !== "lobby") {
+    return (
+      <section className="enter-rise flex h-full flex-col justify-between gap-6">
+        <div>
+          <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent-strong)]">
+            Partida en curso
+          </p>
+          <h1 className="font-display mt-4 text-4xl font-black uppercase tracking-[0.08em]">
+            Espera tu turno
+          </h1>
+          <p className="mt-4 text-base leading-7 text-[color:var(--muted)]">
+            Ya hay una sesión activa. Cuando termine, podrás entrar automáticamente a la siguiente partida.
+          </p>
+        </div>
+
+        <div className="glass-panel rounded-[1.8rem] p-5">
+          <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Vista previa</p>
+          <p className="font-display mt-4 text-2xl font-black uppercase">
+            {room.phase === "question-read" || room.phase === "question"
+              ? room.currentQuestion.prompt
+              : room.phase === "battle-result"
+                ? "Duelo finalizado"
+                : "Tabla de posiciones"}
+          </p>
+          <p className="mt-3 text-sm text-[color:var(--muted)]">
+            {room.players.player1?.name ?? "P1"} vs {room.players.player2?.name ?? "P2"}
+          </p>
+        </div>
+
+        {error ? (
+          <div className="rounded-[1.35rem] border border-[color:var(--danger)]/40 bg-[color:var(--danger)]/10 px-4 py-3 text-sm text-red-100">
+            {error}
+          </div>
+        ) : null}
+      </section>
+    );
   }
 
   if (!session) {
     return (
       <form className="enter-rise flex h-full flex-col gap-5" onSubmit={submitRegistration}>
         <div>
-          <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent-strong)]">
-            Registration
+          <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">
+            Únete a la batalla
           </p>
           <h1 className="font-display mt-4 text-4xl font-black uppercase tracking-[0.08em]">
-            Join {roomCode}
+            Juega desde tu celular
           </h1>
           <p className="mt-3 text-base leading-7 text-[color:var(--muted)]">
-            Claim your seat. Clean entry, clear rules, then straight into the arena.
+            Regístrate una vez y entra a competir. Si ya te conocemos, te volveremos a reconocer automáticamente.
           </p>
         </div>
 
+        {rememberedPlayer ? (
+          <button
+            className="rounded-[1.45rem] border border-[color:var(--accent-cool)]/40 bg-[color:var(--panel-soft)] px-5 py-4 text-left transition hover:border-[color:var(--accent-cool)] hover:bg-white/7"
+            onClick={() => {
+              startTransition(async () => {
+                try {
+                  autoJoinAttempted.current = rememberedPlayer.playerId;
+                  await joinWithPlayer(rememberedPlayer.playerId, rememberedPlayer);
+                } catch (rememberedError) {
+                  setError(rememberedError instanceof Error ? rememberedError.message : "No se pudo reconectar.");
+                }
+              });
+            }}
+            type="button"
+          >
+            <p className="font-display text-lg font-black uppercase text-[color:var(--accent-cool)]">
+              Continuar como {rememberedPlayer.name}
+            </p>
+            <p className="mt-1 text-sm text-[color:var(--muted)]">
+              {rememberedPlayer.country} · {rememberedPlayer.email}
+            </p>
+          </button>
+        ) : null}
+
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-white">Name</span>
+          <span className="text-sm font-semibold text-white">Nombre</span>
           <input
             className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-[color:var(--accent)] focus:bg-white/7"
             onChange={(event) => updateField("name", event.target.value)}
@@ -290,17 +509,17 @@ export function PlayerRoomClient({ roomCode }: PlayerRoomClientProps) {
         </label>
 
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-white">City</span>
+          <span className="text-sm font-semibold text-white">País</span>
           <input
             className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-[color:var(--accent)] focus:bg-white/7"
-            onChange={(event) => updateField("city", event.target.value)}
-            value={form.city}
+            onChange={(event) => updateField("country", event.target.value)}
+            value={form.country}
           />
         </label>
 
         <div className="grid gap-5 sm:grid-cols-2">
           <label className="space-y-2">
-            <span className="text-sm font-semibold text-white">Age</span>
+            <span className="text-sm font-semibold text-white">Edad</span>
             <input
               className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-[color:var(--accent)] focus:bg-white/7"
               inputMode="numeric"
@@ -328,7 +547,7 @@ export function PlayerRoomClient({ roomCode }: PlayerRoomClientProps) {
               type="checkbox"
             />
             <span className="text-sm leading-6 text-[color:var(--muted)]">
-              I accept the terms and gameplay rules.
+              Acepto los términos y condiciones del juego.
             </span>
           </div>
         </label>
@@ -342,7 +561,7 @@ export function PlayerRoomClient({ roomCode }: PlayerRoomClientProps) {
               type="checkbox"
             />
             <span className="text-sm leading-6 text-[color:var(--muted)]">
-              Send me updates and announcements.
+              Quiero recibir novedades por correo.
             </span>
           </div>
         </label>
@@ -362,62 +581,88 @@ export function PlayerRoomClient({ roomCode }: PlayerRoomClientProps) {
           }}
           type="submit"
         >
-          {isPending ? "Joining..." : "Continue"}
+          {isPending ? "Entrando..." : "Siguiente"}
         </button>
       </form>
     );
   }
 
-  if (!session.instructionsDismissed && (room?.phase === "idle" || room?.phase === "lobby" || room?.phase === "instructions")) {
+  if (!room || !playerSeat) {
     return (
-      <section className="enter-rise flex h-full flex-col justify-between">
-        <div>
-          <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">
-            Instructions
-          </p>
-          <h2 className="font-display mt-4 text-3xl font-black uppercase tracking-[0.08em]">
-            You are in, {session.name}.
-          </h2>
-          <div className="mt-6 space-y-4 text-base leading-7 text-[color:var(--muted)]">
-            <p>Answer fast. Correct answers score more if you answer earlier.</p>
-            <p>You get 15 seconds per question.</p>
-            <p>Missing too many questions in a row can reset the match.</p>
-          </div>
-        </div>
-
-        <button
-          className="font-display mt-8 rounded-[1.45rem] bg-[linear-gradient(135deg,var(--accent),#ffd976)] px-5 py-4 text-base font-black uppercase tracking-[0.14em] text-slate-950 transition hover:-translate-y-0.5 hover:brightness-105"
-          onClick={dismissInstructions}
-          type="button"
-        >
-          Continue To Lobby
-        </button>
+      <section className="enter-rise flex h-full flex-col justify-center gap-5 text-center">
+        <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Preparando</p>
+        <h2 className="font-display text-3xl font-black uppercase">Conectando tu control</h2>
+        {error ? <p className="text-sm text-red-200">{error}</p> : null}
       </section>
     );
   }
 
-  if (!room || room.phase === "idle" || room.phase === "lobby" || room.phase === "instructions") {
+  if (room.phase === "idle" || room.phase === "lobby") {
+    const isPlayer1 = playerSeat.slot === 1;
+    const canStartSolo = isPlayer1;
+    const canStartBattle = isPlayer1 && Boolean(room.players.player2);
+
     return (
-      <section className="enter-rise flex h-full flex-col justify-between">
+      <section className="enter-rise flex h-full flex-col justify-between gap-6">
         <div>
           <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent-strong)]">
             Lobby
           </p>
           <h2 className="font-display mt-4 text-3xl font-black uppercase tracking-[0.08em]">
-            {room?.players.player2 ? "Both Players Connected." : "Waiting For Player 2..."}
+            {room.players.player2 ? "Listos para pelear" : "Esperando al jugador 2"}
           </h2>
           <p className="mt-4 text-base leading-7 text-[color:var(--muted)]">
-            The host can start solo if no second player joins. Stay on this screen until the match begins.
+            {room.players.player2
+              ? "Ambos jugadores están conectados. Jugador 1 puede iniciar el duelo."
+              : "Si nadie más entra, el jugador 1 puede comenzar solo."}
           </p>
         </div>
 
-        <div className="glass-panel battle-card rounded-[1.8rem] p-5">
-          <p className="text-sm uppercase tracking-[0.25em] text-[color:var(--accent)]">Current Status</p>
-          <p className="font-display mt-3 text-2xl font-black uppercase">{session.name}</p>
-          <p className="mt-1 text-sm text-[color:var(--muted)]">
-            {room?.players.player1?.name ?? "Player 1"} vs {room?.players.player2?.name ?? "Open slot"}
-          </p>
+        <div className="grid gap-4">
+          <div className="glass-panel rounded-[1.8rem] p-5">
+            <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Tu lugar</p>
+            <p className="font-display mt-3 text-3xl font-black uppercase">
+              P{playerSeat.slot} · {playerSeat.name}
+            </p>
+            <p className="mt-1 text-sm text-[color:var(--muted)]">{playerSeat.country}</p>
+            {waitingCountdown ? (
+              <p className="mt-4 rounded-full border border-white/10 px-3 py-2 text-sm text-[color:var(--muted)]">
+                Cuenta atrás del lobby: {waitingCountdown}s
+              </p>
+            ) : null}
+          </div>
+
+          {isPlayer1 ? (
+            <div className="grid gap-3">
+              <button
+                className="font-display rounded-[1.45rem] bg-[linear-gradient(135deg,var(--accent),#ffd77a)] px-5 py-4 text-base font-black uppercase tracking-[0.14em] text-slate-950 transition hover:-translate-y-0.5 hover:brightness-105 disabled:opacity-40"
+                disabled={!canStartSolo || isPending}
+                onClick={() => startMatch("solo")}
+                type="button"
+              >
+                Empezar solo
+              </button>
+              <button
+                className="font-display rounded-[1.45rem] bg-[linear-gradient(135deg,var(--accent-cool),#8eeeff)] px-5 py-4 text-base font-black uppercase tracking-[0.14em] text-slate-950 transition hover:-translate-y-0.5 hover:brightness-105 disabled:opacity-40"
+                disabled={!canStartBattle || isPending}
+                onClick={() => startMatch("battle")}
+                type="button"
+              >
+                Empezar duelo
+              </button>
+            </div>
+          ) : (
+            <div className="rounded-[1.45rem] border border-white/10 bg-white/5 px-4 py-4 text-sm leading-6 text-[color:var(--muted)]">
+              El jugador 1 decide cuándo comienza la partida. Mantente en esta pantalla.
+            </div>
+          )}
         </div>
+
+        {error ? (
+          <div className="rounded-[1.35rem] border border-[color:var(--danger)]/40 bg-[color:var(--danger)]/10 px-4 py-3 text-sm text-red-100">
+            {error}
+          </div>
+        ) : null}
       </section>
     );
   }
@@ -426,29 +671,50 @@ export function PlayerRoomClient({ roomCode }: PlayerRoomClientProps) {
     return (
       <section className="flex h-full items-center justify-center">
         <div className="enter-scale text-center">
-          <p className="font-display text-sm uppercase tracking-[0.45em] text-[color:var(--accent)]">
-            Countdown
+          <p className="font-display text-sm uppercase tracking-[0.45em] text-[color:var(--accent)]">Cuenta regresiva</p>
+          <h2 className="font-display mt-5 text-8xl font-black uppercase">{countdown}</h2>
+        </div>
+      </section>
+    );
+  }
+
+  if (room.phase === "question-read") {
+    return (
+      <section className="enter-rise flex h-full flex-col justify-between gap-5">
+        <div>
+          <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">
+            Pregunta {room.currentQuestion.questionIndex}
           </p>
-          <h2 className="font-display mt-5 text-8xl font-black uppercase">
-            {room.countdown.secondsRemaining ?? "3"}
+          <h2 className="font-display mt-4 text-3xl font-black uppercase tracking-[0.05em]">
+            {room.currentQuestion.prompt}
           </h2>
+          <p className="mt-4 text-sm leading-7 text-[color:var(--muted)]">
+            Lee con calma. Las respuestas aparecerán en {readCountdown}s.
+          </p>
+        </div>
+
+        <div className="rounded-[1.8rem] border border-white/10 bg-white/5 px-5 py-6 text-center">
+          <p className="font-display text-5xl font-black uppercase text-[color:var(--accent-cool)]">{readCountdown}</p>
+          <p className="mt-2 text-sm text-[color:var(--muted)]">Prepárate para responder.</p>
         </div>
       </section>
     );
   }
 
   if (room.phase === "question") {
-    const alreadyAnswered = Boolean(
-      (room.players.player1?.playerId === session.playerId && room.answers.player1) ||
-        (room.players.player2?.playerId === session.playerId && room.answers.player2),
-    );
+    const alreadyAnswered = Boolean(room.answers[playerSeat.slot === 1 ? "player1" : "player2"]);
 
     return (
       <section className="enter-rise flex h-full flex-col gap-5">
         <div>
-          <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">
-            Question {room.currentQuestion.questionIndex}
-          </p>
+          <div className="flex items-center justify-between gap-4">
+            <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">
+              Pregunta {room.currentQuestion.questionIndex}
+            </p>
+            <p className={`font-display text-3xl font-black ${Number(answerCountdown) <= 5 ? "timer-critical" : ""}`}>
+              {answerCountdown}s
+            </p>
+          </div>
           <h2 className="font-display mt-4 text-3xl font-black uppercase tracking-[0.06em]">
             {room.currentQuestion.prompt}
           </h2>
@@ -456,9 +722,9 @@ export function PlayerRoomClient({ roomCode }: PlayerRoomClientProps) {
 
         <div className="grid flex-1 gap-4">
           {room.currentQuestion.choices
-            ? (Object.keys(room.currentQuestion.choices) as Array<"A" | "B" | "C" | "D">).map((choice) => (
+            ? (Object.entries(room.currentQuestion.choices) as Array<["A" | "B" | "C" | "D", string]>).map(([choice, label]) => (
                 <button
-                  className="font-display rounded-[1.8rem] border border-white/10 px-6 py-7 text-left text-5xl font-black uppercase tracking-[0.08em] transition duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed"
+                  className="rounded-[1.8rem] border border-white/10 px-5 py-5 text-left transition duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed"
                   disabled={alreadyAnswered}
                   key={choice}
                   onClick={() => submitAnswer(choice)}
@@ -471,31 +737,45 @@ export function PlayerRoomClient({ roomCode }: PlayerRoomClientProps) {
                   }}
                   type="button"
                 >
-                  {choice}
+                  <p className="font-display text-5xl font-black uppercase">{choice}</p>
+                  <p className="mt-3 text-base leading-6">{label}</p>
                 </button>
               ))
             : null}
         </div>
 
         <p className="text-sm text-[color:var(--muted)]">
-          {alreadyAnswered ? "Answer locked in." : "Tap one answer before time runs out."}
+          {alreadyAnswered ? "Respuesta enviada." : "Toca una opción antes de que termine el tiempo."}
         </p>
       </section>
     );
   }
 
   if (room.phase === "answer-lock") {
+    const glowClass =
+      playerFeedback === "correct"
+        ? "border-[color:var(--success)]/50 bg-[color:var(--success)]/12"
+        : playerFeedback === "incorrect" || playerFeedback === "timeout"
+          ? "border-[color:var(--danger)]/50 bg-[color:var(--danger)]/12"
+          : "border-white/10 bg-white/5";
+
     return (
       <section className="enter-scale flex h-full flex-col justify-center gap-6 text-center">
-        <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">
-          Answers Locked
-        </p>
-        <h2 className="font-display text-4xl font-black uppercase tracking-[0.08em]">
-          Stand By For The Next Clash.
-        </h2>
-        {playerWarning ? (
+        <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Respuestas cerradas</p>
+        <div className={`rounded-[1.8rem] border px-5 py-8 ${glowClass}`}>
+          <h2 className="font-display text-4xl font-black uppercase tracking-[0.08em]">
+            {playerFeedback === "correct"
+              ? "¡Correcta!"
+              : playerFeedback === "incorrect"
+                ? "Incorrecta"
+                : playerFeedback === "timeout"
+                  ? "Sin respuesta"
+                  : "Procesando"}
+          </h2>
+        </div>
+        {(playerSeat.slot === 1 ? room.warnings.player1AfkWarningVisible : room.warnings.player2AfkWarningVisible) ? (
           <p className="rounded-[1.35rem] border border-[color:var(--danger)]/40 bg-[color:var(--danger)]/10 px-4 py-3 text-sm text-red-100">
-            Warning: two unanswered questions in a row.
+            Advertencia: llevas dos preguntas seguidas sin responder.
           </p>
         ) : null}
       </section>
@@ -505,62 +785,40 @@ export function PlayerRoomClient({ roomCode }: PlayerRoomClientProps) {
   if (room.phase === "battle-result") {
     return (
       <section className="enter-scale flex h-full flex-col justify-center gap-6 text-center">
-        <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent-strong)]">
-          Battle Result
-        </p>
+        <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent-strong)]">Resultado</p>
         <h2 className="font-display text-4xl font-black uppercase tracking-[0.08em]">
           {room.battleResult.winner === "player1"
-            ? `${room.players.player1?.name ?? "Player 1"} wins`
+            ? `${room.players.player1?.name ?? "Jugador 1"} gana`
             : room.battleResult.winner === "player2"
-              ? `${room.players.player2?.name ?? "Player 2"} wins`
-              : "It Is A Tie"}
+              ? `${room.players.player2?.name ?? "Jugador 2"} gana`
+              : "Empate"}
         </h2>
       </section>
     );
   }
 
-  if (room.phase === "leaderboard" || room.phase === "finished" || room.phase === "reset") {
-    const playerRank =
-      room.players.player1?.playerId === session.playerId
-        ? room.leaderboard.player1Rank
-        : room.leaderboard.player2Rank;
-
+  if (room.phase === "leaderboard") {
     return (
       <section className="enter-rise flex h-full flex-col gap-5">
         <div>
-          <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">
-            Leaderboard
-          </p>
-          <h2 className="font-display mt-4 text-3xl font-black uppercase tracking-[0.08em]">
-            Match Complete
-          </h2>
+          <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Leaderboard</p>
+          <h2 className="font-display mt-4 text-3xl font-black uppercase tracking-[0.08em]">Clasificación</h2>
         </div>
+        <LeaderboardList entries={room.leaderboard.visibleTop} rank={playerRank} />
+      </section>
+    );
+  }
 
-        <div className="space-y-3">
-          {room.leaderboard.visibleTop.map((entry, index) => (
-            <div
-              className="glass-panel battle-card enter-scale flex items-center justify-between rounded-[1.6rem] px-5 py-4"
-              key={entry.playerId}
-              style={{ animationDelay: `${index * 70}ms` }}
-            >
-              <div>
-                <p className="text-lg font-bold">
-                  {entry.rank}. {entry.playerName}
-                </p>
-                <p className="text-sm text-[color:var(--muted)]">{entry.city}</p>
-              </div>
-              <p className="font-display text-xl font-black text-[color:var(--accent)]">
-                {entry.lifetimePoints}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {playerRank ? (
-          <p className="rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 text-sm text-[color:var(--muted)]">
-            Your overall rank: <span className="font-bold text-white">#{playerRank}</span>
-          </p>
-        ) : null}
+  if (room.phase === "finished" || room.phase === "reset") {
+    return (
+      <section className="enter-scale flex h-full flex-col justify-center gap-6 text-center">
+        <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Siguiente ronda</p>
+        <h2 className="font-display text-4xl font-black uppercase tracking-[0.08em]">
+          La arena se está reiniciando
+        </h2>
+        <p className="text-sm text-[color:var(--muted)]">
+          {currentMode === "battle" ? "Pronto podrán entrar nuevos jugadores." : "La siguiente partida estará disponible en breve."}
+        </p>
       </section>
     );
   }

@@ -27,5 +27,5 @@ export interface RoomStateResponse {
 }
 
 export interface RegistrationResponse {
-  player: Pick<Player, "playerId" | "name" | "city" | "email">;
+  player: Pick<Player, "playerId" | "name" | "country" | "email">;
 }

@@ -1,5 +1,6 @@
-import type { RoomState } from "@/lib/types/game";
+import { PUBLIC_ROOM_CODE } from "@/lib/game/constants";
 import { createInitialRoomState } from "@/lib/game/default-room";
+import type { Player, Question, RoomState } from "@/lib/types/game";
 import { getKv } from "@/lib/kv/client";
 import {
   ROOM_TTL_SECONDS,
@@ -10,8 +11,7 @@ import {
   roomQuestionBankKey,
   roomStateKey,
 } from "@/lib/kv/keys";
-import { createHostToken, createRoomCode, createSessionId } from "@/lib/utils/ids";
-import type { Player, Question } from "@/lib/types/game";
+import { createHostToken, createSessionId } from "@/lib/utils/ids";
 
 interface RoomMetaRecord {
   roomCode: string;
@@ -21,69 +21,54 @@ interface RoomMetaRecord {
   expiresAt: string;
 }
 
-interface CreateRoomResult {
-  room: RoomState;
-  roomCode: string;
-  hostToken: string;
-  hostSessionId: string;
-}
-
-export async function createRoom(playUrlBase: string): Promise<CreateRoomResult> {
+export async function ensurePublicRoom(baseUrl: string) {
   const kv = getKv();
+  const existing = await kv.get<RoomState>(roomStateKey(PUBLIC_ROOM_CODE));
 
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const roomCode = createRoomCode();
-    const stateKey = roomStateKey(roomCode);
-    const existing = await kv.get<RoomState>(stateKey);
+  if (existing) {
+    return existing;
+  }
 
-    if (existing) {
-      continue;
-    }
+  const createdAt = new Date().toISOString();
+  const expiresAt = new Date(Date.now() + ROOM_TTL_SECONDS * 1000).toISOString();
+  const hostSessionId = createSessionId();
+  const hostToken = createHostToken();
 
-    const createdAt = new Date().toISOString();
-    const expiresAt = new Date(Date.now() + ROOM_TTL_SECONDS * 1000).toISOString();
-    const hostSessionId = createSessionId();
-    const hostToken = createHostToken();
-    const qrUrl = `${playUrlBase}/play/${roomCode}`;
-    const room = createInitialRoomState({
-      roomCode,
-      hostSessionId,
-      hostToken,
-      qrUrl,
-      createdAt,
-      expiresAt,
-    });
+  const room = createInitialRoomState({
+    roomCode: PUBLIC_ROOM_CODE,
+    hostSessionId,
+    hostToken,
+    qrUrl: `${baseUrl}/play`,
+    createdAt,
+    expiresAt,
+  });
 
-    const meta: RoomMetaRecord = {
-      roomCode,
-      hostSessionId,
-      hostToken,
-      createdAt,
-      expiresAt,
-    };
+  const meta: RoomMetaRecord = {
+    roomCode: PUBLIC_ROOM_CODE,
+    hostSessionId,
+    hostToken,
+    createdAt,
+    expiresAt,
+  };
 
-    await Promise.all([
-      kv.set(stateKey, room, { ex: ROOM_TTL_SECONDS }),
-      kv.set(roomMetaKey(roomCode), meta, { ex: ROOM_TTL_SECONDS }),
-      kv.set(roomHostKey(roomCode), {
+  await Promise.all([
+    kv.set(roomStateKey(PUBLIC_ROOM_CODE), room, { ex: ROOM_TTL_SECONDS }),
+    kv.set(roomMetaKey(PUBLIC_ROOM_CODE), meta, { ex: ROOM_TTL_SECONDS }),
+    kv.set(
+      roomHostKey(PUBLIC_ROOM_CODE),
+      {
         hostSessionId,
         hostToken,
         lastSeenAt: createdAt,
-      }, { ex: ROOM_TTL_SECONDS }),
-    ]);
+      },
+      { ex: ROOM_TTL_SECONDS },
+    ),
+  ]);
 
-    return {
-      room,
-      roomCode,
-      hostToken,
-      hostSessionId,
-    };
-  }
-
-  throw new Error("Unable to allocate a unique room code");
+  return room;
 }
 
-export async function getRoomState(roomCode: string) {
+export async function getRoomState(roomCode = PUBLIC_ROOM_CODE) {
   const kv = getKv();
   return kv.get<RoomState>(roomStateKey(roomCode));
 }
@@ -116,9 +101,9 @@ export function choosePlayerSlot(room: RoomState, preferredSlot?: 1 | 2) {
   return null;
 }
 
-export async function joinRoom(roomCode: string, player: Player) {
+export async function joinRoom(player: Player) {
   const kv = getKv();
-  const room = await getRoomState(roomCode);
+  const room = await getRoomState(player.roomCode);
 
   if (!room) {
     throw new Error("room_not_found");
@@ -135,10 +120,6 @@ export async function joinRoom(roomCode: string, player: Player) {
     throw new Error("slot_taken");
   }
 
-  if (room.players.player1?.playerId === player.playerId || room.players.player2?.playerId === player.playerId) {
-    throw new Error("player_already_joined");
-  }
-
   const updatedRoom: RoomState = {
     ...room,
     phase: "lobby",
@@ -147,16 +128,20 @@ export async function joinRoom(roomCode: string, player: Player) {
       [slotKey]: player,
     },
     lobby: {
+      ...room.lobby,
       allowSoloStart: slotKey === "player1" && room.players[otherSlotKey] === null,
-      soloStartRequestedAt: room.lobby.soloStartRequestedAt,
+      waitingEndsAt:
+        room.players.player1 || slotKey === "player2"
+          ? room.lobby.waitingEndsAt
+          : new Date(Date.now() + 120_000).toISOString(),
     },
   };
 
   await Promise.all([
     saveRoomState(updatedRoom),
-    kv.set(roomPlayerKey(roomCode, player.playerId), player, { ex: ROOM_TTL_SECONDS }),
+    kv.set(roomPlayerKey(player.roomCode, player.playerId), player, { ex: ROOM_TTL_SECONDS }),
     kv.set(
-      roomPlayersKey(roomCode),
+      roomPlayersKey(player.roomCode),
       {
         player1Id: updatedRoom.players.player1?.playerId ?? null,
         player2Id: updatedRoom.players.player2?.playerId ?? null,

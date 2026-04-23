@@ -1,17 +1,19 @@
-import { createRoom } from "@/lib/kv/room-store";
+import { PUBLIC_ROOM_CODE } from "@/lib/game/constants";
 import { ok, fail } from "@/lib/api/http";
 import { getBaseUrl } from "@/lib/utils/env";
+import { ensurePublicRoom } from "@/lib/kv/room-store";
 
 export async function POST() {
   try {
-    const room = await createRoom(getBaseUrl());
+    const room = await ensurePublicRoom(getBaseUrl());
 
     return ok({
-      roomCode: room.roomCode,
+      roomCode: PUBLIC_ROOM_CODE,
       hostToken: room.hostToken,
       hostSessionId: room.hostSessionId,
-      playUrl: room.room.qrUrl,
-      qrUrl: room.room.qrUrl,
+      playUrl: `${getBaseUrl()}/play`,
+      qrUrl: `${getBaseUrl()}/play`,
+      hostUrl: `${getBaseUrl()}/host`,
     });
   } catch (error) {
     console.error("create room error", error);

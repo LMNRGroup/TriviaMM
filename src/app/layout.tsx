@@ -14,7 +14,7 @@ const bodyFont = Space_Grotesk({
 
 export const metadata: Metadata = {
   title: "Trivia Battle",
-  description: "Production rebuild of the Trivia Battle MVP.",
+  description: "Arena competitiva de trivia con pantalla principal y control móvil.",
 };
 
 export default function RootLayout({
@@ -23,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html className={`${displayFont.variable} ${bodyFont.variable}`} lang="en">
+    <html className={`${displayFont.variable} ${bodyFont.variable}`} lang="es">
       <body>{children}</body>
     </html>
   );

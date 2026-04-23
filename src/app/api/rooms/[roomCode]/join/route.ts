@@ -57,7 +57,7 @@ export async function POST(request: Request, context: RouteContext) {
       registration,
     });
 
-    const room = await joinRoom(parsedRoomCode.data, player);
+    const room = await joinRoom(player);
 
     return ok({
       player,

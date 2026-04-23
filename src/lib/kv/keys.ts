@@ -1,4 +1,4 @@
-export const ROOM_TTL_SECONDS = 60 * 60 * 2;
+export const ROOM_TTL_SECONDS = 60 * 60 * 8;
 export const PRESENCE_TTL_SECONDS = 60;
 export const LOCK_TTL_SECONDS = 10;
 
@@ -50,6 +50,6 @@ export function roomLockKey(roomCode: string) {
   return `trivia:rooms:${roomCode}:lock`;
 }
 
-export function activeRoomsIndexKey() {
-  return "trivia:rooms:index:active";
+export function returningPlayerByIpKey(ipAddress: string) {
+  return `trivia:returning-player:${ipAddress}`;
 }

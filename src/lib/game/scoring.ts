@@ -1,5 +1,5 @@
 import type { WinnerType } from "@/lib/types/game";
-import { QUESTION_DURATION_MS } from "@/lib/game/constants";
+import { QUESTION_ANSWER_DURATION_MS } from "@/lib/game/constants";
 
 const BASE_CORRECT_POINTS = 100;
 const MAX_SPEED_BONUS = 50;
@@ -9,7 +9,10 @@ export function calculatePoints(responseTimeMs: number | null, isCorrect: boolea
     return 0;
   }
 
-  const speedRatio = Math.max(0, (QUESTION_DURATION_MS - responseTimeMs) / QUESTION_DURATION_MS);
+  const speedRatio = Math.max(
+    0,
+    (QUESTION_ANSWER_DURATION_MS - responseTimeMs) / QUESTION_ANSWER_DURATION_MS,
+  );
   const speedBonus = Math.round(MAX_SPEED_BONUS * speedRatio);
 
   return BASE_CORRECT_POINTS + speedBonus;

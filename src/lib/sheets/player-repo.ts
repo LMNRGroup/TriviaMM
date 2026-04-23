@@ -8,7 +8,7 @@ import { hasSheetsConfig } from "@/lib/utils/env";
 type PlayerSheetRow = [
   playerId: string,
   name: string,
-  city: string,
+  country: string,
   age: string,
   email: string,
   acceptedTermsAt: string,
@@ -27,7 +27,7 @@ type PlayerSheetRow = [
 interface RegisteredPlayerRecord {
   playerId: string;
   name: string;
-  city: string;
+  country: string;
   age: number;
   email: string;
   acceptedTermsAt: string;
@@ -42,7 +42,7 @@ function buildPlayerRow(input: RegistrationInput, playerId: string, timestamp: s
   return [
     playerId,
     input.name,
-    input.city,
+    input.country,
     String(input.age),
     input.email,
     timestamp,
@@ -63,7 +63,7 @@ function mapRowToRegistrationPlayer(row: string[]) {
   return {
     playerId: row[0] ?? "",
     name: row[1] ?? "",
-    city: row[2] ?? "",
+    country: row[2] ?? "",
     age: Number(row[3] ?? 0),
     email: row[4] ?? "",
     acceptedTermsAt: row[5] ?? "",
@@ -92,7 +92,7 @@ export async function createRegisteredPlayer(input: RegistrationInput) {
     fallbackPlayers.set(playerId, {
       playerId,
       name: input.name,
-      city: input.city,
+      country: input.country,
       age: input.age,
       email: input.email,
       acceptedTermsAt: timestamp,
@@ -105,7 +105,7 @@ export async function createRegisteredPlayer(input: RegistrationInput) {
   return {
     playerId,
     name: input.name,
-    city: input.city,
+    country: input.country,
     email: input.email,
   };
 }
@@ -124,6 +124,28 @@ export async function getRegisteredPlayerById(playerId: string) {
   const rows = response.data.values ?? [];
   const dataRows = rows[0]?.[0] === "player_id" ? rows.slice(1) : rows;
   const found = dataRows.find((row) => row[0] === playerId);
+
+  if (!found) {
+    return null;
+  }
+
+  return mapRowToRegistrationPlayer(found);
+}
+
+export async function findRegisteredPlayerByEmail(email: string) {
+  if (!hasSheetsConfig()) {
+    return Array.from(fallbackPlayers.values()).find((player) => player.email === email) ?? null;
+  }
+
+  const sheets = getSheetsClient();
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: getSpreadsheetId(),
+    range: `${SHEETS_TABS.players}!A:P`,
+  });
+
+  const rows = response.data.values ?? [];
+  const dataRows = rows[0]?.[0] === "player_id" ? rows.slice(1) : rows;
+  const found = dataRows.find((row) => (row[4] ?? "").toLowerCase() === email.toLowerCase());
 
   if (!found) {
     return null;
@@ -156,7 +178,7 @@ export function buildLivePlayerFromRegistration({
     roomCode,
     slot,
     name: registration.name,
-    city: registration.city,
+    country: registration.country,
     age: registration.age,
     email: registration.email,
     acceptedTermsAt: registration.acceptedTermsAt,

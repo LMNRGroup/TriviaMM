@@ -1,8 +1,8 @@
 export type RoomPhase =
   | "idle"
   | "lobby"
-  | "instructions"
   | "countdown"
+  | "question-read"
   | "question"
   | "answer-lock"
   | "battle-result"
@@ -16,13 +16,14 @@ export type AnswerChoice = "A" | "B" | "C" | "D";
 export type MatchStatus = "pending" | "active" | "completed" | "abandoned" | "reset_afk";
 export type SubmissionStatus = "submitted" | "timeout" | "duplicate_ignored";
 export type WinnerType = "player1" | "player2" | "tie" | "solo";
+export type AnswerFeedback = "correct" | "incorrect" | "timeout" | null;
 
 export interface Player {
   playerId: string;
   roomCode: string;
   slot: 1 | 2;
   name: string;
-  city: string;
+  country: string;
   age: number;
   email: string;
   acceptedTermsAt: string;
@@ -102,7 +103,7 @@ export interface LeaderboardEntry {
   leaderboardEntryId: string;
   playerId: string;
   playerName: string;
-  city: string;
+  country: string;
   matchesPlayed: number;
   wins: number;
   soloBestScore: number;
@@ -130,7 +131,8 @@ export interface RoomState {
   };
   lobby: {
     allowSoloStart: boolean;
-    soloStartRequestedAt?: string;
+    waitingEndsAt: string | null;
+    previewMessage: string | null;
   };
   countdown: {
     startedAt: string | null;
@@ -144,12 +146,17 @@ export interface RoomState {
     prompt: string | null;
     choices: { A: string; B: string; C: string; D: string } | null;
     startedAt: string | null;
+    answersVisibleAt: string | null;
     endsAt: string | null;
     answerLockEndsAt: string | null;
   };
   answers: {
     player1: AnswerSubmission | null;
     player2: AnswerSubmission | null;
+  };
+  answerFeedback: {
+    player1: AnswerFeedback;
+    player2: AnswerFeedback;
   };
   scores: {
     player1: number;

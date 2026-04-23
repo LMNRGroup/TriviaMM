@@ -1,10 +1,29 @@
 import { randomUUID } from "node:crypto";
-import { ANSWER_LOCK_DURATION_MS, BATTLE_RESULT_DURATION_MS, COUNTDOWN_DURATION_MS, FINISHED_DURATION_MS, INSTRUCTIONS_DURATION_MS, LEADERBOARD_DURATION_MS, MATCH_QUESTION_COUNT, QUESTION_DURATION_MS } from "@/lib/game/constants";
-import { calculatePoints, average, determineBattleWinner } from "@/lib/game/scoring";
+import {
+  ANSWER_LOCK_DURATION_MS,
+  BATTLE_RESULT_DURATION_MS,
+  COUNTDOWN_DURATION_MS,
+  FINISHED_DURATION_MS,
+  LEADERBOARD_DURATION_MS,
+  LOBBY_WAIT_DURATION_MS,
+  MATCH_QUESTION_COUNT,
+  QUESTION_ANSWER_DURATION_MS,
+  QUESTION_READ_DURATION_MS,
+} from "@/lib/game/constants";
 import { shouldResetForAfk, shouldShowAfkWarning } from "@/lib/game/afk";
-import type { AnswerSubmission, Match, Player, Question, RoomMode, RoomState, WinnerType } from "@/lib/types/game";
+import { average, calculatePoints, determineBattleWinner } from "@/lib/game/scoring";
 import { appendMatch, appendMatchAnswers } from "@/lib/sheets/match-repo";
 import { getPlayerLeaderboardRank, listLeaderboard, upsertLeaderboardEntry } from "@/lib/sheets/leaderboard-repo";
+import type {
+  AnswerFeedback,
+  AnswerSubmission,
+  Match,
+  Player,
+  Question,
+  RoomMode,
+  RoomState,
+  WinnerType,
+} from "@/lib/types/game";
 
 function plusMs(baseIso: string, milliseconds: number) {
   return new Date(new Date(baseIso).getTime() + milliseconds).toISOString();
@@ -12,69 +31,27 @@ function plusMs(baseIso: string, milliseconds: number) {
 
 function activePlayers(room: RoomState) {
   return [room.players.player1, room.players.player2].filter((player): player is Player => {
-    if (!player) {
-      return false;
-    }
-
-    if (room.mode === "solo") {
-      return player.slot === 1;
-    }
-
-    return true;
+    if (!player) return false;
+    return room.mode === "solo" ? player.slot === 1 : true;
   });
 }
 
-function updatePlayerTotals(player: Player, submission: AnswerSubmission) {
-  return {
-    ...player,
-    totalScore: player.totalScore + submission.awardedPoints,
-    correctCount: player.correctCount + (submission.isCorrect ? 1 : 0),
-    wrongCount: player.wrongCount + (!submission.isCorrect && submission.status === "submitted" ? 1 : 0),
-    timeoutCount: player.timeoutCount + (submission.status === "timeout" ? 1 : 0),
-    unansweredStreak: submission.unansweredStreakAfter,
-    lastSeenAt: submission.submittedAt ?? player.lastSeenAt,
-  };
+function feedbackFromSubmission(submission: AnswerSubmission): AnswerFeedback {
+  if (submission.status === "timeout") return "timeout";
+  return submission.isCorrect ? "correct" : "incorrect";
 }
 
-function buildTimeoutSubmission({
-  room,
-  player,
-  question,
-}: {
-  room: RoomState;
-  player: Player;
-  question: Question;
-}): AnswerSubmission {
-  return {
-    submissionId: randomUUID(),
-    roomCode: room.roomCode,
-    matchId: room.currentMatchId ?? "",
-    questionId: question.questionId,
-    questionIndex: room.currentQuestion.questionIndex,
-    playerId: player.playerId,
-    playerSlot: player.slot,
-    selectedChoice: null,
-    correctChoice: question.correctChoice,
-    isCorrect: false,
-    responseTimeMs: null,
-    submittedAt: null,
-    deadlineAt: room.currentQuestion.endsAt ?? new Date().toISOString(),
-    status: "timeout",
-    awardedPoints: 0,
-    unansweredStreakAfter: player.unansweredStreak + 1,
-  };
-}
-
-function buildQuestionState(question: Question, room: RoomState, nowIso: string, totalQuestions: number) {
+function buildQuestionReadState(question: Question, room: RoomState, nowIso: string) {
   return {
     ...room.currentQuestion,
     questionId: question.questionId,
     questionIndex: room.randomization.askedQuestionIds.length + 1,
-    totalQuestions,
+    totalQuestions: room.currentQuestion.totalQuestions,
     prompt: question.prompt,
     choices: question.choices,
     startedAt: nowIso,
-    endsAt: plusMs(nowIso, QUESTION_DURATION_MS),
+    answersVisibleAt: plusMs(nowIso, QUESTION_READ_DURATION_MS),
+    endsAt: plusMs(nowIso, QUESTION_READ_DURATION_MS + QUESTION_ANSWER_DURATION_MS),
     answerLockEndsAt: null,
   };
 }
@@ -99,24 +76,44 @@ function createMatch(room: RoomState, mode: RoomMode, questions: Question[], now
   };
 }
 
-export function startMatch(
-  room: RoomState,
-  mode: RoomMode,
-  questions: Question[],
-  nowIso: string,
-): { room: RoomState; match: Match } {
+function resetPlayers(room: RoomState) {
+  return {
+    player1: room.players.player1
+      ? {
+          ...room.players.player1,
+          totalScore: 0,
+          correctCount: 0,
+          wrongCount: 0,
+          timeoutCount: 0,
+          unansweredStreak: 0,
+        }
+      : null,
+    player2: room.players.player2
+      ? {
+          ...room.players.player2,
+          totalScore: 0,
+          correctCount: 0,
+          wrongCount: 0,
+          timeoutCount: 0,
+          unansweredStreak: 0,
+        }
+      : null,
+  };
+}
+
+export function startMatch(room: RoomState, mode: RoomMode, questions: Question[], nowIso: string) {
   const match = createMatch(room, mode, questions, nowIso);
 
   return {
     room: {
       ...room,
-      phase: "instructions",
+      phase: "countdown" as const,
       mode,
       currentMatchId: match.matchId,
       countdown: {
         startedAt: nowIso,
-        endsAt: plusMs(nowIso, INSTRUCTIONS_DURATION_MS),
-        secondsRemaining: Math.ceil(INSTRUCTIONS_DURATION_MS / 1000),
+        endsAt: plusMs(nowIso, COUNTDOWN_DURATION_MS),
+        secondsRemaining: Math.ceil(COUNTDOWN_DURATION_MS / 1000),
       },
       currentQuestion: {
         ...room.currentQuestion,
@@ -126,10 +123,15 @@ export function startMatch(
         prompt: null,
         choices: null,
         startedAt: null,
+        answersVisibleAt: null,
         endsAt: null,
         answerLockEndsAt: null,
       },
       answers: {
+        player1: null,
+        player2: null,
+      },
+      answerFeedback: {
         player1: null,
         player2: null,
       },
@@ -162,14 +164,11 @@ export function startMatch(
       reset: {
         pending: false,
       },
-      players: {
-        player1: room.players.player1
-          ? { ...room.players.player1, totalScore: 0, correctCount: 0, wrongCount: 0, timeoutCount: 0, unansweredStreak: 0 }
-          : null,
-        player2: room.players.player2
-          ? { ...room.players.player2, totalScore: 0, correctCount: 0, wrongCount: 0, timeoutCount: 0, unansweredStreak: 0 }
-          : null,
+      lobby: {
+        ...room.lobby,
+        waitingEndsAt: plusMs(nowIso, LOBBY_WAIT_DURATION_MS),
       },
+      players: resetPlayers(room),
     },
     match,
   };
@@ -188,11 +187,10 @@ export function createAnswerSubmission({
   selectedChoice: Question["correctChoice"];
   submittedAt: string;
 }): AnswerSubmission {
-  const responseTimeMs = room.currentQuestion.startedAt
-    ? Math.max(0, new Date(submittedAt).getTime() - new Date(room.currentQuestion.startedAt).getTime())
+  const responseTimeMs = room.currentQuestion.answersVisibleAt
+    ? Math.max(0, new Date(submittedAt).getTime() - new Date(room.currentQuestion.answersVisibleAt).getTime())
     : null;
   const isCorrect = selectedChoice === question.correctChoice;
-  const awardedPoints = calculatePoints(responseTimeMs, isCorrect);
 
   return {
     submissionId: randomUUID(),
@@ -209,8 +207,37 @@ export function createAnswerSubmission({
     submittedAt,
     deadlineAt: room.currentQuestion.endsAt ?? submittedAt,
     status: "submitted",
-    awardedPoints,
-    unansweredStreakAfter: isCorrect || !isCorrect ? 0 : player.unansweredStreak,
+    awardedPoints: calculatePoints(responseTimeMs, isCorrect),
+    unansweredStreakAfter: 0,
+  };
+}
+
+function buildTimeoutSubmission({
+  room,
+  player,
+  question,
+}: {
+  room: RoomState;
+  player: Player;
+  question: Question;
+}): AnswerSubmission {
+  return {
+    submissionId: randomUUID(),
+    roomCode: room.roomCode,
+    matchId: room.currentMatchId ?? "",
+    questionId: question.questionId,
+    questionIndex: room.currentQuestion.questionIndex,
+    playerId: player.playerId,
+    playerSlot: player.slot,
+    selectedChoice: null,
+    correctChoice: question.correctChoice,
+    isCorrect: false,
+    responseTimeMs: null,
+    submittedAt: null,
+    deadlineAt: room.currentQuestion.endsAt ?? new Date().toISOString(),
+    status: "timeout",
+    awardedPoints: 0,
+    unansweredStreakAfter: player.unansweredStreak + 1,
   };
 }
 
@@ -222,7 +249,16 @@ function updateRoomForSubmission(room: RoomState, player: Player, submission: An
     return room;
   }
 
-  const updatedPlayer = updatePlayerTotals(currentPlayer, submission);
+  const updatedPlayer = {
+    ...currentPlayer,
+    totalScore: currentPlayer.totalScore + submission.awardedPoints,
+    correctCount: currentPlayer.correctCount + (submission.isCorrect ? 1 : 0),
+    wrongCount:
+      currentPlayer.wrongCount + (!submission.isCorrect && submission.status === "submitted" ? 1 : 0),
+    timeoutCount: currentPlayer.timeoutCount + (submission.status === "timeout" ? 1 : 0),
+    unansweredStreak: submission.unansweredStreakAfter,
+    lastSeenAt: submission.submittedAt ?? currentPlayer.lastSeenAt,
+  };
 
   return {
     ...room,
@@ -233,6 +269,10 @@ function updateRoomForSubmission(room: RoomState, player: Player, submission: An
     answers: {
       ...room.answers,
       [slotKey]: submission,
+    },
+    answerFeedback: {
+      ...room.answerFeedback,
+      [slotKey]: feedbackFromSubmission(submission),
     },
     scores: {
       ...room.scores,
@@ -263,7 +303,7 @@ export async function finalizeQuestion({
   room: RoomState;
   questionBank: Question[];
   nowIso: string;
-}): Promise<{ room: RoomState; finalizedSubmissions: AnswerSubmission[] }> {
+}) {
   const question = questionBank.find((candidate) => candidate.questionId === room.currentQuestion.questionId);
 
   if (!question) {
@@ -284,7 +324,9 @@ export async function finalizeQuestion({
   await appendMatchAnswers(submissions);
 
   const askedQuestionIds = [...nextRoom.randomization.askedQuestionIds, question.questionId];
-  const remainingQuestionIds = nextRoom.randomization.remainingQuestionIds.filter((questionId) => questionId !== question.questionId);
+  const remainingQuestionIds = nextRoom.randomization.remainingQuestionIds.filter(
+    (questionId) => questionId !== question.questionId,
+  );
   const shouldReset = nextRoom.mode
     ? shouldResetForAfk(
         nextRoom.mode,
@@ -296,7 +338,7 @@ export async function finalizeQuestion({
   return {
     room: {
       ...nextRoom,
-      phase: "answer-lock",
+      phase: "answer-lock" as const,
       currentQuestion: {
         ...nextRoom.currentQuestion,
         answerLockEndsAt: plusMs(nowIso, ANSWER_LOCK_DURATION_MS),
@@ -309,11 +351,10 @@ export async function finalizeQuestion({
       reset: shouldReset
         ? {
             pending: true,
-            reason: "afk",
+            reason: "afk" as const,
           }
         : nextRoom.reset,
     },
-    finalizedSubmissions: submissions,
   };
 }
 
@@ -321,8 +362,7 @@ export async function finalizeMatch(room: RoomState, nowIso: string) {
   const player1 = room.players.player1;
   const player2 = room.players.player2;
   const mode = room.mode ?? "solo";
-  const player1Times = [room.answers.player1?.responseTimeMs].filter((value): value is number => typeof value === "number");
-  const player2Times = [room.answers.player2?.responseTimeMs].filter((value): value is number => typeof value === "number");
+
   const winner: WinnerType =
     mode === "solo"
       ? "solo"
@@ -331,19 +371,25 @@ export async function finalizeMatch(room: RoomState, nowIso: string) {
           player2Score: room.scores.player2,
           player1CorrectCount: player1?.correctCount ?? 0,
           player2CorrectCount: player2?.correctCount ?? 0,
-          player1AverageMs: average(player1Times),
-          player2AverageMs: average(player2Times),
+          player1AverageMs: average(
+            [room.answers.player1?.responseTimeMs].filter((value): value is number => typeof value === "number"),
+          ),
+          player2AverageMs: average(
+            [room.answers.player2?.responseTimeMs].filter((value): value is number => typeof value === "number"),
+          ),
         });
 
   if (player1) {
     await upsertLeaderboardEntry({
       playerId: player1.playerId,
       playerName: player1.name,
-      city: player1.city,
+      country: player1.country,
       matchScore: room.scores.player1,
       mode,
       won: winner === "solo" || winner === "player1",
-      averageResponseMs: average(player1Times),
+      averageResponseMs: average(
+        [room.answers.player1?.responseTimeMs].filter((value): value is number => typeof value === "number"),
+      ),
     });
   }
 
@@ -351,11 +397,13 @@ export async function finalizeMatch(room: RoomState, nowIso: string) {
     await upsertLeaderboardEntry({
       playerId: player2.playerId,
       playerName: player2.name,
-      city: player2.city,
+      country: player2.country,
       matchScore: room.scores.player2,
       mode,
       won: winner === "player2",
-      averageResponseMs: average(player2Times),
+      averageResponseMs: average(
+        [room.answers.player2?.responseTimeMs].filter((value): value is number => typeof value === "number"),
+      ),
     });
   }
 
@@ -399,8 +447,7 @@ export async function finalizeMatch(room: RoomState, nowIso: string) {
         shownAt: mode === "battle" ? null : nowIso,
       },
     },
-    winner,
-  } satisfies { room: RoomState; winner: WinnerType };
+  };
 }
 
 export function resetRoom(room: RoomState, nowIso: string): RoomState {
@@ -422,10 +469,15 @@ export function resetRoom(room: RoomState, nowIso: string): RoomState {
       prompt: null,
       choices: null,
       startedAt: null,
+      answersVisibleAt: null,
       endsAt: null,
       answerLockEndsAt: null,
     },
     answers: {
+      player1: null,
+      player2: null,
+    },
+    answerFeedback: {
       player1: null,
       player2: null,
     },
@@ -457,6 +509,15 @@ export function resetRoom(room: RoomState, nowIso: string): RoomState {
     reset: {
       pending: false,
     },
+    lobby: {
+      allowSoloStart: false,
+      waitingEndsAt: null,
+      previewMessage: null,
+    },
+    players: {
+      player1: null,
+      player2: null,
+    },
     updatedAt: nowIso,
   };
 }
@@ -470,38 +531,39 @@ export async function tickRoom({
   questionBank: Question[];
   nowIso: string;
 }): Promise<{ room: RoomState; transitionApplied: boolean }> {
-  if (room.phase === "instructions" && room.countdown.endsAt && nowIso >= room.countdown.endsAt) {
+  if (room.phase === "countdown" && room.countdown.endsAt && nowIso >= room.countdown.endsAt) {
+    const nextQuestionId = room.randomization.remainingQuestionIds[0];
+    const nextQuestion = questionBank.find((question) => question.questionId === nextQuestionId);
+
+    if (!nextQuestion) return { room, transitionApplied: false };
+
     return {
       room: {
         ...room,
-        phase: "countdown",
-        countdown: {
-          startedAt: nowIso,
-          endsAt: plusMs(nowIso, COUNTDOWN_DURATION_MS),
-          secondsRemaining: Math.ceil(COUNTDOWN_DURATION_MS / 1000),
+        phase: "question-read",
+        currentQuestion: buildQuestionReadState(nextQuestion, room, nowIso),
+        answers: {
+          player1: null,
+          player2: null,
+        },
+        answerFeedback: {
+          player1: null,
+          player2: null,
         },
       },
       transitionApplied: true,
     };
   }
 
-  if (room.phase === "countdown" && room.countdown.endsAt && nowIso >= room.countdown.endsAt) {
-    const nextQuestionId = room.randomization.remainingQuestionIds[0];
-    const nextQuestion = questionBank.find((question) => question.questionId === nextQuestionId);
-
-    if (!nextQuestion) {
-      return { room, transitionApplied: false };
-    }
-
+  if (
+    room.phase === "question-read" &&
+    room.currentQuestion.answersVisibleAt &&
+    nowIso >= room.currentQuestion.answersVisibleAt
+  ) {
     return {
       room: {
         ...room,
         phase: "question",
-        currentQuestion: buildQuestionState(nextQuestion, room, nowIso, questionBank.length),
-        answers: {
-          player1: null,
-          player2: null,
-        },
       },
       transitionApplied: true,
     };
@@ -515,10 +577,7 @@ export async function tickRoom({
 
     if (allAnswered || (room.currentQuestion.endsAt && nowIso >= room.currentQuestion.endsAt)) {
       const finalized = await finalizeQuestion({ room, questionBank, nowIso });
-      return {
-        room: finalized.room,
-        transitionApplied: true,
-      };
+      return { room: finalized.room, transitionApplied: true };
     }
   }
 
@@ -528,7 +587,6 @@ export async function tickRoom({
         room: {
           ...resetRoom(room, nowIso),
           phase: "reset",
-          reset: room.reset,
           countdown: {
             startedAt: nowIso,
             endsAt: plusMs(nowIso, FINISHED_DURATION_MS),
@@ -546,9 +604,13 @@ export async function tickRoom({
       return {
         room: {
           ...room,
-          phase: "question",
-          currentQuestion: buildQuestionState(nextQuestion, room, nowIso, questionBank.length),
+          phase: "question-read",
+          currentQuestion: buildQuestionReadState(nextQuestion, room, nowIso),
           answers: {
+            player1: null,
+            player2: null,
+          },
+          answerFeedback: {
             player1: null,
             player2: null,
           },
@@ -558,14 +620,10 @@ export async function tickRoom({
     }
 
     const finalized = await finalizeMatch(room, nowIso);
-
     return {
       room:
         room.mode === "battle"
-          ? {
-              ...finalized.room,
-              phase: "battle-result",
-            }
+          ? { ...finalized.room, phase: "battle-result" }
           : {
               ...finalized.room,
               phase: "leaderboard",
@@ -592,7 +650,11 @@ export async function tickRoom({
     };
   }
 
-  if (room.phase === "leaderboard" && room.leaderboard.shownAt && nowIso >= plusMs(room.leaderboard.shownAt, LEADERBOARD_DURATION_MS)) {
+  if (
+    room.phase === "leaderboard" &&
+    room.leaderboard.shownAt &&
+    nowIso >= plusMs(room.leaderboard.shownAt, LEADERBOARD_DURATION_MS)
+  ) {
     return {
       room: {
         ...room,

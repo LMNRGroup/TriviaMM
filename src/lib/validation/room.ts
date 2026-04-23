@@ -20,6 +20,12 @@ export const startRoomSchema = z.object({
   mode: z.union([z.literal("solo"), z.literal("battle")]),
 });
 
+export const publicStartSchema = z.object({
+  playerId: z.string().trim().min(1),
+  controllerToken: z.string().trim().min(1),
+  mode: z.union([z.literal("solo"), z.literal("battle")]),
+});
+
 export const hostTokenSchema = z.object({
   hostToken: z.string().trim().min(1),
 });

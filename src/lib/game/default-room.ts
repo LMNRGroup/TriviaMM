@@ -34,6 +34,8 @@ export function createInitialRoomState({
     },
     lobby: {
       allowSoloStart: false,
+      waitingEndsAt: null,
+      previewMessage: null,
     },
     countdown: {
       startedAt: null,
@@ -47,10 +49,15 @@ export function createInitialRoomState({
       prompt: null,
       choices: null,
       startedAt: null,
+      answersVisibleAt: null,
       endsAt: null,
       answerLockEndsAt: null,
     },
     answers: {
+      player1: null,
+      player2: null,
+    },
+    answerFeedback: {
       player1: null,
       player2: null,
     },
