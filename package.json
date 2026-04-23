@@ -5,7 +5,7 @@
   "description": "Trivia Battle MVP rebuilt with Next.js, React, TypeScript, Tailwind, Vercel KV, and Google Sheets.",
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=20"
+    "node": "20.x"
   },
   "scripts": {
     "dev": "next dev --turbopack",
@@ -14,7 +14,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@vercel/kv": "^3.0.0",
+    "@upstash/redis": "^1.37.0",
     "clsx": "^2.1.1",
     "googleapis": "^171.4.0",
     "next": "^16.2.4",

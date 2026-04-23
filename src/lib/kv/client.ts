@@ -1,7 +1,9 @@
-import { createClient, type VercelKV } from "@vercel/kv";
+import { Redis } from "@upstash/redis";
 import { getKvConfig } from "@/lib/utils/env";
 
-let kvClient: VercelKV | null = null;
+type KvClient = Pick<Redis, "get" | "set" | "del">;
+
+let kvClient: KvClient | null = null;
 type MemoryValue = { value: unknown; expiresAt: number | null };
 
 class MemoryKv {
@@ -39,7 +41,7 @@ const fallbackKv = new MemoryKv();
 export function getKv() {
   try {
     if (!kvClient) {
-      kvClient = createClient(getKvConfig());
+      kvClient = new Redis(getKvConfig());
     }
 
     return kvClient;
