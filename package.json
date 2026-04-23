@@ -1,13 +1,36 @@
 {
   "name": "vercel-triviaapp",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Vercel-only TriviaApp (index.html big screen + user.html controller) using Vercel KV + serverless /api",
+  "description": "Trivia Battle MVP rebuilt with Next.js, React, TypeScript, Tailwind, Vercel KV, and Google Sheets.",
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint ."
   },
   "dependencies": {
-    "@vercel/kv": "^2.0.0"
+    "@vercel/kv": "^3.0.0",
+    "clsx": "^2.1.1",
+    "googleapis": "^171.4.0",
+    "next": "^16.2.4",
+    "qrcode.react": "^4.2.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.14",
+    "@types/node": "^24.7.2",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "eslint": "^9.37.0",
+    "eslint-config-next": "^16.2.4",
+    "tailwindcss": "^4.1.14",
+    "typescript": "^5.9.3"
   }
 }
