@@ -45,7 +45,7 @@ export function CreateRoomButton() {
   return (
     <div className="space-y-3">
       <button
-        className="rounded-3xl border border-white/10 bg-[color:var(--accent)] px-6 py-4 text-left text-lg font-black text-slate-950 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+        className="font-display pulse-ring relative rounded-[1.5rem] bg-[linear-gradient(135deg,var(--accent),#ffd77a)] px-6 py-4 text-left text-lg font-black uppercase tracking-[0.18em] text-slate-950 transition hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
         disabled={isPending}
         onClick={handleCreateRoom}
         type="button"
