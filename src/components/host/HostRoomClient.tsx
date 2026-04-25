@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import type { AnswerFeedback, LeaderboardEntry, RoomState } from "@/lib/types/game";
+import { LeaderboardList } from "@/components/leaderboard/LeaderboardList";
+import type { AnswerFeedback, PublicRoomState } from "@/lib/types/game";
 
 function formatSeconds(iso: string | null, now: number, decimals = 0) {
   if (!iso) {
@@ -25,52 +26,16 @@ function getFeedbackGlow(feedback: AnswerFeedback, side: "left" | "right") {
   return "";
 }
 
-function LeaderboardList({
-  entries,
-  highlightRank,
-}: {
-  entries: LeaderboardEntry[];
-  highlightRank?: number;
-}) {
-  return (
-    <div className="grid gap-3">
-      {entries.map((entry) => (
-        <div
-          className="flex items-center justify-between rounded-[1.4rem] border border-white/10 bg-white/6 px-5 py-4"
-          key={entry.playerId}
-        >
-          <div>
-            <p className="font-display text-lg font-black uppercase">
-              #{entry.rank} {entry.playerName}
-            </p>
-            <p className="text-sm text-[color:var(--muted)]">{entry.country}</p>
-          </div>
-          <div className="text-right">
-            <p className="font-display text-2xl font-black text-[color:var(--accent)]">{entry.lifetimePoints}</p>
-            <p className="text-xs uppercase tracking-[0.3em] text-[color:var(--muted)]">puntos</p>
-          </div>
-        </div>
-      ))}
-
-      {highlightRank && !entries.some((entry) => entry.rank === highlightRank) ? (
-        <div className="rounded-[1.4rem] border border-[color:var(--accent-cool)]/25 bg-[color:var(--panel-soft)] px-5 py-4 text-sm text-[color:var(--foreground)]">
-          Tu rango actual no está en el top visible: <span className="font-display text-xl font-black">#{highlightRank}</span>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 function SeatCard({
   title,
   playerName,
-  country,
+  cityLabel,
   score,
   slot,
 }: {
   title: string;
   playerName: string;
-  country: string;
+  cityLabel: string;
   score: number;
   slot: "P1" | "P2";
 }) {
@@ -81,7 +46,7 @@ function SeatCard({
         <div>
           <p className="font-display text-4xl font-black uppercase">{slot}</p>
           <p className="mt-2 font-display text-2xl font-black uppercase">{playerName}</p>
-          <p className="mt-1 text-sm text-[color:var(--muted)]">{country}</p>
+          <p className="mt-1 text-sm text-[color:var(--muted)]">{cityLabel}</p>
         </div>
         <div className="text-right">
           <p className="font-display text-4xl font-black text-[color:var(--accent)]">{score}</p>
@@ -93,7 +58,7 @@ function SeatCard({
 }
 
 export function HostRoomClient() {
-  const [room, setRoom] = useState<RoomState | null>(null);
+  const [room, setRoom] = useState<PublicRoomState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
@@ -109,7 +74,7 @@ export function HostRoomClient() {
           throw new Error(statePayload.message ?? "No se pudo cargar la pantalla principal.");
         }
 
-        const nextRoom = statePayload.data.room as RoomState;
+        const nextRoom = statePayload.data.room as PublicRoomState;
 
         if (!cancelled) {
           setRoom(nextRoom);
@@ -119,11 +84,12 @@ export function HostRoomClient() {
           const tickResponse = await fetch("/api/public/tick", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
           });
           const tickPayload = await tickResponse.json();
 
           if (tickResponse.ok && tickPayload.ok && !cancelled) {
-            setRoom(tickPayload.data.room as RoomState);
+            setRoom(tickPayload.data.room as PublicRoomState);
           }
         }
 
@@ -203,6 +169,41 @@ export function HostRoomClient() {
   const leftGlow = room?.phase === "answer-lock" && room.mode === "battle" ? getFeedbackGlow(room.answerFeedback.player1, "left") : "";
   const rightGlow = room?.phase === "answer-lock" && room.mode === "battle" ? getFeedbackGlow(room.answerFeedback.player2, "right") : "";
 
+  const hostAfkMessage = useMemo(() => {
+    if (!room) {
+      return null;
+    }
+
+    if (room.mode === "solo" && room.warnings.player1AfkWarningVisible) {
+      return "Alerta AFK: el jugador en solitario lleva dos preguntas sin responder. Un tercer silencio reinicia la partida y no sumará al ranking.";
+    }
+
+    if (
+      room.mode === "battle" &&
+      room.unansweredStreaks.player1 >= 2 &&
+      room.unansweredStreaks.player2 >= 2
+    ) {
+      return "Alerta AFK: ambos duelistas acumulan racha sin respuesta. Si ambos fallan tres seguidas, la arena se reinicia.";
+    }
+
+    return null;
+  }, [room]);
+
+  const leaderboardHighlightRanks = useMemo(() => {
+    if (!room?.leaderboard) {
+      return [];
+    }
+
+    const p1 = room.leaderboard.player1Rank;
+    const p2 = room.leaderboard.player2Rank;
+
+    if (room.mode === "solo") {
+      return typeof p1 === "number" ? [p1] : [];
+    }
+
+    return [p1, p2].filter((value): value is number => typeof value === "number");
+  }, [room]);
+
   return (
     <section className="mx-auto flex w-full max-w-[1920px] items-center justify-center">
       <div className="glass-panel battle-card app-shell aspect-[16/9] w-full overflow-hidden rounded-[2.6rem] p-6 xl:p-8">
@@ -218,6 +219,11 @@ export function HostRoomClient() {
                 Pantalla principal
               </h1>
               <p className="status-dot mt-4 text-base leading-7 text-[color:var(--muted)]">{phaseCopy}</p>
+              {hostAfkMessage ? (
+                <div className="mt-4 max-w-3xl rounded-[1.2rem] border border-[color:var(--danger)]/40 bg-[color:var(--danger)]/10 px-4 py-3 text-sm font-semibold leading-6 text-red-100">
+                  {hostAfkMessage}
+                </div>
+              ) : null}
             </div>
 
             <div className="min-w-[13rem] rounded-[1.8rem] border border-white/10 bg-white/6 px-5 py-4 text-right">
@@ -262,14 +268,14 @@ export function HostRoomClient() {
                         title="Jugador 1"
                         slot="P1"
                         playerName={room?.players.player1?.name ?? "Esperando jugador"}
-                        country={room?.players.player1?.country ?? "Toma tu celular y escanea"}
+                        cityLabel={room?.players.player1?.city ?? "Toma tu celular y escanea"}
                         score={room?.scores.player1 ?? 0}
                       />
                       <SeatCard
                         title="Jugador 2"
                         slot="P2"
                         playerName={room?.players.player2?.name ?? "Lugar disponible"}
-                        country={room?.players.player2?.country ?? "Segundo retador pendiente"}
+                        cityLabel={room?.players.player2?.city ?? "Segundo retador pendiente"}
                         score={room?.scores.player2 ?? 0}
                       />
                     </div>
@@ -363,10 +369,7 @@ export function HostRoomClient() {
                     <p className="font-display text-sm uppercase tracking-[0.4em] text-[color:var(--accent)]">Leaderboard</p>
                     <h2 className="font-display mt-4 text-5xl font-black uppercase">Top jugadores</h2>
                   </div>
-                  <LeaderboardList
-                    entries={room.leaderboard.visibleTop}
-                    highlightRank={room.mode === "battle" ? room.leaderboard.player1Rank : undefined}
-                  />
+                  <LeaderboardList entries={room.leaderboard.visibleTop} highlightRanks={leaderboardHighlightRanks} />
                 </div>
               ) : null}
 
@@ -385,14 +388,14 @@ export function HostRoomClient() {
                 title="Lado izquierdo"
                 slot="P1"
                 playerName={room?.players.player1?.name ?? "Disponible"}
-                country={room?.players.player1?.country ?? "Espera a que alguien escanee"}
+                cityLabel={room?.players.player1?.city ?? "Espera a que alguien escanee"}
                 score={room?.scores.player1 ?? 0}
               />
               <SeatCard
                 title="Lado derecho"
                 slot="P2"
                 playerName={room?.players.player2?.name ?? "Disponible"}
-                country={room?.players.player2?.country ?? "Modo duelo opcional"}
+                cityLabel={room?.players.player2?.city ?? "Modo duelo opcional"}
                 score={room?.scores.player2 ?? 0}
               />
               <div className="glass-panel rounded-[1.8rem] p-5">

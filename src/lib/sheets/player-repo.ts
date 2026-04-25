@@ -8,7 +8,7 @@ import { hasSheetsConfig } from "@/lib/utils/env";
 type PlayerSheetRow = [
   playerId: string,
   name: string,
-  country: string,
+  city: string,
   age: string,
   email: string,
   acceptedTermsAt: string,
@@ -27,7 +27,7 @@ type PlayerSheetRow = [
 interface RegisteredPlayerRecord {
   playerId: string;
   name: string;
-  country: string;
+  city: string;
   age: number;
   email: string;
   acceptedTermsAt: string;
@@ -42,7 +42,7 @@ function buildPlayerRow(input: RegistrationInput, playerId: string, timestamp: s
   return [
     playerId,
     input.name,
-    input.country,
+    input.city,
     String(input.age),
     input.email,
     timestamp,
@@ -60,10 +60,11 @@ function buildPlayerRow(input: RegistrationInput, playerId: string, timestamp: s
 }
 
 function mapRowToRegistrationPlayer(row: string[]) {
+  const location = row[2] ?? "";
   return {
     playerId: row[0] ?? "",
     name: row[1] ?? "",
-    country: row[2] ?? "",
+    city: location,
     age: Number(row[3] ?? 0),
     email: row[4] ?? "",
     acceptedTermsAt: row[5] ?? "",
@@ -92,7 +93,7 @@ export async function createRegisteredPlayer(input: RegistrationInput) {
     fallbackPlayers.set(playerId, {
       playerId,
       name: input.name,
-      country: input.country,
+      city: input.city,
       age: input.age,
       email: input.email,
       acceptedTermsAt: timestamp,
@@ -105,8 +106,7 @@ export async function createRegisteredPlayer(input: RegistrationInput) {
   return {
     playerId,
     name: input.name,
-    country: input.country,
-    email: input.email,
+    city: input.city,
   };
 }
 
@@ -178,7 +178,7 @@ export function buildLivePlayerFromRegistration({
     roomCode,
     slot,
     name: registration.name,
-    country: registration.country,
+    city: registration.city,
     age: registration.age,
     email: registration.email,
     acceptedTermsAt: registration.acceptedTermsAt,
@@ -194,5 +194,7 @@ export function buildLivePlayerFromRegistration({
     correctCount: 0,
     wrongCount: 0,
     timeoutCount: 0,
+    matchResponseTimeSumMs: 0,
+    matchResponseTimeCount: 0,
   };
 }

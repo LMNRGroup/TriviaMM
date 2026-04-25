@@ -1,4 +1,5 @@
 import { ok, fail } from "@/lib/api/http";
+import { toPublicRoomState } from "@/lib/api/room-state";
 import { requireHost } from "@/lib/api/room-auth";
 import { tickRoom } from "@/lib/game/engine";
 import { clearQuestionBank, getQuestionBank, getRoomState, saveRoomState } from "@/lib/kv/room-store";
@@ -55,7 +56,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     return ok({
-      room: result.room,
+      room: toPublicRoomState(result.room),
       transitionApplied: result.transitionApplied,
     });
   } catch (error) {

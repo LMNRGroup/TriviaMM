@@ -27,6 +27,7 @@ export function createInitialRoomState({
     updatedAt: createdAt,
     expiresAt,
     currentMatchId: null,
+    matchStartedAt: null,
     qrUrl,
     players: {
       player1: null,

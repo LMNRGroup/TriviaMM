@@ -1,4 +1,4 @@
-import type { WinnerType } from "@/lib/types/game";
+import type { Player, WinnerType } from "@/lib/types/game";
 import { QUESTION_ANSWER_DURATION_MS } from "@/lib/game/constants";
 
 const BASE_CORRECT_POINTS = 100;
@@ -24,6 +24,23 @@ export function average(values: number[]) {
   }
 
   return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+}
+
+/** Match-wide mean response time from finalized timed answers (excludes timeouts / null). */
+export function matchAverageResponseMs(
+  player: Pick<Player, "matchResponseTimeSumMs" | "matchResponseTimeCount"> | null | undefined,
+): number | null {
+  if (!player) {
+    return null;
+  }
+
+  const count = player.matchResponseTimeCount ?? 0;
+  if (count <= 0) {
+    return null;
+  }
+
+  const sum = player.matchResponseTimeSumMs ?? 0;
+  return Math.round(sum / count);
 }
 
 export function determineBattleWinner(input: {

@@ -1,13 +1,30 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import type { LeaderboardEntry, RoomMode, RoomState } from "@/lib/types/game";
+import { LeaderboardList } from "@/components/leaderboard/LeaderboardList";
+import {
+  AGE_OPTIONS,
+  COUNTRY_OPTIONS,
+  PUERTO_RICO_MUNICIPALITY_OPTIONS,
+  US_STATE_AND_TERRITORY_OPTIONS,
+} from "@/lib/data/regions";
+import type { PublicRoomState, RoomMode } from "@/lib/types/game";
 import { registrationSchema } from "@/lib/validation/registration";
+
+interface JoinApiPlayer {
+  playerId: string;
+  name: string;
+  city: string;
+  slot: 1 | 2;
+  roomCode: string;
+  controllerToken: string;
+  sessionId: string;
+}
 
 interface PlayerSession {
   playerId: string;
   name: string;
-  country: string;
+  city: string;
   age: number;
   email: string;
   controllerToken: string;
@@ -17,14 +34,17 @@ interface PlayerSession {
 interface RememberedPlayer {
   playerId: string;
   name: string;
-  country: string;
+  city: string;
   age: number;
-  email: string;
+  /** Same-device hint from server; never part of `PublicRoomState`. */
+  email?: string;
 }
 
 interface FormState {
   name: string;
   country: string;
+  region: string;
+  city: string;
   age: string;
   email: string;
   acceptedTerms: boolean;
@@ -33,9 +53,43 @@ interface FormState {
 
 const STORAGE_KEY = "trivia:player:public";
 
+function instructionsStorageKey(playerId: string) {
+  return `trivia:instr:${playerId}`;
+}
+
+function normalizeStoredSession(raw: unknown): PlayerSession | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const data = raw as Record<string, unknown>;
+  const city = typeof data.city === "string" ? data.city : typeof data.country === "string" ? data.country : "";
+
+  if (
+    typeof data.playerId !== "string" ||
+    typeof data.name !== "string" ||
+    typeof data.controllerToken !== "string" ||
+    typeof data.sessionId !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    playerId: data.playerId,
+    name: data.name,
+    city,
+    age: typeof data.age === "number" ? data.age : Number(data.age ?? 0),
+    email: typeof data.email === "string" ? data.email : "",
+    controllerToken: data.controllerToken,
+    sessionId: data.sessionId,
+  };
+}
+
 const initialFormState: FormState = {
   name: "",
   country: "",
+  region: "",
+  city: "",
   age: "",
   email: "",
   acceptedTerms: false,
@@ -51,40 +105,8 @@ function formatSeconds(iso: string | null, now: number, decimals = 0) {
   return remaining.toFixed(decimals);
 }
 
-function LeaderboardList({
-  entries,
-  rank,
-}: {
-  entries: LeaderboardEntry[];
-  rank?: number;
-}) {
-  return (
-    <div className="space-y-3">
-      {entries.map((entry) => (
-        <div
-          className="flex items-center justify-between rounded-[1.4rem] border border-white/10 bg-white/6 px-4 py-4"
-          key={entry.playerId}
-        >
-          <div>
-            <p className="font-display text-lg font-black uppercase">
-              #{entry.rank} {entry.playerName}
-            </p>
-            <p className="text-sm text-[color:var(--muted)]">{entry.country}</p>
-          </div>
-          <p className="font-display text-2xl font-black text-[color:var(--accent)]">{entry.lifetimePoints}</p>
-        </div>
-      ))}
-      {rank && !entries.some((entry) => entry.rank === rank) ? (
-        <div className="rounded-[1.4rem] border border-[color:var(--accent-cool)]/30 bg-[color:var(--panel-soft)] px-4 py-4 text-sm text-[color:var(--foreground)]">
-          Tu posición actual es <span className="font-display text-lg font-black">#{rank}</span>.
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 export function PlayerRoomClient() {
-  const [room, setRoom] = useState<RoomState | null>(null);
+  const [room, setRoom] = useState<PublicRoomState | null>(null);
   const [rememberedPlayer, setRememberedPlayer] = useState<RememberedPlayer | null>(null);
   const [form, setForm] = useState<FormState>(initialFormState);
   const [session, setSession] = useState<PlayerSession | null>(() => {
@@ -99,7 +121,7 @@ export function PlayerRoomClient() {
     }
 
     try {
-      return JSON.parse(raw) as PlayerSession;
+      return normalizeStoredSession(JSON.parse(raw));
     } catch {
       window.localStorage.removeItem(STORAGE_KEY);
       return null;
@@ -108,8 +130,35 @@ export function PlayerRoomClient() {
   const [selectedChoiceState, setSelectedChoiceState] = useState<{ questionIndex: number; choice: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [agePickerOpen, setAgePickerOpen] = useState(false);
   const autoJoinAttempted = useRef<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [instructionsBump, setInstructionsBump] = useState(0);
+
+  const regionOptions = useMemo(() => {
+    if (form.country === "United States") {
+      return US_STATE_AND_TERRITORY_OPTIONS;
+    }
+
+    if (form.country === "Puerto Rico") {
+      return PUERTO_RICO_MUNICIPALITY_OPTIONS;
+    }
+
+    return [];
+  }, [form.country]);
+
+  const instructionsAck = useMemo(() => {
+    if (!session?.playerId) {
+      return true;
+    }
+
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    void instructionsBump;
+    return window.sessionStorage.getItem(instructionsStorageKey(session.playerId)) === "1";
+  }, [session?.playerId, instructionsBump]);
 
   const playerSeat = room
     ? room.players.player1?.playerId === session?.playerId
@@ -143,10 +192,10 @@ export function PlayerRoomClient() {
       throw new Error(payload.message ?? "No se pudo cargar la sala.");
     }
 
-    setRoom(payload.data.room as RoomState);
+    setRoom(payload.data.room as PublicRoomState);
     setRememberedPlayer((payload.data.rememberedPlayer as RememberedPlayer | null) ?? null);
     setError(null);
-    return payload.data.room as RoomState;
+    return payload.data.room as PublicRoomState;
   }
 
   const joinWithPlayer = useCallback(async (playerId: string, profile?: RememberedPlayer) => {
@@ -167,11 +216,11 @@ export function PlayerRoomClient() {
       throw new Error(payload.message ?? "No fue posible entrar a la sala.");
     }
 
-    const joinedPlayer = payload.data.player;
+    const joinedPlayer = payload.data.player as JoinApiPlayer;
     persistSession({
       playerId: joinedPlayer.playerId,
       name: joinedPlayer.name,
-      country: joinedPlayer.country,
+      city: joinedPlayer.city,
       age: Number(profile?.age ?? form.age ?? 0),
       email: profile?.email ?? form.email,
       controllerToken: joinedPlayer.controllerToken,
@@ -190,11 +239,12 @@ export function PlayerRoomClient() {
           const tickResponse = await fetch("/api/public/tick", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
           });
           const tickPayload = await tickResponse.json();
 
           if (tickResponse.ok && tickPayload.ok && !cancelled) {
-            setRoom(tickPayload.data.room as RoomState);
+            setRoom(tickPayload.data.room as PublicRoomState);
           }
         }
       } catch (syncError) {
@@ -239,6 +289,26 @@ export function PlayerRoomClient() {
   }, [session]);
 
   useEffect(() => {
+    if (!room || !session) {
+      return;
+    }
+
+    const playerStillInRoom =
+      room.players.player1?.playerId === session.playerId || room.players.player2?.playerId === session.playerId;
+
+    if (room.phase === "idle" && room.lobby.previewMessage === "lobby_timeout" && !playerStillInRoom) {
+      const timeoutId = window.setTimeout(() => {
+        autoJoinAttempted.current = session.playerId;
+        persistSession(null);
+        setRememberedPlayer(null);
+        setError("Tu tiempo en el lobby expiró. Entra de nuevo cuando estés listo.");
+      }, 0);
+
+      return () => window.clearTimeout(timeoutId);
+    }
+  }, [room, session]);
+
+  useEffect(() => {
     if (!room || room.phase !== "idle" && room.phase !== "lobby") {
       return;
     }
@@ -271,7 +341,7 @@ export function PlayerRoomClient() {
           await joinWithPlayer(session.playerId, {
             playerId: session.playerId,
             name: session.name,
-            country: session.country,
+            city: session.city,
             age: session.age,
             email: session.email,
           });
@@ -279,9 +349,11 @@ export function PlayerRoomClient() {
           setForm((current) => ({
             ...current,
             name: rememberedPlayer.name,
-            country: rememberedPlayer.country,
+            country: "",
+            region: rememberedPlayer.city,
+            city: rememberedPlayer.city,
             age: String(rememberedPlayer.age),
-            email: rememberedPlayer.email,
+            email: rememberedPlayer.email ?? "",
             acceptedTerms: true,
             newsletterOptIn: true,
           }));
@@ -299,7 +371,7 @@ export function PlayerRoomClient() {
     return registrationSchema.safeParse({
       roomCode: "PUBLICO",
       name: form.name,
-      country: form.country,
+      city: form.region,
       age: Number.isFinite(numericAge) ? numericAge : Number.NaN,
       email: form.email,
       acceptedTerms: form.acceptedTerms,
@@ -320,6 +392,23 @@ export function PlayerRoomClient() {
     setForm((current) => ({
       ...current,
       [key]: value,
+    }));
+  }
+
+  function updateCountry(country: string) {
+    setForm((current) => ({
+      ...current,
+      country,
+      region: "",
+      city: "",
+    }));
+  }
+
+  function updateRegion(region: string) {
+    setForm((current) => ({
+      ...current,
+      region,
+      city: region,
     }));
   }
 
@@ -351,7 +440,7 @@ export function PlayerRoomClient() {
         await joinWithPlayer(player.playerId, {
           playerId: player.playerId,
           name: form.name,
-          country: form.country,
+          city: form.region,
           age: Number(form.age),
           email: form.email,
         });
@@ -384,7 +473,7 @@ export function PlayerRoomClient() {
       return;
     }
 
-    setRoom(payload.data.room as RoomState);
+    setRoom(payload.data.room as PublicRoomState);
     setError(null);
   }
 
@@ -494,7 +583,8 @@ export function PlayerRoomClient() {
               Continuar como {rememberedPlayer.name}
             </p>
             <p className="mt-1 text-sm text-[color:var(--muted)]">
-              {rememberedPlayer.country} · {rememberedPlayer.email}
+              {rememberedPlayer.city}
+              {rememberedPlayer.email ? ` · ${rememberedPlayer.email}` : null}
             </p>
           </button>
         ) : null}
@@ -508,24 +598,55 @@ export function PlayerRoomClient() {
           />
         </label>
 
-        <label className="space-y-2">
-          <span className="text-sm font-semibold text-white">País</span>
-          <input
-            className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-[color:var(--accent)] focus:bg-white/7"
-            onChange={(event) => updateField("country", event.target.value)}
-            value={form.country}
-          />
-        </label>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <label className="space-y-2">
+            <span className="text-sm font-semibold text-white">País</span>
+            <select
+              className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-[color:var(--accent)] focus:bg-white/7"
+              onChange={(event) => updateCountry(event.target.value)}
+              value={form.country}
+            >
+              <option value="">Selecciona un país</option>
+              {COUNTRY_OPTIONS.map((country) => (
+                <option key={country} value={country}>
+                  {country}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="space-y-2">
+            <span className="text-sm font-semibold text-white">
+              {form.country === "Puerto Rico" ? "Municipio" : "Estado o territorio"}
+            </span>
+            <select
+              className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-[color:var(--accent)] focus:bg-white/7 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={regionOptions.length === 0}
+              onChange={(event) => updateRegion(event.target.value)}
+              value={form.region}
+            >
+              <option value="">
+                {form.country ? "Selecciona una opción" : "Selecciona primero el país"}
+              </option>
+              {regionOptions.map((region) => (
+                <option key={region} value={region}>
+                  {region}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
           <label className="space-y-2">
             <span className="text-sm font-semibold text-white">Edad</span>
-            <input
-              className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-[color:var(--accent)] focus:bg-white/7"
-              inputMode="numeric"
-              onChange={(event) => updateField("age", event.target.value)}
-              value={form.age}
-            />
+            <button
+              className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 text-left outline-none transition hover:bg-white/7 focus:border-[color:var(--accent)] focus:bg-white/7"
+              onClick={() => setAgePickerOpen(true)}
+              type="button"
+            >
+              {form.age ? `${form.age} años` : "Selecciona tu edad"}
+            </button>
           </label>
           <label className="space-y-2">
             <span className="text-sm font-semibold text-white">Email</span>
@@ -583,6 +704,46 @@ export function PlayerRoomClient() {
         >
           {isPending ? "Entrando..." : "Siguiente"}
         </button>
+
+        {agePickerOpen ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/82 px-4">
+            <div className="w-full max-w-sm rounded-[1.8rem] border border-white/10 bg-[color:var(--panel-strong)] p-5 shadow-2xl">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Edad</p>
+                  <h2 className="mt-3 text-xl font-black uppercase text-white">Selecciona tu edad</h2>
+                </div>
+                <button
+                  className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]"
+                  onClick={() => setAgePickerOpen(false)}
+                  type="button"
+                >
+                  Cerrar
+                </button>
+              </div>
+
+              <div className="mt-5 grid max-h-[50vh] grid-cols-3 gap-2 overflow-y-auto pr-1">
+                {AGE_OPTIONS.map((age) => (
+                  <button
+                    className={`rounded-[1rem] px-3 py-3 text-sm font-semibold transition ${
+                      form.age === age
+                        ? "bg-[color:var(--accent)] text-slate-950"
+                        : "border border-white/10 bg-white/5 text-white hover:bg-white/8"
+                    }`}
+                    key={age}
+                    onClick={() => {
+                      updateField("age", age);
+                      setAgePickerOpen(false);
+                    }}
+                    type="button"
+                  >
+                    {age}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
       </form>
     );
   }
@@ -597,10 +758,41 @@ export function PlayerRoomClient() {
     );
   }
 
+  if ((room.phase === "idle" || room.phase === "lobby") && !instructionsAck) {
+    return (
+      <section className="enter-rise flex h-full flex-col justify-between gap-6">
+        <div>
+          <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Instrucciones</p>
+          <h2 className="font-display mt-4 text-3xl font-black uppercase tracking-[0.08em]">Cómo jugar</h2>
+          <ul className="mt-5 space-y-3 text-base leading-7 text-[color:var(--muted)]">
+            <li>Tienes 15 segundos para responder cada pregunta cuando aparezcan las opciones.</li>
+            <li>Entre más rápido aciertes, más puntos sumas.</li>
+            <li>Si fallas, verás feedback en rojo pero nunca revelaremos la respuesta correcta.</li>
+            <li>
+              En modo solo, si dejas sin responder 3 preguntas seguidas, la partida se reinicia y tu puntuación no entrará al
+              leaderboard.
+            </li>
+          </ul>
+        </div>
+        <button
+          className="font-display rounded-[1.45rem] bg-[linear-gradient(135deg,var(--accent),#ffd77a)] px-5 py-4 text-base font-black uppercase tracking-[0.14em] text-slate-950 transition hover:-translate-y-0.5 hover:brightness-105"
+          onClick={() => {
+            if (session?.playerId && typeof window !== "undefined") {
+              window.sessionStorage.setItem(instructionsStorageKey(session.playerId), "1");
+            }
+            setInstructionsBump((value) => value + 1);
+          }}
+          type="button"
+        >
+          Continuar al lobby
+        </button>
+      </section>
+    );
+  }
+
   if (room.phase === "idle" || room.phase === "lobby") {
     const isPlayer1 = playerSeat.slot === 1;
-    const canStartSolo = isPlayer1;
-    const canStartBattle = isPlayer1 && Boolean(room.players.player2);
+    const canStartSolo = isPlayer1 && !room.players.player2;
 
     return (
       <section className="enter-rise flex h-full flex-col justify-between gap-6">
@@ -609,12 +801,14 @@ export function PlayerRoomClient() {
             Lobby
           </p>
           <h2 className="font-display mt-4 text-3xl font-black uppercase tracking-[0.08em]">
-            {room.players.player2 ? "Listos para pelear" : "Esperando al jugador 2"}
+            {room.players.player2 ? "El duelo se está preparando" : isPlayer1 ? "Listo para comenzar" : "Esperando al jugador 1"}
           </h2>
           <p className="mt-4 text-base leading-7 text-[color:var(--muted)]">
             {room.players.player2
-              ? "Ambos jugadores están conectados. Jugador 1 puede iniciar el duelo."
-              : "Si nadie más entra, el jugador 1 puede comenzar solo."}
+              ? "Jugador 2 ya entró. La cuenta regresiva del duelo arrancará automáticamente."
+              : isPlayer1
+                ? "Tienes 60 segundos para comenzar solo o esperar a que entre un segundo jugador."
+                : "Si nadie más entra, el jugador 1 puede comenzar solo."}
           </p>
         </div>
 
@@ -624,7 +818,7 @@ export function PlayerRoomClient() {
             <p className="font-display mt-3 text-3xl font-black uppercase">
               P{playerSeat.slot} · {playerSeat.name}
             </p>
-            <p className="mt-1 text-sm text-[color:var(--muted)]">{playerSeat.country}</p>
+            <p className="mt-1 text-sm text-[color:var(--muted)]">{playerSeat.city}</p>
             {waitingCountdown ? (
               <p className="mt-4 rounded-full border border-white/10 px-3 py-2 text-sm text-[color:var(--muted)]">
                 Cuenta atrás del lobby: {waitingCountdown}s
@@ -640,15 +834,7 @@ export function PlayerRoomClient() {
                 onClick={() => startMatch("solo")}
                 type="button"
               >
-                Empezar solo
-              </button>
-              <button
-                className="font-display rounded-[1.45rem] bg-[linear-gradient(135deg,var(--accent-cool),#8eeeff)] px-5 py-4 text-base font-black uppercase tracking-[0.14em] text-slate-950 transition hover:-translate-y-0.5 hover:brightness-105 disabled:opacity-40"
-                disabled={!canStartBattle || isPending}
-                onClick={() => startMatch("battle")}
-                type="button"
-              >
-                Empezar duelo
+                Comenzar
               </button>
             </div>
           ) : (
@@ -671,7 +857,9 @@ export function PlayerRoomClient() {
     return (
       <section className="flex h-full items-center justify-center">
         <div className="enter-scale text-center">
-          <p className="font-display text-sm uppercase tracking-[0.45em] text-[color:var(--accent)]">Cuenta regresiva</p>
+          <p className="font-display text-sm uppercase tracking-[0.45em] text-[color:var(--accent)]">
+            {room.mode === "battle" ? "Duelo por comenzar" : "El reto está por comenzar"}
+          </p>
           <h2 className="font-display mt-5 text-8xl font-black uppercase">{countdown}</h2>
         </div>
       </section>
@@ -804,7 +992,10 @@ export function PlayerRoomClient() {
           <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Leaderboard</p>
           <h2 className="font-display mt-4 text-3xl font-black uppercase tracking-[0.08em]">Clasificación</h2>
         </div>
-        <LeaderboardList entries={room.leaderboard.visibleTop} rank={playerRank} />
+        <LeaderboardList
+          entries={room.leaderboard.visibleTop}
+          highlightRanks={typeof playerRank === "number" ? [playerRank] : []}
+        />
       </section>
     );
   }

@@ -1,4 +1,5 @@
 import { ok, fail } from "@/lib/api/http";
+import { toPublicRoomState } from "@/lib/api/room-state";
 import { requireHost } from "@/lib/api/room-auth";
 import { clearQuestionBank, getRoomState, saveRoomState } from "@/lib/kv/room-store";
 import { resetRoom } from "@/lib/game/engine";
@@ -44,7 +45,7 @@ export async function POST(request: Request, context: RouteContext) {
     const updatedRoom = resetRoom(room, new Date().toISOString());
     await Promise.all([saveRoomState(updatedRoom), clearQuestionBank(parsedRoomCode.data)]);
 
-    return ok({ room: updatedRoom });
+    return ok({ room: toPublicRoomState(updatedRoom) });
   } catch (error) {
     console.error("reset room error", error);
     return fail("server_error", 500, "Unable to reset room");

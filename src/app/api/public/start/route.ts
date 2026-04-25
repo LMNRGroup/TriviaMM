@@ -1,4 +1,5 @@
 import { ok, fail } from "@/lib/api/http";
+import { toPublicRoomState } from "@/lib/api/room-state";
 import { findPlayerById, requirePlayerToken } from "@/lib/api/room-auth";
 import { MATCH_QUESTION_COUNT } from "@/lib/game/constants";
 import { startMatch } from "@/lib/game/engine";
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
 
     await Promise.all([saveQuestionBank(room.roomCode, questions), saveRoomState(startedRoom), getQuestionBank(room.roomCode)]);
 
-    return ok({ room: startedRoom });
+    return ok({ room: toPublicRoomState(startedRoom) });
   } catch (error) {
     console.error("public start error", error);
     return fail("server_error", 500, "No se pudo iniciar la partida.");

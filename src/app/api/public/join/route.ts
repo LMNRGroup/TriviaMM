@@ -3,10 +3,15 @@ import { ok, fail } from "@/lib/api/http";
 import { choosePlayerSlot, ensurePublicRoom, getRoomState, joinRoom } from "@/lib/kv/room-store";
 import { getKv } from "@/lib/kv/client";
 import { returningPlayerByIpKey } from "@/lib/kv/keys";
+import { MATCH_QUESTION_COUNT } from "@/lib/game/constants";
+import { startMatch } from "@/lib/game/engine";
 import { buildLivePlayerFromRegistration, getRegisteredPlayerById } from "@/lib/sheets/player-repo";
+import { getRandomQuestions } from "@/lib/sheets/question-repo";
 import { getBaseUrl } from "@/lib/utils/env";
 import { getRequestIp } from "@/lib/utils/request";
+import { toJoinPlayerPayload, toPublicRoomJoinSlice } from "@/lib/api/room-state";
 import { joinRoomSchema } from "@/lib/validation/room";
+import { saveQuestionBank, saveRoomState } from "@/lib/kv/room-store";
 
 export async function POST(request: Request) {
   let payload: unknown;
@@ -50,13 +55,13 @@ export async function POST(request: Request) {
 
     if (existingPlayer) {
       return ok({
-        player: existingPlayer,
-        room: {
+        player: toJoinPlayerPayload(existingPlayer),
+        room: toPublicRoomJoinSlice({
           phase: room.phase,
           mode: room.mode,
           players: room.players,
           lobby: room.lobby,
-        },
+        }),
       });
     }
 
@@ -75,17 +80,26 @@ export async function POST(request: Request) {
     });
 
     const updatedRoom = await joinRoom(player);
+    let responseRoom = updatedRoom;
+
+    if (player.slot === 2 && updatedRoom.players.player1 && updatedRoom.phase === "lobby") {
+      const questions = await getRandomQuestions(MATCH_QUESTION_COUNT);
+      const { room: startedRoom } = startMatch(updatedRoom, "battle", questions, new Date().toISOString());
+      await Promise.all([saveQuestionBank(startedRoom.roomCode, questions), saveRoomState(startedRoom)]);
+      responseRoom = startedRoom;
+    }
+
     const ipAddress = getRequestIp(request);
     await getKv().set(returningPlayerByIpKey(ipAddress), player.playerId, { ex: 60 * 60 * 24 * 30 });
 
     return ok({
-      player,
-      room: {
-        phase: updatedRoom.phase,
-        mode: updatedRoom.mode,
-        players: updatedRoom.players,
-        lobby: updatedRoom.lobby,
-      },
+      player: toJoinPlayerPayload(player),
+      room: toPublicRoomJoinSlice({
+        phase: responseRoom.phase,
+        mode: responseRoom.mode,
+        players: responseRoom.players,
+        lobby: responseRoom.lobby,
+      }),
     });
   } catch (error) {
     if (error instanceof Error) {

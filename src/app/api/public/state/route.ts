@@ -1,5 +1,5 @@
 import { ok, fail } from "@/lib/api/http";
-import { sanitizeRoomState } from "@/lib/api/room-state";
+import { toPublicRoomState } from "@/lib/api/room-state";
 import { getKv } from "@/lib/kv/client";
 import { returningPlayerByIpKey } from "@/lib/kv/keys";
 import { ensurePublicRoom, getRoomState } from "@/lib/kv/room-store";
@@ -21,12 +21,12 @@ export async function GET(request: Request) {
     const rememberedPlayer = rememberedPlayerId ? await getRegisteredPlayerById(rememberedPlayerId) : null;
 
     return ok({
-      room: sanitizeRoomState(room),
+      room: toPublicRoomState(room),
       rememberedPlayer: rememberedPlayer
         ? {
             playerId: rememberedPlayer.playerId,
             name: rememberedPlayer.name,
-            country: rememberedPlayer.country,
+            city: rememberedPlayer.city,
             age: rememberedPlayer.age,
             email: rememberedPlayer.email,
           }

@@ -1,5 +1,7 @@
 import { PUBLIC_ROOM_CODE } from "@/lib/game/constants";
 import { createInitialRoomState } from "@/lib/game/default-room";
+import { LOBBY_WAIT_DURATION_MS } from "@/lib/game/constants";
+import { coerceRoomStateFromStorage } from "@/lib/game/player-normalize";
 import type { Player, Question, RoomState } from "@/lib/types/game";
 import { getKv } from "@/lib/kv/client";
 import {
@@ -26,7 +28,7 @@ export async function ensurePublicRoom(baseUrl: string) {
   const existing = await kv.get<RoomState>(roomStateKey(PUBLIC_ROOM_CODE));
 
   if (existing) {
-    return existing;
+    return coerceRoomStateFromStorage(existing);
   }
 
   const createdAt = new Date().toISOString();
@@ -70,7 +72,8 @@ export async function ensurePublicRoom(baseUrl: string) {
 
 export async function getRoomState(roomCode = PUBLIC_ROOM_CODE) {
   const kv = getKv();
-  return kv.get<RoomState>(roomStateKey(roomCode));
+  const raw = await kv.get<RoomState>(roomStateKey(roomCode));
+  return raw ? coerceRoomStateFromStorage(raw) : null;
 }
 
 export async function saveRoomState(room: RoomState) {
@@ -133,7 +136,8 @@ export async function joinRoom(player: Player) {
       waitingEndsAt:
         room.players.player1 || slotKey === "player2"
           ? room.lobby.waitingEndsAt
-          : new Date(Date.now() + 120_000).toISOString(),
+          : new Date(Date.now() + LOBBY_WAIT_DURATION_MS).toISOString(),
+      previewMessage: null,
     },
   };
 

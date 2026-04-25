@@ -1,17 +1,17 @@
 import { randomUUID } from "node:crypto";
 import {
   ANSWER_LOCK_DURATION_MS,
+  BATTLE_COUNTDOWN_DURATION_MS,
   BATTLE_RESULT_DURATION_MS,
-  COUNTDOWN_DURATION_MS,
   FINISHED_DURATION_MS,
   LEADERBOARD_DURATION_MS,
-  LOBBY_WAIT_DURATION_MS,
-  MATCH_QUESTION_COUNT,
   QUESTION_ANSWER_DURATION_MS,
   QUESTION_READ_DURATION_MS,
+  SOLO_COUNTDOWN_DURATION_MS,
 } from "@/lib/game/constants";
+import { playerDisplayCity } from "@/lib/api/room-state";
 import { shouldResetForAfk, shouldShowAfkWarning } from "@/lib/game/afk";
-import { average, calculatePoints, determineBattleWinner } from "@/lib/game/scoring";
+import { calculatePoints, determineBattleWinner, matchAverageResponseMs } from "@/lib/game/scoring";
 import { appendMatch, appendMatchAnswers } from "@/lib/sheets/match-repo";
 import { getPlayerLeaderboardRank, listLeaderboard, upsertLeaderboardEntry } from "@/lib/sheets/leaderboard-repo";
 import type {
@@ -86,6 +86,8 @@ function resetPlayers(room: RoomState) {
           wrongCount: 0,
           timeoutCount: 0,
           unansweredStreak: 0,
+          matchResponseTimeSumMs: 0,
+          matchResponseTimeCount: 0,
         }
       : null,
     player2: room.players.player2
@@ -96,6 +98,8 @@ function resetPlayers(room: RoomState) {
           wrongCount: 0,
           timeoutCount: 0,
           unansweredStreak: 0,
+          matchResponseTimeSumMs: 0,
+          matchResponseTimeCount: 0,
         }
       : null,
   };
@@ -103,6 +107,7 @@ function resetPlayers(room: RoomState) {
 
 export function startMatch(room: RoomState, mode: RoomMode, questions: Question[], nowIso: string) {
   const match = createMatch(room, mode, questions, nowIso);
+  const countdownDurationMs = mode === "battle" ? BATTLE_COUNTDOWN_DURATION_MS : SOLO_COUNTDOWN_DURATION_MS;
 
   return {
     room: {
@@ -110,10 +115,11 @@ export function startMatch(room: RoomState, mode: RoomMode, questions: Question[
       phase: "countdown" as const,
       mode,
       currentMatchId: match.matchId,
+      matchStartedAt: nowIso,
       countdown: {
         startedAt: nowIso,
-        endsAt: plusMs(nowIso, COUNTDOWN_DURATION_MS),
-        secondsRemaining: Math.ceil(COUNTDOWN_DURATION_MS / 1000),
+        endsAt: plusMs(nowIso, countdownDurationMs),
+        secondsRemaining: Math.ceil(countdownDurationMs / 1000),
       },
       currentQuestion: {
         ...room.currentQuestion,
@@ -165,8 +171,9 @@ export function startMatch(room: RoomState, mode: RoomMode, questions: Question[
         pending: false,
       },
       lobby: {
-        ...room.lobby,
-        waitingEndsAt: plusMs(nowIso, LOBBY_WAIT_DURATION_MS),
+        allowSoloStart: false,
+        waitingEndsAt: null,
+        previewMessage: mode === "battle" ? "battle_auto_start" : "solo_starting",
       },
       players: resetPlayers(room),
     },
@@ -249,6 +256,10 @@ function updateRoomForSubmission(room: RoomState, player: Player, submission: An
     return room;
   }
 
+  const timedAnswer = submission.responseTimeMs !== null;
+  const sumMs = currentPlayer.matchResponseTimeSumMs ?? 0;
+  const cnt = currentPlayer.matchResponseTimeCount ?? 0;
+
   const updatedPlayer = {
     ...currentPlayer,
     totalScore: currentPlayer.totalScore + submission.awardedPoints,
@@ -258,6 +269,8 @@ function updateRoomForSubmission(room: RoomState, player: Player, submission: An
     timeoutCount: currentPlayer.timeoutCount + (submission.status === "timeout" ? 1 : 0),
     unansweredStreak: submission.unansweredStreakAfter,
     lastSeenAt: submission.submittedAt ?? currentPlayer.lastSeenAt,
+    matchResponseTimeSumMs: sumMs + (timedAnswer ? submission.responseTimeMs! : 0),
+    matchResponseTimeCount: cnt + (timedAnswer ? 1 : 0),
   };
 
   return {
@@ -362,6 +375,7 @@ export async function finalizeMatch(room: RoomState, nowIso: string) {
   const player1 = room.players.player1;
   const player2 = room.players.player2;
   const mode = room.mode ?? "solo";
+  const skipLeaderboard = Boolean(room.reset.pending && room.reset.reason === "afk");
 
   const winner: WinnerType =
     mode === "solo"
@@ -371,39 +385,31 @@ export async function finalizeMatch(room: RoomState, nowIso: string) {
           player2Score: room.scores.player2,
           player1CorrectCount: player1?.correctCount ?? 0,
           player2CorrectCount: player2?.correctCount ?? 0,
-          player1AverageMs: average(
-            [room.answers.player1?.responseTimeMs].filter((value): value is number => typeof value === "number"),
-          ),
-          player2AverageMs: average(
-            [room.answers.player2?.responseTimeMs].filter((value): value is number => typeof value === "number"),
-          ),
+          player1AverageMs: matchAverageResponseMs(player1),
+          player2AverageMs: matchAverageResponseMs(player2),
         });
 
-  if (player1) {
+  if (player1 && !skipLeaderboard) {
     await upsertLeaderboardEntry({
       playerId: player1.playerId,
       playerName: player1.name,
-      country: player1.country,
+      country: playerDisplayCity(player1),
       matchScore: room.scores.player1,
       mode,
       won: winner === "solo" || winner === "player1",
-      averageResponseMs: average(
-        [room.answers.player1?.responseTimeMs].filter((value): value is number => typeof value === "number"),
-      ),
+      averageResponseMs: matchAverageResponseMs(player1),
     });
   }
 
-  if (player2 && mode === "battle") {
+  if (player2 && mode === "battle" && !skipLeaderboard) {
     await upsertLeaderboardEntry({
       playerId: player2.playerId,
       playerName: player2.name,
-      country: player2.country,
+      country: playerDisplayCity(player2),
       matchScore: room.scores.player2,
       mode,
       won: winner === "player2",
-      averageResponseMs: average(
-        [room.answers.player2?.responseTimeMs].filter((value): value is number => typeof value === "number"),
-      ),
+      averageResponseMs: matchAverageResponseMs(player2),
     });
   }
 
@@ -415,7 +421,7 @@ export async function finalizeMatch(room: RoomState, nowIso: string) {
     roomCode: room.roomCode,
     mode,
     status: room.reset.pending ? "reset_afk" : "completed",
-    startedAt: room.createdAt,
+    startedAt: room.matchStartedAt ?? nowIso,
     endedAt: nowIso,
     player1Id: player1?.playerId ?? "",
     player2Id: player2?.playerId,
@@ -456,6 +462,7 @@ export function resetRoom(room: RoomState, nowIso: string): RoomState {
     phase: "idle",
     mode: null,
     currentMatchId: null,
+    matchStartedAt: null,
     countdown: {
       startedAt: null,
       endsAt: null,
@@ -531,6 +538,25 @@ export async function tickRoom({
   questionBank: Question[];
   nowIso: string;
 }): Promise<{ room: RoomState; transitionApplied: boolean }> {
+  if (
+    room.phase === "lobby" &&
+    room.lobby.waitingEndsAt &&
+    !room.players.player2 &&
+    nowIso >= room.lobby.waitingEndsAt
+  ) {
+    return {
+      room: {
+        ...resetRoom(room, nowIso),
+        lobby: {
+          allowSoloStart: false,
+          waitingEndsAt: null,
+          previewMessage: "lobby_timeout",
+        },
+      },
+      transitionApplied: true,
+    };
+  }
+
   if (room.phase === "countdown" && room.countdown.endsAt && nowIso >= room.countdown.endsAt) {
     const nextQuestionId = room.randomization.remainingQuestionIds[0];
     const nextQuestion = questionBank.find((question) => question.questionId === nextQuestionId);

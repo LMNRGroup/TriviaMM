@@ -1,9 +1,17 @@
 import { ok, fail } from "@/lib/api/http";
+import { assertPublicTickAllowed } from "@/lib/api/public-tick-rate-limit";
+import { toPublicRoomState } from "@/lib/api/room-state";
 import { tickRoom } from "@/lib/game/engine";
 import { clearQuestionBank, getQuestionBank, getRoomState, saveRoomState } from "@/lib/kv/room-store";
+import { getRequestIp } from "@/lib/utils/request";
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    const rate = await assertPublicTickAllowed(getRequestIp(request));
+    if (!rate.ok) {
+      return fail("rate_limited", 429, "Demasiadas solicitudes. Espera un momento.");
+    }
+
     const room = await getRoomState();
 
     if (!room) {
@@ -24,7 +32,7 @@ export async function POST() {
     }
 
     return ok({
-      room: result.room,
+      room: toPublicRoomState(result.room),
       transitionApplied: result.transitionApplied,
     });
   } catch (error) {

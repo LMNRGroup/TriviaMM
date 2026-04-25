@@ -16,11 +16,21 @@ export function getBaseUrl() {
   );
 }
 
+export function hasKvConfig() {
+  return Boolean(process.env.KV_REST_API_URL?.trim() && process.env.KV_REST_API_TOKEN?.trim());
+}
+
 export function getKvConfig() {
   return {
     url: requireEnv("KV_REST_API_URL"),
     token: requireEnv("KV_REST_API_TOKEN"),
   };
+}
+
+/** When true, never connects to Upstash (local dev). */
+export function preferMemoryKv() {
+  const v = process.env.KV_USE_MEMORY?.trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes";
 }
 
 export function getSheetsConfig() {

@@ -26,8 +26,7 @@ export async function POST(request: Request) {
       ? {
           playerId: existing.playerId,
           name: existing.name,
-          country: existing.country,
-          email: existing.email,
+          city: existing.city,
         }
       : await createRegisteredPlayer(parsed.data);
 

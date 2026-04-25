@@ -1,5 +1,5 @@
 import { ok, fail } from "@/lib/api/http";
-import { sanitizeRoomState } from "@/lib/api/room-state";
+import { toPublicRoomState } from "@/lib/api/room-state";
 import { getRoomState } from "@/lib/kv/room-store";
 import { roomCodeSchema } from "@/lib/validation/room";
 
@@ -23,7 +23,7 @@ export async function GET(_: Request, context: RouteContext) {
     }
 
     return ok({
-      room: sanitizeRoomState(room),
+      room: toPublicRoomState(room),
       serverTime: new Date().toISOString(),
     });
   } catch (error) {

@@ -1,4 +1,5 @@
 import { ok, fail } from "@/lib/api/http";
+import { toJoinPlayerPayload, toPublicRoomJoinSlice } from "@/lib/api/room-state";
 import { choosePlayerSlot, getRoomState, joinRoom } from "@/lib/kv/room-store";
 import { buildLivePlayerFromRegistration, getRegisteredPlayerById } from "@/lib/sheets/player-repo";
 import { roomCodeSchema, joinRoomSchema } from "@/lib/validation/room";
@@ -60,13 +61,13 @@ export async function POST(request: Request, context: RouteContext) {
     const room = await joinRoom(player);
 
     return ok({
-      player,
-      room: {
+      player: toJoinPlayerPayload(player),
+      room: toPublicRoomJoinSlice({
         phase: room.phase,
         mode: room.mode,
         players: room.players,
         lobby: room.lobby,
-      },
+      }),
     });
   } catch (error) {
     if (error instanceof Error) {

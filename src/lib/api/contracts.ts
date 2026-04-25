@@ -1,4 +1,4 @@
-import type { Player, RoomState } from "@/lib/types/game";
+import type { Player, PublicRoomState } from "@/lib/types/game";
 
 export interface ApiSuccess<T> {
   ok: true;
@@ -22,10 +22,10 @@ export interface CreateRoomResponse {
 }
 
 export interface RoomStateResponse {
-  room: RoomState;
+  room: PublicRoomState;
   serverTime: string;
 }
 
 export interface RegistrationResponse {
-  player: Pick<Player, "playerId" | "name" | "country" | "email">;
+  player: Pick<Player, "playerId" | "name" | "city">;
 }

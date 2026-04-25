@@ -1,4 +1,5 @@
 import { ok, fail } from "@/lib/api/http";
+import { toPublicRoomState } from "@/lib/api/room-state";
 import { requireHost } from "@/lib/api/room-auth";
 import { startMatch } from "@/lib/game/engine";
 import { getQuestionBank, getRoomState, saveQuestionBank, saveRoomState } from "@/lib/kv/room-store";
@@ -60,7 +61,7 @@ export async function POST(request: Request, context: RouteContext) {
       getQuestionBank(parsedRoomCode.data),
     ]);
 
-    return ok({ room: startedRoom });
+    return ok({ room: toPublicRoomState(startedRoom) });
   } catch (error) {
     console.error("start room error", error);
     return fail("server_error", 500, "Unable to start match");
