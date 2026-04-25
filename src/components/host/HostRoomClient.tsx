@@ -334,6 +334,17 @@ export function HostRoomClient() {
                 </div>
               ) : null}
 
+              {room?.phase === "countdown" ? (
+                <div className="flex h-full flex-col items-center justify-center text-center">
+                  <p className="font-display text-sm uppercase tracking-[0.45em] text-[color:var(--accent)]">
+                    {room.mode === "battle" ? "Duelo por comenzar" : "El reto está por comenzar"}
+                  </p>
+                  <h2 className="countdown-pop font-display mt-6 text-8xl font-black uppercase xl:text-[13rem]">
+                    {timerLabel}
+                  </h2>
+                </div>
+              ) : null}
+
               {room?.phase === "answer-lock" ? (
                 <div className="flex h-full flex-col items-center justify-center text-center">
                   <p className="font-display text-sm uppercase tracking-[0.45em] text-[color:var(--accent-cool)]">

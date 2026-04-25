@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { HostRoomClient } from "@/components/host/HostRoomClient";
 import type { PublicRoomState } from "@/lib/types/game";
 
 function formatSeconds(iso: string | null, now: number) {
@@ -128,6 +129,14 @@ export default function HomePage() {
 
   const qrValue = room?.qrUrl || "https://triviamm.local/play";
 
+  if (room && room.phase !== "idle" && room.phase !== "lobby") {
+    return (
+      <main className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
+        <HostRoomClient />
+      </main>
+    );
+  }
+
   return (
     <main className="display-viewport">
       <section className="display-stage">
@@ -148,10 +157,10 @@ export default function HomePage() {
                   </p>
                   <h1 className="display-title font-display text-[8.5rem] font-black uppercase leading-[0.9] tracking-[0.08em] text-[color:var(--foreground)]">
                     <span className="display-title-line">RETO</span>
-                    <span className="display-title-line block text-[color:var(--accent-cool)]">TRIVIA</span>
+                    <span className="display-title-line display-title-brand block">JUSTAS</span>
                   </h1>
                   <p className="max-w-[700px] text-[2.2rem] leading-[1.35] text-[color:var(--muted)]">
-                    Escanea el codigo desde tu telefono para entrar a la partida.
+                    Escanea el código desde tu teléfono para comenzar el juego.
                   </p>
                 </div>
 
@@ -189,7 +198,7 @@ export default function HomePage() {
 
               <div className="display-legal-bar">
                 <p className="display-legal">
-                  © Luminar Apps. Todos los derechos reservados. Desarrollado para Municipio Autónomo de Mayagüez.
+                  © 2026 Luminar Apps. Todos los derechos reservados. Desarrollado para Municipio Autónomo de Mayagüez.
                 </p>
               </div>
             </div>

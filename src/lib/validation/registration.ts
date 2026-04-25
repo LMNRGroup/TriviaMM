@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+const strictEmailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .email()
+  .refine((value) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value), {
+    message: "Email must be a valid address",
+  });
+
 export const registrationSchema = z
   .object({
     roomCode: z.string().trim().min(4).max(12),
@@ -8,7 +17,7 @@ export const registrationSchema = z
     /** @deprecated Legacy clients — use `city` */
     country: z.string().trim().min(2).max(80).optional(),
     age: z.number().int().min(18).max(99),
-    email: z.email(),
+    email: strictEmailSchema,
     acceptedTerms: z.literal(true),
     newsletterOptIn: z.boolean(),
   })

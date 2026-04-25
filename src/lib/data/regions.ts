@@ -139,4 +139,14 @@ export const PUERTO_RICO_MUNICIPALITY_OPTIONS = [
   "Yauco",
 ] as const;
 
-export const AGE_OPTIONS = Array.from({ length: 82 }, (_, index) => String(index + 18));
+export const AGE_OPTIONS = [
+  { label: "18-21", value: "18" },
+  { label: "22-27", value: "22" },
+  { label: "28-34", value: "28" },
+  { label: "35-44", value: "35" },
+  { label: "45-54", value: "45" },
+  { label: "55-64", value: "55" },
+  { label: "65-74", value: "65" },
+  { label: "75-84", value: "75" },
+  { label: "85-99", value: "85" },
+] as const;

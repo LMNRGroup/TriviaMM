@@ -105,6 +105,10 @@ function formatSeconds(iso: string | null, now: number, decimals = 0) {
   return remaining.toFixed(decimals);
 }
 
+function ageLabelFromValue(value: string) {
+  return AGE_OPTIONS.find((option) => option.value === value)?.label ?? value;
+}
+
 export function PlayerRoomClient() {
   const [room, setRoom] = useState<PublicRoomState | null>(null);
   const [rememberedPlayer, setRememberedPlayer] = useState<RememberedPlayer | null>(null);
@@ -387,6 +391,7 @@ export function PlayerRoomClient() {
   const playerRank = playerSeat?.slot === 1 ? room?.leaderboard.player1Rank : room?.leaderboard.player2Rank;
   const playerFeedback =
     playerSeat?.slot === 1 ? room?.answerFeedback.player1 : playerSeat?.slot === 2 ? room?.answerFeedback.player2 : null;
+  const roomHasOpenSeat = !room?.players.player1 || !room?.players.player2;
 
   function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({
@@ -549,6 +554,38 @@ export function PlayerRoomClient() {
     );
   }
 
+  if (!session && room && (room.phase === "idle" || room.phase === "lobby") && !roomHasOpenSeat) {
+    return (
+      <section className="enter-rise flex h-full flex-col justify-between gap-6">
+        <div>
+          <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent-strong)]">
+            Sala ocupada
+          </p>
+          <h1 className="font-display mt-4 text-4xl font-black uppercase tracking-[0.08em]">
+            Espera a la próxima partida
+          </h1>
+          <p className="mt-4 text-base leading-7 text-[color:var(--muted)]">
+            Ya hay dos jugadores conectados en esta sesión. Cuando el lobby vuelva a estar disponible, te dejaremos entrar.
+          </p>
+        </div>
+
+        <div className="glass-panel rounded-[1.8rem] p-5">
+          <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Estado actual</p>
+          <p className="font-display mt-4 text-2xl font-black uppercase">
+            {room.players.player1?.name ?? "Jugador 1"} vs {room.players.player2?.name ?? "Jugador 2"}
+          </p>
+          <p className="mt-3 text-sm text-[color:var(--muted)]">La sala admite un máximo de dos jugadores por sesión.</p>
+        </div>
+
+        {error ? (
+          <div className="rounded-[1.35rem] border border-[color:var(--danger)]/40 bg-[color:var(--danger)]/10 px-4 py-3 text-sm text-red-100">
+            {error}
+          </div>
+        ) : null}
+      </section>
+    );
+  }
+
   if (!session) {
     return (
       <form className="enter-rise flex h-full flex-col gap-5" onSubmit={submitRegistration}>
@@ -645,14 +682,17 @@ export function PlayerRoomClient() {
               onClick={() => setAgePickerOpen(true)}
               type="button"
             >
-              {form.age ? `${form.age} años` : "Selecciona tu edad"}
+              {form.age ? ageLabelFromValue(form.age) : "Selecciona tu grupo de edad"}
             </button>
           </label>
           <label className="space-y-2">
             <span className="text-sm font-semibold text-white">Email</span>
             <input
               className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-[color:var(--accent)] focus:bg-white/7"
+              autoCapitalize="none"
+              autoComplete="email"
               onChange={(event) => updateField("email", event.target.value)}
+              placeholder="nombre@correo.com"
               type="email"
               value={form.email}
             />
@@ -726,18 +766,18 @@ export function PlayerRoomClient() {
                 {AGE_OPTIONS.map((age) => (
                   <button
                     className={`rounded-[1rem] px-3 py-3 text-sm font-semibold transition ${
-                      form.age === age
+                      form.age === age.value
                         ? "bg-[color:var(--accent)] text-slate-950"
                         : "border border-white/10 bg-white/5 text-white hover:bg-white/8"
                     }`}
-                    key={age}
+                    key={age.value}
                     onClick={() => {
-                      updateField("age", age);
+                      updateField("age", age.value);
                       setAgePickerOpen(false);
                     }}
                     type="button"
                   >
-                    {age}
+                    {age.label}
                   </button>
                 ))}
               </div>
@@ -750,9 +790,23 @@ export function PlayerRoomClient() {
 
   if (!room || !playerSeat) {
     return (
-      <section className="enter-rise flex h-full flex-col justify-center gap-5 text-center">
-        <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Preparando</p>
-        <h2 className="font-display text-3xl font-black uppercase">Conectando tu control</h2>
+      <section className="enter-rise flex h-full flex-col justify-between gap-6">
+        <div>
+          <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Preparando</p>
+          <h2 className="font-display mt-4 text-3xl font-black uppercase">Conectando tu control</h2>
+          <p className="connecting-dots mt-4 text-base text-[color:var(--muted)]">Espera mientras enlazamos tu celular con la pantalla</p>
+        </div>
+
+        <div className="glass-panel rounded-[1.8rem] p-5">
+          <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Cómo jugar</p>
+          <ul className="mt-5 space-y-3 text-base leading-7 text-[color:var(--muted)]">
+            <li>Tienes 15 segundos para responder cada pregunta cuando aparezcan las opciones.</li>
+            <li>Entre más rápido aciertes, más puntos sumas.</li>
+            <li>Si el lobby está libre, te dejaremos continuar sin registrarte otra vez en este dispositivo.</li>
+            <li>La sala pública admite un máximo de dos jugadores conectados a la vez.</li>
+          </ul>
+        </div>
+
         {error ? <p className="text-sm text-red-200">{error}</p> : null}
       </section>
     );
@@ -860,7 +914,7 @@ export function PlayerRoomClient() {
           <p className="font-display text-sm uppercase tracking-[0.45em] text-[color:var(--accent)]">
             {room.mode === "battle" ? "Duelo por comenzar" : "El reto está por comenzar"}
           </p>
-          <h2 className="font-display mt-5 text-8xl font-black uppercase">{countdown}</h2>
+          <h2 className="countdown-pop font-display mt-5 text-8xl font-black uppercase">{countdown}</h2>
         </div>
       </section>
     );
@@ -903,7 +957,7 @@ export function PlayerRoomClient() {
               {answerCountdown}s
             </p>
           </div>
-          <h2 className="font-display mt-4 text-3xl font-black uppercase tracking-[0.06em]">
+          <h2 className="font-display mt-4 text-2xl font-black uppercase tracking-[0.05em] sm:text-3xl">
             {room.currentQuestion.prompt}
           </h2>
         </div>
@@ -912,7 +966,7 @@ export function PlayerRoomClient() {
           {room.currentQuestion.choices
             ? (Object.entries(room.currentQuestion.choices) as Array<["A" | "B" | "C" | "D", string]>).map(([choice, label]) => (
                 <button
-                  className="rounded-[1.8rem] border border-white/10 px-5 py-5 text-left transition duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed"
+                  className="rounded-[1.8rem] border border-white/10 px-5 py-6 text-left transition duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed"
                   disabled={alreadyAnswered}
                   key={choice}
                   onClick={() => submitAnswer(choice)}
@@ -925,8 +979,10 @@ export function PlayerRoomClient() {
                   }}
                   type="button"
                 >
-                  <p className="font-display text-5xl font-black uppercase">{choice}</p>
-                  <p className="mt-3 text-base leading-6">{label}</p>
+                  <div className="flex items-center gap-4">
+                    <p className="font-display min-w-[3.2rem] text-6xl font-black uppercase sm:text-7xl">{choice}</p>
+                    <p className="text-lg font-semibold leading-7 sm:text-xl">{label}</p>
+                  </div>
                 </button>
               ))
             : null}

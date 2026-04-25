@@ -33,7 +33,23 @@ function rankEntries(entries: LeaderboardEntry[]) {
         return right.soloBestScore - left.soloBestScore;
       }
 
-      return right.battleBestScore - left.battleBestScore;
+      if (right.battleBestScore !== left.battleBestScore) {
+        return right.battleBestScore - left.battleBestScore;
+      }
+
+      if (left.averageResponseMs !== null && right.averageResponseMs !== null && left.averageResponseMs !== right.averageResponseMs) {
+        return left.averageResponseMs - right.averageResponseMs;
+      }
+
+      if (left.averageResponseMs !== null && right.averageResponseMs === null) {
+        return -1;
+      }
+
+      if (left.averageResponseMs === null && right.averageResponseMs !== null) {
+        return 1;
+      }
+
+      return left.playerName.localeCompare(right.playerName);
     })
     .map((entry, index) => ({
       ...entry,
