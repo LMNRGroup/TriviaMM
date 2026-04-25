@@ -1,7 +1,7 @@
 import type { LeaderboardEntry } from "@/lib/types/game";
+import { ensureSheetHeaders } from "@/lib/sheets/bootstrap";
 import { hasSheetsConfig } from "@/lib/utils/env";
-import { getSheetsClient, getSpreadsheetId } from "@/lib/sheets/client";
-import { SHEETS_TABS } from "@/lib/sheets/tabs";
+import { getSheetRange, getSheetsClient, getSpreadsheetId } from "@/lib/sheets/client";
 
 type LeaderboardSheetRow = [
   leaderboardEntryId: string,
@@ -101,9 +101,11 @@ async function readLeaderboardRows() {
   }
 
   const sheets = getSheetsClient();
+  await ensureSheetHeaders("leaderboard");
+  const range = await getSheetRange("leaderboard", "A:L");
   const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: getSpreadsheetId(),
-    range: `${SHEETS_TABS.leaderboard}!A:L`,
+    spreadsheetId: getSpreadsheetId("leaderboard"),
+    range,
   });
 
   const rows = response.data.values ?? [];
@@ -137,9 +139,11 @@ export async function upsertLeaderboardEntry(input: {
   }
 
   const sheets = getSheetsClient();
+  await ensureSheetHeaders("leaderboard");
+  const range = await getSheetRange("leaderboard", "A:L");
   const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: getSpreadsheetId(),
-    range: `${SHEETS_TABS.leaderboard}!A:L`,
+    spreadsheetId: getSpreadsheetId("leaderboard"),
+    range,
   });
 
   const rows = response.data.values ?? [];
@@ -179,18 +183,20 @@ export async function upsertLeaderboardEntry(input: {
 
   if (rowIndex >= 0) {
     const absoluteRow = rowIndex + 2;
+    const updateRange = await getSheetRange("leaderboard", `A${absoluteRow}:L${absoluteRow}`);
     await sheets.spreadsheets.values.update({
-      spreadsheetId: getSpreadsheetId(),
-      range: `${SHEETS_TABS.leaderboard}!A${absoluteRow}:L${absoluteRow}`,
+      spreadsheetId: getSpreadsheetId("leaderboard"),
+      range: updateRange,
       valueInputOption: "USER_ENTERED",
       requestBody: {
         values: [targetRow],
       },
     });
   } else {
+    const appendRange = await getSheetRange("leaderboard", "A:L");
     await sheets.spreadsheets.values.append({
-      spreadsheetId: getSpreadsheetId(),
-      range: `${SHEETS_TABS.leaderboard}!A:L`,
+      spreadsheetId: getSpreadsheetId("leaderboard"),
+      range: appendRange,
       valueInputOption: "USER_ENTERED",
       requestBody: {
         values: [header.length === 0 ? targetRow : targetRow],

@@ -1,7 +1,7 @@
 import type { AnswerSubmission, Match } from "@/lib/types/game";
+import { ensureSheetHeaders } from "@/lib/sheets/bootstrap";
 import { hasSheetsConfig } from "@/lib/utils/env";
-import { getSheetsClient, getSpreadsheetId } from "@/lib/sheets/client";
-import { SHEETS_TABS } from "@/lib/sheets/tabs";
+import { getSheetRange, getSheetsClient, getSpreadsheetId } from "@/lib/sheets/client";
 
 export async function appendMatch(match: Match) {
   if (!hasSheetsConfig()) {
@@ -9,10 +9,12 @@ export async function appendMatch(match: Match) {
   }
 
   const sheets = getSheetsClient();
+  await ensureSheetHeaders("matches");
+  const range = await getSheetRange("matches", "A:O");
 
   await sheets.spreadsheets.values.append({
-    spreadsheetId: getSpreadsheetId(),
-    range: `${SHEETS_TABS.matches}!A:O`,
+    spreadsheetId: getSpreadsheetId("matches"),
+    range,
     valueInputOption: "USER_ENTERED",
     requestBody: {
       values: [[
@@ -42,9 +44,11 @@ export async function appendMatchAnswers(submissions: AnswerSubmission[]) {
   }
 
   const sheets = getSheetsClient();
+  await ensureSheetHeaders("matchAnswers");
+  const range = await getSheetRange("matchAnswers", "A:N");
   await sheets.spreadsheets.values.append({
-    spreadsheetId: getSpreadsheetId(),
-    range: `${SHEETS_TABS.matchAnswers}!A:N`,
+    spreadsheetId: getSpreadsheetId("matchAnswers"),
+    range,
     valueInputOption: "USER_ENTERED",
     requestBody: {
       values: submissions.map((submission) => [

@@ -1,8 +1,8 @@
 import type { Question } from "@/lib/types/game";
 import { SAMPLE_QUESTIONS } from "@/lib/game/sample-questions";
+import { ensureSheetHeaders } from "@/lib/sheets/bootstrap";
 import { hasSheetsConfig } from "@/lib/utils/env";
-import { getSheetsClient, getSpreadsheetId } from "@/lib/sheets/client";
-import { SHEETS_TABS } from "@/lib/sheets/tabs";
+import { getSheetRange, getSheetsClient, getSpreadsheetId } from "@/lib/sheets/client";
 
 function shuffle<T>(items: T[]) {
   const copy = [...items];
@@ -53,9 +53,11 @@ export async function getActiveQuestions() {
 
   try {
     const sheets = getSheetsClient();
+    await ensureSheetHeaders("questions");
+    const range = await getSheetRange("questions", "A:N");
     const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: getSpreadsheetId(),
-      range: `${SHEETS_TABS.questions}!A:N`,
+      spreadsheetId: getSpreadsheetId("questions"),
+      range,
     });
 
     const rows = response.data.values ?? [];

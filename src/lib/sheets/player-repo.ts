@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { Player } from "@/lib/types/game";
 import type { RegistrationInput } from "@/lib/validation/registration";
-import { getSheetsClient, getSpreadsheetId } from "@/lib/sheets/client";
-import { SHEETS_TABS } from "@/lib/sheets/tabs";
+import { ensureSheetHeaders } from "@/lib/sheets/bootstrap";
+import { getSheetRange, getSheetsClient, getSpreadsheetId } from "@/lib/sheets/client";
 import { hasSheetsConfig } from "@/lib/utils/env";
 
 type PlayerSheetRow = [
@@ -80,10 +80,12 @@ export async function createRegisteredPlayer(input: RegistrationInput) {
 
   if (hasSheetsConfig()) {
     const sheets = getSheetsClient();
+    await ensureSheetHeaders("players");
+    const range = await getSheetRange("players", "A:P");
 
     await sheets.spreadsheets.values.append({
-      spreadsheetId: getSpreadsheetId(),
-      range: `${SHEETS_TABS.players}!A:P`,
+      spreadsheetId: getSpreadsheetId("players"),
+      range,
       valueInputOption: "USER_ENTERED",
       requestBody: {
         values: [buildPlayerRow(input, playerId, timestamp)],
@@ -116,9 +118,11 @@ export async function getRegisteredPlayerById(playerId: string) {
   }
 
   const sheets = getSheetsClient();
+  await ensureSheetHeaders("players");
+  const range = await getSheetRange("players", "A:P");
   const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: getSpreadsheetId(),
-    range: `${SHEETS_TABS.players}!A:P`,
+    spreadsheetId: getSpreadsheetId("players"),
+    range,
   });
 
   const rows = response.data.values ?? [];
@@ -138,9 +142,11 @@ export async function findRegisteredPlayerByEmail(email: string) {
   }
 
   const sheets = getSheetsClient();
+  await ensureSheetHeaders("players");
+  const range = await getSheetRange("players", "A:P");
   const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: getSpreadsheetId(),
-    range: `${SHEETS_TABS.players}!A:P`,
+    spreadsheetId: getSpreadsheetId("players"),
+    range,
   });
 
   const rows = response.data.values ?? [];
