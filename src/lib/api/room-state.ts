@@ -8,6 +8,7 @@ import type {
   PublicRoomState,
   RoomState,
 } from "@/lib/types/game";
+import { matchAverageResponseMs } from "@/lib/game/scoring";
 
 /** Display city from a live or legacy `Player` (KV may still have `country` only). */
 export function playerDisplayCity(player: Pick<Player, "city" | "country">): string {
@@ -34,6 +35,7 @@ function toPublicPlayer(player: Player | null): PublicPlayer | null {
     timeoutCount: player.timeoutCount,
     connectedAt: player.connectedAt,
     lastSeenAt: player.lastSeenAt,
+    matchAverageResponseMs: matchAverageResponseMs(player),
     rank: player.rank,
   };
 }

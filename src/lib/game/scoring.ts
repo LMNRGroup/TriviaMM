@@ -1,21 +1,11 @@
 import type { Player, WinnerType } from "@/lib/types/game";
-import { QUESTION_ANSWER_DURATION_MS } from "@/lib/game/constants";
-
-const BASE_CORRECT_POINTS = 100;
-const MAX_SPEED_BONUS = 50;
 
 export function calculatePoints(responseTimeMs: number | null, isCorrect: boolean) {
   if (!isCorrect || responseTimeMs === null) {
     return 0;
   }
 
-  const speedRatio = Math.max(
-    0,
-    (QUESTION_ANSWER_DURATION_MS - responseTimeMs) / QUESTION_ANSWER_DURATION_MS,
-  );
-  const speedBonus = Math.round(MAX_SPEED_BONUS * speedRatio);
-
-  return BASE_CORRECT_POINTS + speedBonus;
+  return 1;
 }
 
 export function average(values: number[]) {
@@ -26,7 +16,7 @@ export function average(values: number[]) {
   return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
 }
 
-/** Match-wide mean response time from finalized timed answers (excludes timeouts / null). */
+/** Match-wide mean response time across finalized questions in the round. */
 export function matchAverageResponseMs(
   player: Pick<Player, "matchResponseTimeSumMs" | "matchResponseTimeCount"> | null | undefined,
 ): number | null {

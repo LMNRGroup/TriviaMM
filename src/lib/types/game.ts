@@ -45,9 +45,9 @@ export interface Player {
   correctCount: number;
   wrongCount: number;
   timeoutCount: number;
-  /** Sum of `responseTimeMs` for finalized submissions where time was recorded (excludes timeouts). */
+  /** Sum of effective match response time across finalized questions. */
   matchResponseTimeSumMs: number;
-  /** Count of submissions included in `matchResponseTimeSumMs`. */
+  /** Count of finalized match questions included in `matchResponseTimeSumMs`. */
   matchResponseTimeCount: number;
   rank?: number;
 }
@@ -63,7 +63,9 @@ export interface Question {
     D: string;
   };
   correctChoice: AnswerChoice;
+  categoryOrder?: number;
   category?: string;
+  explanation?: string;
   difficulty?: "easy" | "medium" | "hard";
   isActive: boolean;
   tags?: string[];
@@ -141,6 +143,7 @@ export interface PublicPlayer {
   timeoutCount: number;
   connectedAt: string;
   lastSeenAt: string;
+  matchAverageResponseMs: number | null;
   rank?: number;
 }
 
@@ -206,6 +209,7 @@ export interface RoomState {
     questionId: string | null;
     questionIndex: number;
     totalQuestions: number;
+    category: string | null;
     prompt: string | null;
     choices: { A: string; B: string; C: string; D: string } | null;
     startedAt: string | null;

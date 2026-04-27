@@ -14,6 +14,14 @@ function formatSeconds(iso: string | null, now: number, decimals = 0) {
   return remaining.toFixed(decimals);
 }
 
+function formatAverageSeconds(milliseconds: number | null | undefined) {
+  if (typeof milliseconds !== "number") {
+    return "--";
+  }
+
+  return `${(milliseconds / 1000).toFixed(1)}s`;
+}
+
 function getFeedbackGlow(feedback: AnswerFeedback, side: "left" | "right") {
   if (feedback === "correct") {
     return `${side}-0 top-0 h-full w-1/2 bg-[radial-gradient(circle_at_center,rgba(61,224,163,0.32),transparent_72%)]`;
@@ -310,6 +318,11 @@ export function HostRoomClient() {
                       <p className="font-display text-sm uppercase tracking-[0.35em] text-[color:var(--accent)]">
                         Pregunta {room.currentQuestion.questionIndex} / {room.currentQuestion.totalQuestions}
                       </p>
+                      {room.currentQuestion.category ? (
+                        <p className="mt-4 font-display text-xl font-black uppercase tracking-[0.18em] text-[color:var(--accent-strong)]">
+                          {room.currentQuestion.category}
+                        </p>
+                      ) : null}
                       <h2 className="font-display mt-4 text-4xl font-black uppercase leading-[1.02] xl:text-6xl">
                         {room.currentQuestion.prompt}
                       </h2>
@@ -379,6 +392,42 @@ export function HostRoomClient() {
                   <div>
                     <p className="font-display text-sm uppercase tracking-[0.4em] text-[color:var(--accent)]">Leaderboard</p>
                     <h2 className="font-display mt-4 text-5xl font-black uppercase">Top jugadores</h2>
+                  </div>
+                  <div className="grid gap-4 xl:grid-cols-2">
+                    <div className="glass-panel rounded-[1.7rem] p-5">
+                      <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Jugador 1</p>
+                      <p className="font-display mt-3 text-3xl font-black uppercase">{room.players.player1?.name ?? "—"}</p>
+                      <div className="mt-4 flex items-center justify-between gap-4">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Puntuación</p>
+                          <p className="font-display mt-2 text-5xl font-black text-[color:var(--accent)]">{room.scores.player1}/10</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Promedio</p>
+                          <p className="font-display mt-2 text-4xl font-black text-[color:var(--foreground)]">
+                            {formatAverageSeconds(room.players.player1?.matchAverageResponseMs)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    {room.mode === "battle" && room.players.player2 ? (
+                      <div className="glass-panel rounded-[1.7rem] p-5">
+                        <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Jugador 2</p>
+                        <p className="font-display mt-3 text-3xl font-black uppercase">{room.players.player2.name}</p>
+                        <div className="mt-4 flex items-center justify-between gap-4">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Puntuación</p>
+                            <p className="font-display mt-2 text-5xl font-black text-[color:var(--accent)]">{room.scores.player2}/10</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Promedio</p>
+                            <p className="font-display mt-2 text-4xl font-black text-[color:var(--foreground)]">
+                              {formatAverageSeconds(room.players.player2.matchAverageResponseMs)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                   <LeaderboardList entries={room.leaderboard.visibleTop} highlightRanks={leaderboardHighlightRanks} />
                 </div>

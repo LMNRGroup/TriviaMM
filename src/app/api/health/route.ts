@@ -3,10 +3,23 @@ import { ensureAllSheetStructures } from "@/lib/sheets/bootstrap";
 import { getSheetsConfig, hasKvConfig, hasSheetsConfig, preferMemoryKv } from "@/lib/utils/env";
 
 export async function GET() {
-  const sheets = getSheetsConfig();
+  const sheetsEnabled = hasSheetsConfig();
+  const sheets = sheetsEnabled
+    ? getSheetsConfig()
+    : {
+        spreadsheetId: null,
+        spreadsheetIds: {
+          players: null,
+          questions: null,
+          matches: null,
+          matchAnswers: null,
+          leaderboard: null,
+          leaderboardSnapshots: null,
+        },
+      };
   let sheetsBootstrapOk = false;
 
-  if (hasSheetsConfig()) {
+  if (sheetsEnabled) {
     try {
       await ensureAllSheetStructures();
       sheetsBootstrapOk = true;
@@ -21,7 +34,7 @@ export async function GET() {
       appUrl: Boolean(process.env.NEXT_PUBLIC_APP_URL?.trim()),
       kv: hasKvConfig(),
       kvUseMemory: preferMemoryKv(),
-      sheets: hasSheetsConfig(),
+      sheets: sheetsEnabled,
       sheetsSingleSpreadsheet: Boolean(sheets.spreadsheetId),
       sheetsSplitSpreadsheets: Object.values(sheets.spreadsheetIds).every(Boolean),
       sheetsBootstrapOk,

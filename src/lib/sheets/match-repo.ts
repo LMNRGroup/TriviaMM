@@ -45,7 +45,7 @@ export async function appendMatchAnswers(submissions: AnswerSubmission[]) {
 
   const sheets = getSheetsClient();
   await ensureSheetHeaders("matchAnswers");
-  const range = await getSheetRange("matchAnswers", "A:N");
+  const range = await getSheetRange("matchAnswers", "A:O");
   await sheets.spreadsheets.values.append({
     spreadsheetId: getSpreadsheetId("matchAnswers"),
     range,

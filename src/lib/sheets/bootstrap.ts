@@ -41,6 +41,8 @@ const sheetHeaders: Record<SheetResourceKey, string[]> = {
     "difficulty",
     "tags",
     "is_active",
+    "category_order",
+    "explanation",
   ],
   matches: [
     "match_id",
@@ -120,14 +122,19 @@ export async function ensureSheetHeaders(resource: SheetResourceKey) {
 
   const firstRow = response.data.values?.[0] ?? [];
 
-  if (firstRow.length === 0) {
+  const expectedHeader = sheetHeaders[resource];
+  const headerNeedsUpdate =
+    firstRow.length === 0 ||
+    expectedHeader.some((value, index) => (firstRow[index] ?? "") !== value);
+
+  if (headerNeedsUpdate) {
     const targetRange = await getSheetRange(resource, "A1");
     await sheets.spreadsheets.values.update({
       spreadsheetId,
       range: targetRange,
       valueInputOption: "USER_ENTERED",
       requestBody: {
-        values: [sheetHeaders[resource]],
+        values: [expectedHeader],
       },
     });
   }

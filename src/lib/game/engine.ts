@@ -47,6 +47,7 @@ function buildQuestionReadState(question: Question, room: RoomState, nowIso: str
     questionId: question.questionId,
     questionIndex: room.randomization.askedQuestionIds.length + 1,
     totalQuestions: room.currentQuestion.totalQuestions,
+    category: question.category ?? null,
     prompt: question.prompt,
     choices: question.choices,
     startedAt: nowIso,
@@ -126,6 +127,7 @@ export function startMatch(room: RoomState, mode: RoomMode, questions: Question[
         questionId: null,
         questionIndex: 0,
         totalQuestions: questions.length,
+        category: null,
         prompt: null,
         choices: null,
         startedAt: null,
@@ -256,9 +258,10 @@ function updateRoomForSubmission(room: RoomState, player: Player, submission: An
     return room;
   }
 
-  const timedAnswer = submission.responseTimeMs !== null;
   const sumMs = currentPlayer.matchResponseTimeSumMs ?? 0;
   const cnt = currentPlayer.matchResponseTimeCount ?? 0;
+  const effectiveResponseTimeMs =
+    submission.responseTimeMs === null ? QUESTION_ANSWER_DURATION_MS : submission.responseTimeMs;
 
   const updatedPlayer = {
     ...currentPlayer,
@@ -269,8 +272,8 @@ function updateRoomForSubmission(room: RoomState, player: Player, submission: An
     timeoutCount: currentPlayer.timeoutCount + (submission.status === "timeout" ? 1 : 0),
     unansweredStreak: submission.unansweredStreakAfter,
     lastSeenAt: submission.submittedAt ?? currentPlayer.lastSeenAt,
-    matchResponseTimeSumMs: sumMs + (timedAnswer ? submission.responseTimeMs! : 0),
-    matchResponseTimeCount: cnt + (timedAnswer ? 1 : 0),
+    matchResponseTimeSumMs: sumMs + effectiveResponseTimeMs,
+    matchResponseTimeCount: cnt + 1,
   };
 
   return {
@@ -473,6 +476,7 @@ export function resetRoom(room: RoomState, nowIso: string): RoomState {
       questionId: null,
       questionIndex: 0,
       totalQuestions: 0,
+      category: null,
       prompt: null,
       choices: null,
       startedAt: null,

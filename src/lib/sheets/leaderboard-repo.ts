@@ -174,7 +174,10 @@ export async function upsertLeaderboardEntry(input: {
         ? existing?.averageResponseMs ?? null
         : existing?.averageResponseMs === null || existing?.averageResponseMs === undefined
           ? input.averageResponseMs
-          : Math.round((existing.averageResponseMs + input.averageResponseMs) / 2),
+          : Math.round(
+              ((existing.averageResponseMs * (existing.matchesPlayed ?? 0)) + input.averageResponseMs) /
+                ((existing.matchesPlayed ?? 0) + 1),
+            ),
     rank: existing?.rank ?? 0,
     updatedAt: timestamp,
   };

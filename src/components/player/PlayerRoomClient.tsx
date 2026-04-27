@@ -105,6 +105,14 @@ function formatSeconds(iso: string | null, now: number, decimals = 0) {
   return remaining.toFixed(decimals);
 }
 
+function formatAverageSeconds(milliseconds: number | null | undefined) {
+  if (typeof milliseconds !== "number") {
+    return "--";
+  }
+
+  return `${(milliseconds / 1000).toFixed(1)}s`;
+}
+
 function ageLabelFromValue(value: string) {
   return AGE_OPTIONS.find((option) => option.value === value)?.label ?? value;
 }
@@ -957,6 +965,11 @@ export function PlayerRoomClient() {
               {answerCountdown}s
             </p>
           </div>
+          {room.currentQuestion.category ? (
+            <p className="mt-4 font-display text-base uppercase tracking-[0.22em] text-[color:var(--accent-strong)]">
+              {room.currentQuestion.category}
+            </p>
+          ) : null}
           <h2 className="font-display mt-4 text-2xl font-black uppercase tracking-[0.05em] sm:text-3xl">
             {room.currentQuestion.prompt}
           </h2>
@@ -1047,6 +1060,24 @@ export function PlayerRoomClient() {
         <div>
           <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Leaderboard</p>
           <h2 className="font-display mt-4 text-3xl font-black uppercase tracking-[0.08em]">Clasificación</h2>
+        </div>
+        <div className="rounded-[1.8rem] border border-white/10 bg-white/5 px-5 py-5">
+          <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Tu resultado</p>
+          <p className="font-display mt-3 text-3xl font-black uppercase">{playerSeat?.name ?? "Jugador"}</p>
+          <div className="mt-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Puntuación</p>
+              <p className="font-display mt-2 text-5xl font-black text-[color:var(--accent)]">
+                {playerSeat ? `${playerSeat.totalScore}/10` : "--"}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Promedio</p>
+              <p className="font-display mt-2 text-4xl font-black">
+                {formatAverageSeconds(playerSeat?.matchAverageResponseMs)}
+              </p>
+            </div>
+          </div>
         </div>
         <LeaderboardList
           entries={room.leaderboard.visibleTop}

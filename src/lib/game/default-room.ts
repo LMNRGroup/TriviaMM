@@ -47,6 +47,7 @@ export function createInitialRoomState({
       questionId: null,
       questionIndex: 0,
       totalQuestions: 0,
+      category: null,
       prompt: null,
       choices: null,
       startedAt: null,
