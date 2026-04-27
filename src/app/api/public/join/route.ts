@@ -80,6 +80,11 @@ export async function POST(request: Request) {
 
       if (player.slot === 2 && updatedRoom.players.player1 && updatedRoom.phase === "lobby") {
         const questions = await getRandomQuestions(MATCH_QUESTION_COUNT);
+
+        if (questions.length === 0) {
+          throw new Error("question_bank_empty");
+        }
+
         const { room: startedRoom } = startMatch(updatedRoom, "battle", questions, new Date().toISOString());
         await Promise.all([saveQuestionBank(startedRoom.roomCode, questions), saveRoomState(startedRoom)]);
         responseRoom = startedRoom;
@@ -123,6 +128,10 @@ export async function POST(request: Request) {
 
       if (error.message === "active_session") {
         return fail("active_session", 409, "Ya hay una partida activa. Espera a que termine para entrar.");
+      }
+
+      if (error.message === "question_bank_empty") {
+        return fail("question_bank_empty", 409, "No hay preguntas disponibles para iniciar la partida.");
       }
     }
 

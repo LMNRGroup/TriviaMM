@@ -7,8 +7,9 @@ export default function PlayPage() {
         <div className="flex min-h-0 flex-1 flex-col">
           <PlayerRoomClient />
         </div>
-        <p className="mt-6 border-t border-white/10 pt-4 text-center text-[0.62rem] uppercase tracking-[0.12em] text-[color:var(--muted)]">
-          © 2026 Luminar Apps. Todos los derechos reservados. Desarrollado para Municipio Autónomo de Mayagüez.
+        <p className="mt-4 border-t border-white/10 pt-3 text-center text-[0.48rem] uppercase leading-tight tracking-[0.08em] text-[color:var(--muted)] sm:text-[0.54rem]">
+          <span className="block whitespace-nowrap">© 2026 Luminar Apps. Todos los derechos reservados.</span>
+          <span className="block whitespace-nowrap">Desarrollado para Municipio Autónomo de Mayagüez.</span>
         </p>
       </div>
     </main>

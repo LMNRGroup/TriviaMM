@@ -25,6 +25,10 @@ export async function POST(request: Request) {
   try {
     const questions = await getRandomQuestions(MATCH_QUESTION_COUNT);
 
+    if (questions.length === 0) {
+      return fail("question_bank_empty", 409, "No hay preguntas disponibles para iniciar la partida.");
+    }
+
     const startedRoom = await withRoomMutationLock(PUBLIC_ROOM_CODE, async () => {
       const room = await getRoomState();
 

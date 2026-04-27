@@ -36,6 +36,10 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     const questions = await getRandomQuestions(MATCH_QUESTION_COUNT);
 
+    if (questions.length === 0) {
+      return fail("question_bank_empty", 409, "No questions are available to start the match");
+    }
+
     const startedRoom = await withRoomMutationLock(parsedRoomCode.data, async () => {
       const room = await getRoomState(parsedRoomCode.data);
 

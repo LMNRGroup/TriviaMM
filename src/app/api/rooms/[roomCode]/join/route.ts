@@ -1,6 +1,6 @@
 import { ok, fail } from "@/lib/api/http";
 import { toJoinPlayerPayload, toPublicRoomJoinSlice } from "@/lib/api/room-state";
-import { choosePlayerSlot, getRoomState, joinRoom } from "@/lib/kv/room-store";
+import { choosePlayerSlot, getRoomState, joinRoom, withRoomMutationLock } from "@/lib/kv/room-store";
 import { buildLivePlayerFromRegistration, getRegisteredPlayerById } from "@/lib/sheets/player-repo";
 import { roomCodeSchema, joinRoomSchema } from "@/lib/validation/room";
 import { randomUUID } from "node:crypto";
@@ -32,41 +32,44 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   try {
-    const existingRoom = await getRoomState(parsedRoomCode.data);
-
-    if (!existingRoom) {
-      return fail("room_not_found", 404, "Room not found");
-    }
-
     const registration = await getRegisteredPlayerById(parsedBody.data.playerId);
 
     if (!registration) {
       return fail("player_not_found", 404, "Registration record was not found");
     }
 
-    const slot = choosePlayerSlot(existingRoom, parsedBody.data.preferredSlot);
+    const result = await withRoomMutationLock(parsedRoomCode.data, async () => {
+      const existingRoom = await getRoomState(parsedRoomCode.data);
 
-    if (!slot) {
-      return fail("room_full", 409, "Room is full");
-    }
+      if (!existingRoom) {
+        throw new Error("room_not_found");
+      }
 
-    const player = buildLivePlayerFromRegistration({
-      roomCode: parsedRoomCode.data,
-      slot,
-      sessionId: parsedBody.data.sessionId,
-      controllerToken: `ctrl_${randomUUID()}`,
-      registration,
+      const slot = choosePlayerSlot(existingRoom, parsedBody.data.preferredSlot);
+
+      if (!slot) {
+        throw new Error("room_full");
+      }
+
+      const player = buildLivePlayerFromRegistration({
+        roomCode: parsedRoomCode.data,
+        slot,
+        sessionId: parsedBody.data.sessionId,
+        controllerToken: `ctrl_${randomUUID()}`,
+        registration,
+      });
+
+      const room = await joinRoom(player);
+      return { player, room };
     });
 
-    const room = await joinRoom(player);
-
     return ok({
-      player: toJoinPlayerPayload(player),
+      player: toJoinPlayerPayload(result.player),
       room: toPublicRoomJoinSlice({
-        phase: room.phase,
-        mode: room.mode,
-        players: room.players,
-        lobby: room.lobby,
+        phase: result.room.phase,
+        mode: result.room.mode,
+        players: result.room.players,
+        lobby: result.room.lobby,
       }),
     });
   } catch (error) {

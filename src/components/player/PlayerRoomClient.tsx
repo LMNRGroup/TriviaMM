@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { LeaderboardList } from "@/components/leaderboard/LeaderboardList";
 import {
-  AGE_OPTIONS,
   COUNTRY_OPTIONS,
   PUERTO_RICO_MUNICIPALITY_OPTIONS,
   US_STATE_AND_TERRITORY_OPTIONS,
@@ -109,8 +108,18 @@ function formatAverageSeconds(milliseconds: number | null | undefined) {
   return `${(milliseconds / 1000).toFixed(1)}s`;
 }
 
-function ageLabelFromValue(value: string) {
-  return AGE_OPTIONS.find((option) => option.value === value)?.label ?? value;
+function birthYearToAge(value: string) {
+  const year = Number(value);
+
+  if (!Number.isFinite(year)) {
+    return Number.NaN;
+  }
+
+  return new Date().getFullYear() - year;
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function PlayerRoomClient() {
@@ -137,10 +146,22 @@ export function PlayerRoomClient() {
   });
   const [selectedChoiceState, setSelectedChoiceState] = useState<{ questionIndex: number; choice: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [joinInFlightPlayerId, setJoinInFlightPlayerId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [agePickerOpen, setAgePickerOpen] = useState(false);
+  const syncInFlightRef = useRef(false);
   const [now, setNow] = useState(() => Date.now());
+
+  const birthYearOptions = useMemo(() => {
+    const maxBirthYear = new Date().getFullYear() - 16;
+    const years: number[] = [];
+
+    for (let year = maxBirthYear; year >= 1900; year -= 1) {
+      years.push(year);
+    }
+
+    return years;
+  }, []);
 
   const regionOptions = useMemo(() => {
     if (form.country === "United States") {
@@ -178,7 +199,7 @@ export function PlayerRoomClient() {
     setSession(null);
   }
 
-  async function loadRoomState() {
+  const loadRoomState = useCallback(async () => {
     const response = await fetch("/api/public/state", { cache: "no-store" });
     const payload = await response.json();
 
@@ -186,11 +207,14 @@ export function PlayerRoomClient() {
       throw new Error(payload.message ?? "No se pudo cargar la sala.");
     }
 
-    setRoom(payload.data.room as PublicRoomState);
-    setRememberedPlayer((payload.data.rememberedPlayer as RememberedPlayer | null) ?? null);
+    const nextRoom = payload.data.room as PublicRoomState;
+    const remoteRememberedPlayer = (payload.data.rememberedPlayer as RememberedPlayer | null) ?? null;
+
+    setRoom(nextRoom);
+    setRememberedPlayer((current) => remoteRememberedPlayer ?? current);
     setError(null);
-    return payload.data.room as PublicRoomState;
-  }
+    return nextRoom;
+  }, []);
 
   const joinWithPlayer = useCallback(async (playerId: string, profile?: RememberedPlayer) => {
     const sessionId = crypto.randomUUID();
@@ -211,21 +235,45 @@ export function PlayerRoomClient() {
     }
 
     const joinedPlayer = payload.data.player as JoinApiPlayer;
+    setJoinInFlightPlayerId(joinedPlayer.playerId);
     persistSession({
       playerId: joinedPlayer.playerId,
       name: joinedPlayer.name,
       city: joinedPlayer.city,
-      age: Number(profile?.age ?? form.age ?? 0),
+      age: Number(profile?.age ?? birthYearToAge(form.age) ?? 0),
       email: profile?.email ?? form.email,
       controllerToken: joinedPlayer.controllerToken,
       sessionId,
     });
-  }, [form.age, form.email]);
+
+    setRememberedPlayer(null);
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const nextRoom = await loadRoomState();
+      const joinedSeat =
+        nextRoom.players.player1?.playerId === joinedPlayer.playerId ||
+        nextRoom.players.player2?.playerId === joinedPlayer.playerId;
+
+      if (joinedSeat) {
+        break;
+      }
+
+      await wait(250);
+    }
+
+    setJoinInFlightPlayerId(null);
+  }, [form.age, form.email, loadRoomState]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function sync() {
+      if (syncInFlightRef.current) {
+        return;
+      }
+
+      syncInFlightRef.current = true;
+
       try {
         const nextRoom = await loadRoomState();
 
@@ -249,6 +297,8 @@ export function PlayerRoomClient() {
         if (!cancelled) {
           setError(syncError instanceof Error ? syncError.message : "No se pudo sincronizar la partida.");
         }
+      } finally {
+        syncInFlightRef.current = false;
       }
     }
 
@@ -263,7 +313,7 @@ export function PlayerRoomClient() {
       window.clearInterval(poll);
       window.clearInterval(timer);
     };
-  }, []);
+  }, [loadRoomState]);
 
   useEffect(() => {
     if (!session || !playerSeat?.playerId) {
@@ -306,7 +356,7 @@ export function PlayerRoomClient() {
   }, [room, session]);
 
   const validation = useMemo(() => {
-    const numericAge = Number(form.age);
+    const numericAge = birthYearToAge(form.age);
 
     return registrationSchema.safeParse({
       roomCode: "PUBLICO",
@@ -381,7 +431,7 @@ export function PlayerRoomClient() {
           playerId: player.playerId,
           name: form.name,
           city: form.region,
-          age: Number(form.age),
+          age: birthYearToAge(form.age),
           email: form.email,
         });
         setError(null);
@@ -475,9 +525,26 @@ export function PlayerRoomClient() {
       try {
         await joinWithPlayer(profile.playerId, profile);
       } catch (joinError) {
+        setJoinInFlightPlayerId(null);
         setError(joinError instanceof Error ? joinError.message : "No fue posible entrar a la sala.");
       }
     });
+  }
+
+  if (joinInFlightPlayerId) {
+    return (
+      <section className="enter-rise flex h-full flex-col justify-between gap-6">
+        <div>
+          <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Preparando</p>
+          <h2 className="font-display mt-4 text-3xl font-black uppercase">Entrando a la sala</h2>
+          <p className="connecting-dots mt-4 text-base text-[color:var(--muted)]">
+            Estamos reservando tu espacio antes de mostrar las preguntas.
+          </p>
+        </div>
+
+        {error ? <p className="text-sm text-red-200">{error}</p> : null}
+      </section>
+    );
   }
 
   if (room && pendingJoinPlayer && room.phase !== "idle" && room.phase !== "lobby") {
@@ -696,14 +763,19 @@ export function PlayerRoomClient() {
 
         <div className="grid gap-5 sm:grid-cols-2">
           <label className="space-y-2">
-            <span className="text-sm font-semibold text-white">Edad</span>
-            <button
-              className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 text-left outline-none transition hover:bg-white/7 focus:border-[color:var(--accent)] focus:bg-white/7"
-              onClick={() => setAgePickerOpen(true)}
-              type="button"
+            <span className="text-sm font-semibold text-white">¿En qué año naciste?</span>
+            <select
+              className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-[color:var(--accent)] focus:bg-white/7"
+              onChange={(event) => updateField("age", event.target.value)}
+              value={form.age}
             >
-              {form.age ? ageLabelFromValue(form.age) : "Selecciona tu grupo de edad"}
-            </button>
+              <option value="">Selecciona tu año</option>
+              {birthYearOptions.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="space-y-2">
             <span className="text-sm font-semibold text-white">Email</span>
@@ -764,46 +836,6 @@ export function PlayerRoomClient() {
         >
           {isPending ? "Registrando..." : "Registrarme"}
         </button>
-
-        {agePickerOpen ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/82 px-4">
-            <div className="w-full max-w-sm rounded-[1.8rem] border border-white/10 bg-[color:var(--panel-strong)] p-5 shadow-2xl">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Edad</p>
-                  <h2 className="mt-3 text-xl font-black uppercase text-white">Selecciona tu edad</h2>
-                </div>
-                <button
-                  className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]"
-                  onClick={() => setAgePickerOpen(false)}
-                  type="button"
-                >
-                  Cerrar
-                </button>
-              </div>
-
-              <div className="mt-5 grid max-h-[50vh] grid-cols-3 gap-2 overflow-y-auto pr-1">
-                {AGE_OPTIONS.map((age) => (
-                  <button
-                    className={`rounded-[1rem] px-3 py-3 text-sm font-semibold transition ${
-                      form.age === age.value
-                        ? "bg-[color:var(--accent)] text-slate-950"
-                        : "border border-white/10 bg-white/5 text-white hover:bg-white/8"
-                    }`}
-                    key={age.value}
-                    onClick={() => {
-                      updateField("age", age.value);
-                      setAgePickerOpen(false);
-                    }}
-                    type="button"
-                  >
-                    {age.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : null}
       </form>
     );
   }

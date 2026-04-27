@@ -16,7 +16,7 @@ export const registrationSchema = z
     city: z.string().trim().min(2).max(80).optional(),
     /** @deprecated Legacy clients — use `city` */
     country: z.string().trim().min(2).max(80).optional(),
-    age: z.number().int().min(18).max(99),
+    age: z.number().int().min(16).max(126),
     email: strictEmailSchema,
     acceptedTerms: z.literal(true),
     newsletterOptIn: z.boolean(),

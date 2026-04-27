@@ -15,7 +15,7 @@ import {
  */
 export async function runTickWithOptimisticRetry(roomCode: string) {
   return withRoomMutationLock(roomCode, async () => {
-    const nowIso = new Date().toISOString();
+    let nowIso = new Date().toISOString();
     let room = await getRoomState(roomCode);
 
     if (!room) {
@@ -56,6 +56,7 @@ export async function runTickWithOptimisticRetry(roomCode: string) {
       }
 
       room = verify;
+      nowIso = new Date().toISOString();
     }
 
     const questionBank = await getQuestionBank(room.roomCode);
