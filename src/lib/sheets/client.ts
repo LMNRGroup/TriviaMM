@@ -1,4 +1,5 @@
 import { google, type sheets_v4 } from "googleapis";
+import { SHEETS_TABS } from "@/lib/sheets/tabs";
 import { getSheetsConfig } from "@/lib/utils/env";
 
 export type SheetResourceKey =
@@ -49,8 +50,10 @@ export function getSheetsClient() {
 }
 
 export async function getWorksheetTitle(resource: SheetResourceKey) {
+  const config = getSheetsConfig();
   const spreadsheetId = getSpreadsheetId(resource);
-  const cached = worksheetTitleCache.get(spreadsheetId);
+  const cacheKey = `${spreadsheetId}:${resource}`;
+  const cached = worksheetTitleCache.get(cacheKey);
 
   if (cached) {
     return cached;
@@ -59,16 +62,46 @@ export async function getWorksheetTitle(resource: SheetResourceKey) {
   const sheets = getSheetsClient();
   const response = await sheets.spreadsheets.get({
     spreadsheetId,
-    fields: "sheets.properties.title",
+    fields: "sheets(properties(sheetId,title))",
   });
 
-  const title = response.data.sheets?.[0]?.properties?.title;
+  const tabName = SHEETS_TABS[resource];
+  const existingSheets = response.data.sheets ?? [];
+
+  if (config.spreadsheetId) {
+    const existing = existingSheets.find((sheet) => sheet.properties?.title === tabName)?.properties?.title;
+
+    if (existing) {
+      worksheetTitleCache.set(cacheKey, existing);
+      return existing;
+    }
+
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            addSheet: {
+              properties: {
+                title: tabName,
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    worksheetTitleCache.set(cacheKey, tabName);
+    return tabName;
+  }
+
+  const title = existingSheets[0]?.properties?.title;
 
   if (!title) {
     throw new Error(`No worksheet found for spreadsheet: ${spreadsheetId}`);
   }
 
-  worksheetTitleCache.set(spreadsheetId, title);
+  worksheetTitleCache.set(cacheKey, title);
   return title;
 }
 

@@ -1,5 +1,14 @@
 import { getSheetRange, getSheetsClient, getSpreadsheetId, type SheetResourceKey } from "@/lib/sheets/client";
 
+export const SHEET_RESOURCES: SheetResourceKey[] = [
+  "players",
+  "questions",
+  "matches",
+  "matchAnswers",
+  "leaderboard",
+  "leaderboardSnapshots",
+];
+
 const sheetHeaders: Record<SheetResourceKey, string[]> = {
   players: [
     "player_id",
@@ -124,4 +133,10 @@ export async function ensureSheetHeaders(resource: SheetResourceKey) {
   }
 
   ensuredSheets.add(resource);
+}
+
+export async function ensureAllSheetStructures() {
+  for (const resource of SHEET_RESOURCES) {
+    await ensureSheetHeaders(resource);
+  }
 }
