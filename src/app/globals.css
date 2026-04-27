@@ -223,6 +223,8 @@ button {
 }
 
 .display-viewport {
+  --display-stage-width: 1920;
+  --display-stage-height: 1080;
   min-height: 100vh;
   overflow: hidden;
   display: grid;
@@ -231,10 +233,13 @@ button {
 }
 
 .display-stage {
-  --stage-scale: min(calc((100vw - 24px) / 1920), calc((100vh - 24px) / 1080));
+  --stage-scale: min(
+    calc((100vw - 24px) / var(--display-stage-width)),
+    calc((100vh - 24px) / var(--display-stage-height))
+  );
   position: relative;
-  width: calc(1920px * var(--stage-scale));
-  height: calc(1080px * var(--stage-scale));
+  width: calc(var(--display-stage-width) * 1px * var(--stage-scale));
+  height: calc(var(--display-stage-height) * 1px * var(--stage-scale));
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
@@ -242,8 +247,8 @@ button {
 }
 
 .display-canvas {
-  width: 1920px;
-  height: 1080px;
+  width: calc(var(--display-stage-width) * 1px);
+  height: calc(var(--display-stage-height) * 1px);
   zoom: var(--stage-scale);
   transform-origin: top left;
 }
@@ -316,8 +321,6 @@ button {
   text-shadow:
     0 0 24px rgba(248, 193, 78, 0.26),
     0 0 56px rgba(77, 225, 255, 0.16);
-  animation: titlePulse 3.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
-  will-change: transform, filter;
 }
 
 .display-title::before {
@@ -326,27 +329,18 @@ button {
   inset: -24px -44px;
   background: linear-gradient(100deg, transparent 18%, rgba(255, 255, 255, 0.18) 48%, transparent 78%);
   opacity: 0;
-  transform: translateX(-28%) skewX(-18deg);
   mix-blend-mode: screen;
-  animation: titleSweep 3.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 
 .display-title-line {
-  position: relative;
   display: block;
-  animation: titleStrike 3.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
-  will-change: transform, letter-spacing;
-}
-
-.display-title-line:last-child {
-  animation-delay: 0.12s;
 }
 
 .display-title-brand {
-  color: var(--brand-blue);
+  color: var(--accent);
   text-shadow:
-    0 0 20px rgba(98, 168, 255, 0.34),
-    0 0 40px rgba(98, 168, 255, 0.2);
+    0 0 20px rgba(248, 193, 78, 0.34),
+    0 0 40px rgba(248, 193, 78, 0.2);
 }
 
 .display-qr-shell {
@@ -477,6 +471,125 @@ button {
   width: 360px;
   height: 360px;
   background: radial-gradient(circle, rgba(77, 225, 255, 0.2), transparent 70%);
+}
+
+@media (max-aspect-ratio: 1 / 1) {
+  .display-viewport {
+    --display-stage-width: 1080;
+    --display-stage-height: 1080;
+    padding: 10px;
+  }
+
+  .display-content {
+    padding: 68px 66px 22px;
+  }
+
+  .display-header {
+    justify-content: center;
+  }
+
+  .display-kicker {
+    padding: 16px 24px;
+    font-size: 1rem;
+    letter-spacing: 0.34em;
+  }
+
+  .display-body {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 52px;
+  }
+
+  .display-copy {
+    align-items: center;
+    gap: 20px;
+    text-align: center;
+  }
+
+  .display-copy > p:first-child {
+    font-size: 1.45rem;
+    letter-spacing: 0.38em;
+  }
+
+  .display-title {
+    align-items: center;
+    text-align: center;
+  }
+
+  .display-title.font-display {
+    font-size: 6.15rem;
+    letter-spacing: 0.06em;
+  }
+
+  .display-copy > p:last-child {
+    max-width: 760px;
+    font-size: 1.7rem;
+    line-height: 1.45;
+  }
+
+  .display-qr-shell {
+    justify-self: center;
+    width: 420px;
+    border-radius: 34px;
+    padding: 26px 26px 30px;
+  }
+
+  .display-qr-frame {
+    width: 368px;
+    height: 368px;
+    border-radius: 24px;
+    padding: 14px;
+  }
+
+  .display-qr-art {
+    width: 340px;
+    height: 340px;
+    flex-basis: 340px;
+  }
+
+  .display-qr-art svg {
+    width: 340px;
+    height: 340px;
+  }
+
+  .display-qr-shell > p {
+    margin-top: 28px;
+    font-size: 1.45rem;
+    letter-spacing: 0.16em;
+  }
+
+  .display-footer {
+    min-height: 112px;
+  }
+
+  .display-waiting.font-display {
+    font-size: 2.5rem;
+    letter-spacing: 0.12em;
+    text-align: center;
+  }
+
+  .display-legal-bar {
+    min-height: 24px;
+  }
+
+  .display-legal {
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+  }
+
+  .display-orb-left {
+    top: 88px;
+    left: -120px;
+    width: 300px;
+    height: 300px;
+  }
+
+  .display-orb-right {
+    right: -96px;
+    bottom: 160px;
+    width: 260px;
+    height: 260px;
+  }
 }
 
 @keyframes titlePulse {
