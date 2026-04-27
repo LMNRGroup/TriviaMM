@@ -54,6 +54,10 @@ export async function POST(request: Request) {
         throw new Error("missing_player_2");
       }
 
+      if (parsed.data.mode === "solo" && room.players.player2) {
+        throw new Error("player_2_present");
+      }
+
       const { room: nextRoom } = startMatch(room, parsed.data.mode, questions, new Date().toISOString());
       await Promise.all([saveQuestionBank(room.roomCode, questions), saveRoomState(nextRoom)]);
       return nextRoom;
@@ -76,6 +80,10 @@ export async function POST(request: Request) {
 
       if (error.message === "missing_player_2") {
         return fail("missing_player_2", 409, "Se necesita un segundo jugador para duelo.");
+      }
+
+      if (error.message === "player_2_present") {
+        return fail("player_2_present", 409, "Ya hay dos jugadores en sala. Inicia en modo duelo.");
       }
     }
 

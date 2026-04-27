@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { LeaderboardList } from "@/components/leaderboard/LeaderboardList";
 import type { AnswerFeedback, PublicRoomState } from "@/lib/types/game";
@@ -69,11 +69,18 @@ export function HostRoomClient() {
   const [room, setRoom] = useState<PublicRoomState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const syncInFlightRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
 
     async function syncRoom() {
+      if (syncInFlightRef.current) {
+        return;
+      }
+
+      syncInFlightRef.current = true;
+
       try {
         const stateResponse = await fetch("/api/public/state", { cache: "no-store" });
         const statePayload = await stateResponse.json();
@@ -108,6 +115,8 @@ export function HostRoomClient() {
         if (!cancelled) {
           setError(syncError instanceof Error ? syncError.message : "No se pudo sincronizar la sala.");
         }
+      } finally {
+        syncInFlightRef.current = false;
       }
     }
 

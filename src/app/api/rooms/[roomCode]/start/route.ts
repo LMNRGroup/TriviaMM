@@ -63,6 +63,10 @@ export async function POST(request: Request, context: RouteContext) {
         throw new Error("missing_player_2");
       }
 
+      if (parsed.data.mode === "solo" && room.players.player2) {
+        throw new Error("player_2_present");
+      }
+
       const { room: nextRoom } = startMatch(room, parsed.data.mode, questions, new Date().toISOString());
       await Promise.all([saveQuestionBank(parsedRoomCode.data, questions), saveRoomState(nextRoom)]);
       return nextRoom;
@@ -85,6 +89,10 @@ export async function POST(request: Request, context: RouteContext) {
 
       if (error.message === "missing_player_2") {
         return fail("missing_player_2", 409, "Battle mode requires two players");
+      }
+
+      if (error.message === "player_2_present") {
+        return fail("player_2_present", 409, "Two players are already connected. Start in battle mode");
       }
     }
 

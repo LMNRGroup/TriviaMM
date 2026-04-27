@@ -77,6 +77,9 @@ class MemoryKv {
 
 const fallbackKv = new MemoryKv();
 
+type KvRuntimeMode = "memory" | "remote" | "unconfigured";
+let runtimeMode: KvRuntimeMode = "unconfigured";
+
 function isKvUnreachableError(error: unknown): boolean {
   if (!error || typeof error !== "object") {
     return false;
@@ -103,13 +106,21 @@ function isKvUnreachableError(error: unknown): boolean {
 }
 
 /**
- * Single process-wide client: tries Upstash when configured, falls back to memory on
- * DNS/network failures (e.g. stale `KV_REST_API_URL` in `.env.local`).
+ * Single process-wide KV client.
+ *
+ * Safety rule: if Upstash is configured but unreachable, do not silently fail over to memory.
+ * Memory KV is process-local and causes split-brain room state in multi-instance environments.
+ * Use `KV_USE_MEMORY=true` explicitly for local-only testing.
  */
 function createResilientKv(): KvClient {
   const memory = fallbackKv;
   let remote: Redis | null = null;
-  let memoryOnly = preferMemoryKv() || !hasKvConfig();
+  const forceMemory = preferMemoryKv();
+  const hasRemoteConfig = hasKvConfig();
+  const runningProduction = process.env.NODE_ENV === "production";
+  let memoryOnly = forceMemory || (!hasRemoteConfig && !runningProduction);
+
+  runtimeMode = memoryOnly ? "memory" : hasRemoteConfig ? "remote" : "unconfigured";
 
   async function run<T>(operation: (client: KvClient) => Promise<T>): Promise<T> {
     if (memoryOnly) {
@@ -120,15 +131,24 @@ function createResilientKv(): KvClient {
       if (!remote) {
         remote = new Redis(getKvConfig());
       }
-      return await operation(remote);
+      const result = await operation(remote);
+      runtimeMode = "remote";
+      return result;
     } catch (error) {
       if (isKvUnreachableError(error)) {
-        console.warn(
-          "[kv] Upstash Redis unreachable (check KV_REST_API_URL / network). Using in-memory KV for this server process.",
+        if (forceMemory) {
+          console.warn(
+            "[kv] Upstash Redis unreachable. `KV_USE_MEMORY` is enabled, so this process will use in-memory KV.",
+          );
+          memoryOnly = true;
+          remote = null;
+          runtimeMode = "memory";
+          return operation(memory);
+        }
+
+        throw new Error(
+          "[kv] Upstash Redis unreachable. Refusing to auto-fallback to in-memory KV because it breaks shared room state across instances.",
         );
-        memoryOnly = true;
-        remote = null;
-        return operation(memory);
       }
       throw error;
     }
@@ -151,4 +171,11 @@ export function getKv(): KvClient {
     singleton = createResilientKv();
   }
   return singleton;
+}
+
+export function getKvRuntimeMode(): KvRuntimeMode {
+  if (!singleton) {
+    singleton = createResilientKv();
+  }
+  return runtimeMode;
 }

@@ -276,10 +276,15 @@ export function PlayerRoomClient() {
 
       try {
         const nextRoom = await loadRoomState();
+        const isSeatedPlayer =
+          Boolean(session?.playerId) &&
+          (nextRoom.players.player1?.playerId === session?.playerId ||
+            nextRoom.players.player2?.playerId === session?.playerId);
 
         const shouldAdvanceMatch =
-          (nextRoom.phase !== "idle" && nextRoom.phase !== "lobby") ||
-          (nextRoom.phase === "lobby" && Boolean(nextRoom.lobby.waitingEndsAt) && !nextRoom.players.player2);
+          isSeatedPlayer &&
+          ((nextRoom.phase !== "idle" && nextRoom.phase !== "lobby") ||
+            (nextRoom.phase === "lobby" && Boolean(nextRoom.lobby.waitingEndsAt) && !nextRoom.players.player2));
 
         if (!cancelled && shouldAdvanceMatch) {
           const tickResponse = await fetch("/api/public/tick", {
@@ -313,7 +318,7 @@ export function PlayerRoomClient() {
       window.clearInterval(poll);
       window.clearInterval(timer);
     };
-  }, [loadRoomState]);
+  }, [loadRoomState, session?.playerId]);
 
   useEffect(() => {
     if (!session || !playerSeat?.playerId) {
@@ -791,29 +796,29 @@ export function PlayerRoomClient() {
           </label>
         </div>
 
-        <label className="rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/7">
-          <div className="flex items-start gap-3">
+        <label className="rounded-[1rem] border border-white/5 bg-white/[0.025] px-3 py-2 transition hover:bg-white/5">
+          <div className="flex items-start gap-2.5">
             <input
               checked={form.acceptedTerms}
-              className="mt-1 size-4"
+              className="mt-0.5 size-3.5 accent-[color:var(--accent)]"
               onChange={(event) => updateField("acceptedTerms", event.target.checked)}
               type="checkbox"
             />
-            <span className="text-sm leading-6 text-[color:var(--muted)]">
+            <span className="text-xs leading-5 text-[color:var(--muted)]/80">
               Acepto los términos y condiciones del juego.
             </span>
           </div>
         </label>
 
-        <label className="rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/7">
-          <div className="flex items-start gap-3">
+        <label className="rounded-[1rem] border border-white/5 bg-white/[0.025] px-3 py-2 transition hover:bg-white/5">
+          <div className="flex items-start gap-2.5">
             <input
               checked={form.newsletterOptIn}
-              className="mt-1 size-4"
+              className="mt-0.5 size-3.5 accent-[color:var(--accent)]"
               onChange={(event) => updateField("newsletterOptIn", event.target.checked)}
               type="checkbox"
             />
-            <span className="text-sm leading-6 text-[color:var(--muted)]">
+            <span className="text-xs leading-5 text-[color:var(--muted)]/80">
               Quiero recibir novedades por correo.
             </span>
           </div>
