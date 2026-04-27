@@ -1,9 +1,9 @@
 import { ok, fail } from "@/lib/api/http";
 import { toPublicRoomState } from "@/lib/api/room-state";
 import { findPlayerById, requirePlayerToken } from "@/lib/api/room-auth";
-import { MATCH_QUESTION_COUNT } from "@/lib/game/constants";
+import { MATCH_QUESTION_COUNT, PUBLIC_ROOM_CODE } from "@/lib/game/constants";
 import { startMatch } from "@/lib/game/engine";
-import { getQuestionBank, getRoomState, saveQuestionBank, saveRoomState } from "@/lib/kv/room-store";
+import { getRoomState, saveQuestionBank, saveRoomState, withRoomMutationLock } from "@/lib/kv/room-store";
 import { getRandomQuestions } from "@/lib/sheets/question-repo";
 import { publicStartSchema } from "@/lib/validation/room";
 
@@ -23,33 +23,58 @@ export async function POST(request: Request) {
   }
 
   try {
-    const room = await getRoomState();
-
-    if (!room) {
-      return fail("room_not_found", 404, "No se encontro la sala publica.");
-    }
-
-    const player = findPlayerById(room, parsed.data.playerId);
-
-    if (!player || player.slot !== 1) {
-      return fail("only_player_1", 403, "Solo el jugador 1 puede iniciar la partida.");
-    }
-
-    if (!requirePlayerToken(player, parsed.data.controllerToken)) {
-      return fail("invalid_token", 403, "El token del jugador es invalido.");
-    }
-
-    if (parsed.data.mode === "battle" && !room.players.player2) {
-      return fail("missing_player_2", 409, "Se necesita un segundo jugador para duelo.");
-    }
-
     const questions = await getRandomQuestions(MATCH_QUESTION_COUNT);
-    const { room: startedRoom } = startMatch(room, parsed.data.mode, questions, new Date().toISOString());
 
-    await Promise.all([saveQuestionBank(room.roomCode, questions), saveRoomState(startedRoom), getQuestionBank(room.roomCode)]);
+    const startedRoom = await withRoomMutationLock(PUBLIC_ROOM_CODE, async () => {
+      const room = await getRoomState();
+
+      if (!room) {
+        throw new Error("room_not_found");
+      }
+
+      const player = findPlayerById(room, parsed.data.playerId);
+
+      if (!player || player.slot !== 1) {
+        throw new Error("only_player_1");
+      }
+
+      if (!requirePlayerToken(player, parsed.data.controllerToken)) {
+        throw new Error("invalid_token");
+      }
+
+      if (room.phase !== "idle" && room.phase !== "lobby") {
+        return room;
+      }
+
+      if (parsed.data.mode === "battle" && !room.players.player2) {
+        throw new Error("missing_player_2");
+      }
+
+      const { room: nextRoom } = startMatch(room, parsed.data.mode, questions, new Date().toISOString());
+      await Promise.all([saveQuestionBank(room.roomCode, questions), saveRoomState(nextRoom)]);
+      return nextRoom;
+    });
 
     return ok({ room: toPublicRoomState(startedRoom) });
   } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === "room_not_found") {
+        return fail("room_not_found", 404, "No se encontro la sala publica.");
+      }
+
+      if (error.message === "only_player_1") {
+        return fail("only_player_1", 403, "Solo el jugador 1 puede iniciar la partida.");
+      }
+
+      if (error.message === "invalid_token") {
+        return fail("invalid_token", 403, "El token del jugador es invalido.");
+      }
+
+      if (error.message === "missing_player_2") {
+        return fail("missing_player_2", 409, "Se necesita un segundo jugador para duelo.");
+      }
+    }
+
     console.error("public start error", error);
     return fail("server_error", 500, "No se pudo iniciar la partida.");
   }

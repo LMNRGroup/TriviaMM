@@ -53,10 +53,6 @@ interface FormState {
 
 const STORAGE_KEY = "trivia:player:public";
 
-function instructionsStorageKey(playerId: string) {
-  return `trivia:instr:${playerId}`;
-}
-
 function normalizeStoredSession(raw: unknown): PlayerSession | null {
   if (!raw || typeof raw !== "object") {
     return null;
@@ -141,11 +137,11 @@ export function PlayerRoomClient() {
   });
   const [selectedChoiceState, setSelectedChoiceState] = useState<{ questionIndex: number; choice: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [agePickerOpen, setAgePickerOpen] = useState(false);
   const autoJoinAttempted = useRef<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const [instructionsBump, setInstructionsBump] = useState(0);
 
   const regionOptions = useMemo(() => {
     if (form.country === "United States") {
@@ -158,19 +154,6 @@ export function PlayerRoomClient() {
 
     return [];
   }, [form.country]);
-
-  const instructionsAck = useMemo(() => {
-    if (!session?.playerId) {
-      return true;
-    }
-
-    if (typeof window === "undefined") {
-      return false;
-    }
-
-    void instructionsBump;
-    return window.sessionStorage.getItem(instructionsStorageKey(session.playerId)) === "1";
-  }, [session?.playerId, instructionsBump]);
 
   const playerSeat = room
     ? room.players.player1?.playerId === session?.playerId
@@ -468,30 +451,36 @@ export function PlayerRoomClient() {
   }
 
   async function startMatch(mode: RoomMode) {
-    if (!session) {
+    if (!session || isStarting) {
       return;
     }
 
-    const response = await fetch("/api/public/start", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        playerId: session.playerId,
-        controllerToken: session.controllerToken,
-        mode,
-      }),
-    });
-    const payload = await response.json();
+    setIsStarting(true);
 
-    if (!response.ok || !payload.ok) {
-      setError(payload.message ?? "No se pudo iniciar la partida.");
-      return;
+    try {
+      const response = await fetch("/api/public/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          playerId: session.playerId,
+          controllerToken: session.controllerToken,
+          mode,
+        }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok || !payload.ok) {
+        setError(payload.message ?? "No se pudo iniciar la partida.");
+        return;
+      }
+
+      setRoom(payload.data.room as PublicRoomState);
+      setError(null);
+    } finally {
+      setIsStarting(false);
     }
-
-    setRoom(payload.data.room as PublicRoomState);
-    setError(null);
   }
 
   async function submitAnswer(choice: "A" | "B" | "C" | "D") {
@@ -824,38 +813,6 @@ export function PlayerRoomClient() {
     );
   }
 
-  if ((room.phase === "idle" || room.phase === "lobby") && !instructionsAck) {
-    return (
-      <section className="enter-rise flex h-full flex-col justify-between gap-6">
-        <div>
-          <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Instrucciones</p>
-          <h2 className="font-display mt-4 text-3xl font-black uppercase tracking-[0.08em]">Cómo jugar</h2>
-          <ul className="mt-5 space-y-3 text-base leading-7 text-[color:var(--muted)]">
-            <li>Tienes 15 segundos para responder cada pregunta cuando aparezcan las opciones.</li>
-            <li>Entre más rápido aciertes, más puntos sumas.</li>
-            <li>Si fallas, verás feedback en rojo pero nunca revelaremos la respuesta correcta.</li>
-            <li>
-              En modo solo, si dejas sin responder 3 preguntas seguidas, la partida se reinicia y tu puntuación no entrará al
-              leaderboard.
-            </li>
-          </ul>
-        </div>
-        <button
-          className="font-display rounded-[1.45rem] bg-[linear-gradient(135deg,var(--accent),#ffd77a)] px-5 py-4 text-base font-black uppercase tracking-[0.14em] text-slate-950 transition hover:-translate-y-0.5 hover:brightness-105"
-          onClick={() => {
-            if (session?.playerId && typeof window !== "undefined") {
-              window.sessionStorage.setItem(instructionsStorageKey(session.playerId), "1");
-            }
-            setInstructionsBump((value) => value + 1);
-          }}
-          type="button"
-        >
-          Continuar al lobby
-        </button>
-      </section>
-    );
-  }
-
   if (room.phase === "idle" || room.phase === "lobby") {
     const isPlayer1 = playerSeat.slot === 1;
     const canStartSolo = isPlayer1 && !room.players.player2;
@@ -892,15 +849,24 @@ export function PlayerRoomClient() {
             ) : null}
           </div>
 
+          <div className="glass-panel rounded-[1.8rem] p-5">
+            <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Cómo jugar</p>
+            <ul className="mt-4 space-y-2 text-sm leading-6 text-[color:var(--muted)]">
+              <li>Primero verás cada pregunta durante unos segundos para leerla con calma.</li>
+              <li>Después aparecen las respuestas y empieza el temporizador para contestar.</li>
+              <li>Entre más rápido aciertes, más puntos sumas y mejor será tu promedio de velocidad.</li>
+            </ul>
+          </div>
+
           {isPlayer1 ? (
             <div className="grid gap-3">
               <button
                 className="font-display rounded-[1.45rem] bg-[linear-gradient(135deg,var(--accent),#ffd77a)] px-5 py-4 text-base font-black uppercase tracking-[0.14em] text-slate-950 transition hover:-translate-y-0.5 hover:brightness-105 disabled:opacity-40"
-                disabled={!canStartSolo || isPending}
+                disabled={!canStartSolo || isPending || isStarting}
                 onClick={() => startMatch("solo")}
                 type="button"
               >
-                Comenzar
+                {isStarting ? "Comenzando..." : "Comenzar"}
               </button>
             </div>
           ) : (

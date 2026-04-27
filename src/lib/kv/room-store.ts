@@ -5,8 +5,10 @@ import { coerceRoomStateFromStorage } from "@/lib/game/player-normalize";
 import type { Player, Question, RoomState } from "@/lib/types/game";
 import { getKv } from "@/lib/kv/client";
 import {
+  LOCK_TTL_SECONDS,
   ROOM_TTL_SECONDS,
   roomHostKey,
+  roomLockKey,
   roomMetaKey,
   roomPlayerKey,
   roomPlayersKey,
@@ -21,6 +23,35 @@ interface RoomMetaRecord {
   hostToken: string;
   createdAt: string;
   expiresAt: string;
+}
+
+async function sleep(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function withRoomMutationLock<T>(roomCode: string, action: () => Promise<T>): Promise<T> {
+  const kv = getKv();
+  const lockKey = roomLockKey(roomCode);
+  const token = createSessionId();
+
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const acquired = await kv.set(lockKey, token, { ex: LOCK_TTL_SECONDS, nx: true });
+
+    if (acquired) {
+      try {
+        return await action();
+      } finally {
+        const currentToken = await kv.get<string>(lockKey);
+        if (currentToken === token) {
+          await kv.del(lockKey);
+        }
+      }
+    }
+
+    await sleep(25 + attempt * 10);
+  }
+
+  throw new Error("room_lock_timeout");
 }
 
 export async function ensurePublicRoom(baseUrl: string) {

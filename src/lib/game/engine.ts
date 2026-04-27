@@ -550,9 +550,9 @@ export async function tickRoom({
   ) {
     return {
       room: {
-        ...resetRoom(room, nowIso),
+        ...room,
         lobby: {
-          allowSoloStart: false,
+          allowSoloStart: Boolean(room.players.player1),
           waitingEndsAt: null,
           previewMessage: "lobby_timeout",
         },

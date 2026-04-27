@@ -2,7 +2,7 @@ import { ok, fail } from "@/lib/api/http";
 import { toPublicRoomState } from "@/lib/api/room-state";
 import { requireHost } from "@/lib/api/room-auth";
 import { startMatch } from "@/lib/game/engine";
-import { getQuestionBank, getRoomState, saveQuestionBank, saveRoomState } from "@/lib/kv/room-store";
+import { getRoomState, saveQuestionBank, saveRoomState, withRoomMutationLock } from "@/lib/kv/room-store";
 import { getRandomQuestions } from "@/lib/sheets/question-repo";
 import { roomCodeSchema, startRoomSchema } from "@/lib/validation/room";
 import { MATCH_QUESTION_COUNT } from "@/lib/game/constants";
@@ -34,35 +34,56 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   try {
-    const room = await getRoomState(parsedRoomCode.data);
-
-    if (!room) {
-      return fail("room_not_found", 404, "Room not found");
-    }
-
-    if (!requireHost(room, parsed.data.hostToken)) {
-      return fail("invalid_host_token", 403, "Host token is invalid");
-    }
-
-    if (!room.players.player1) {
-      return fail("missing_player_1", 409, "At least one player must join before starting");
-    }
-
-    if (parsed.data.mode === "battle" && !room.players.player2) {
-      return fail("missing_player_2", 409, "Battle mode requires two players");
-    }
-
     const questions = await getRandomQuestions(MATCH_QUESTION_COUNT);
-    const { room: startedRoom } = startMatch(room, parsed.data.mode, questions, new Date().toISOString());
 
-    await Promise.all([
-      saveQuestionBank(parsedRoomCode.data, questions),
-      saveRoomState(startedRoom),
-      getQuestionBank(parsedRoomCode.data),
-    ]);
+    const startedRoom = await withRoomMutationLock(parsedRoomCode.data, async () => {
+      const room = await getRoomState(parsedRoomCode.data);
+
+      if (!room) {
+        throw new Error("room_not_found");
+      }
+
+      if (!requireHost(room, parsed.data.hostToken)) {
+        throw new Error("invalid_host_token");
+      }
+
+      if (room.phase !== "idle" && room.phase !== "lobby") {
+        return room;
+      }
+
+      if (!room.players.player1) {
+        throw new Error("missing_player_1");
+      }
+
+      if (parsed.data.mode === "battle" && !room.players.player2) {
+        throw new Error("missing_player_2");
+      }
+
+      const { room: nextRoom } = startMatch(room, parsed.data.mode, questions, new Date().toISOString());
+      await Promise.all([saveQuestionBank(parsedRoomCode.data, questions), saveRoomState(nextRoom)]);
+      return nextRoom;
+    });
 
     return ok({ room: toPublicRoomState(startedRoom) });
   } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === "room_not_found") {
+        return fail("room_not_found", 404, "Room not found");
+      }
+
+      if (error.message === "invalid_host_token") {
+        return fail("invalid_host_token", 403, "Host token is invalid");
+      }
+
+      if (error.message === "missing_player_1") {
+        return fail("missing_player_1", 409, "At least one player must join before starting");
+      }
+
+      if (error.message === "missing_player_2") {
+        return fail("missing_player_2", 409, "Battle mode requires two players");
+      }
+    }
+
     console.error("start room error", error);
     return fail("server_error", 500, "Unable to start match");
   }

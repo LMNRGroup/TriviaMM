@@ -1,7 +1,10 @@
 import { Redis } from "@upstash/redis";
 import { getKvConfig, hasKvConfig, preferMemoryKv } from "@/lib/utils/env";
 
-type KvClient = Pick<Redis, "get" | "set" | "del" | "incr" | "expire">;
+type KvSetOptions = { ex?: number; nx?: boolean };
+type KvClient = Omit<Pick<Redis, "get" | "set" | "del" | "incr" | "expire">, "set"> & {
+  set<TData>(key: string, value: TData, options?: KvSetOptions): Promise<TData | "OK" | null>;
+};
 
 type MemoryValue = { value: unknown; expiresAt: number | null };
 
@@ -23,7 +26,14 @@ class MemoryKv {
     return entry.value as T;
   }
 
-  async set<TData>(key: string, value: TData, options?: { ex?: number }): Promise<TData | "OK" | null> {
+  async set<TData>(key: string, value: TData, options?: KvSetOptions): Promise<TData | "OK" | null> {
+    if (options?.nx && this.store.has(key)) {
+      const entry = this.store.get(key);
+      if (entry && (entry.expiresAt === null || entry.expiresAt > Date.now())) {
+        return null;
+      }
+    }
+
     this.store.set(key, {
       value,
       expiresAt: options?.ex ? Date.now() + options.ex * 1000 : null,
