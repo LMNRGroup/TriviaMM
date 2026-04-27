@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { LeaderboardList } from "@/components/leaderboard/LeaderboardList";
 import {
   AGE_OPTIONS,
@@ -140,7 +140,6 @@ export function PlayerRoomClient() {
   const [isStarting, setIsStarting] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [agePickerOpen, setAgePickerOpen] = useState(false);
-  const autoJoinAttempted = useRef<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
   const regionOptions = useMemo(() => {
@@ -267,7 +266,7 @@ export function PlayerRoomClient() {
   }, []);
 
   useEffect(() => {
-    if (!session) {
+    if (!session || !playerSeat?.playerId) {
       return;
     }
 
@@ -285,7 +284,7 @@ export function PlayerRoomClient() {
     }, 10_000);
 
     return () => window.clearInterval(heartbeat);
-  }, [session]);
+  }, [playerSeat?.playerId, session]);
 
   useEffect(() => {
     if (!room || !session) {
@@ -297,72 +296,14 @@ export function PlayerRoomClient() {
 
     if (room.phase === "idle" && room.lobby.previewMessage === "lobby_timeout" && !playerStillInRoom) {
       const timeoutId = window.setTimeout(() => {
-        autoJoinAttempted.current = session.playerId;
         persistSession(null);
         setRememberedPlayer(null);
-        setError("Tu tiempo en el lobby expiró. Entra de nuevo cuando estés listo.");
+        setError("Tu tiempo en la sala expiró. Entra de nuevo cuando estés listo.");
       }, 0);
 
       return () => window.clearTimeout(timeoutId);
     }
   }, [room, session]);
-
-  useEffect(() => {
-    if (!room || room.phase !== "idle" && room.phase !== "lobby") {
-      return;
-    }
-
-    const currentAttemptKey = session?.playerId ?? rememberedPlayer?.playerId ?? null;
-
-    if (!currentAttemptKey || autoJoinAttempted.current === currentAttemptKey) {
-      return;
-    }
-
-    const playerAlreadyInRoom =
-      room.players.player1?.playerId === currentAttemptKey || room.players.player2?.playerId === currentAttemptKey;
-
-    if (playerAlreadyInRoom) {
-      autoJoinAttempted.current = currentAttemptKey;
-      return;
-    }
-
-    const slotAvailable = !room.players.player1 || !room.players.player2;
-
-    if (!slotAvailable) {
-      return;
-    }
-
-    autoJoinAttempted.current = currentAttemptKey;
-
-    startTransition(async () => {
-      try {
-        if (session) {
-          await joinWithPlayer(session.playerId, {
-            playerId: session.playerId,
-            name: session.name,
-            city: session.city,
-            age: session.age,
-            email: session.email,
-          });
-        } else if (rememberedPlayer) {
-          setForm((current) => ({
-            ...current,
-            name: rememberedPlayer.name,
-            country: "",
-            region: rememberedPlayer.city,
-            city: rememberedPlayer.city,
-            age: String(rememberedPlayer.age),
-            email: rememberedPlayer.email ?? "",
-            acceptedTerms: true,
-            newsletterOptIn: true,
-          }));
-          await joinWithPlayer(rememberedPlayer.playerId, rememberedPlayer);
-        }
-      } catch (autoJoinError) {
-        setError(autoJoinError instanceof Error ? autoJoinError.message : "No fue posible reconectar.");
-      }
-    });
-  }, [joinWithPlayer, rememberedPlayer, room, session]);
 
   const validation = useMemo(() => {
     const numericAge = Number(form.age);
@@ -436,14 +377,14 @@ export function PlayerRoomClient() {
         }
 
         const player = registrationPayload.data.player as RememberedPlayer;
-        autoJoinAttempted.current = player.playerId;
-        await joinWithPlayer(player.playerId, {
+        setRememberedPlayer({
           playerId: player.playerId,
           name: form.name,
           city: form.region,
           age: Number(form.age),
           email: form.email,
         });
+        setError(null);
       } catch (registrationError) {
         setError(registrationError instanceof Error ? registrationError.message : "No se pudo completar el registro.");
       }
@@ -517,6 +458,131 @@ export function PlayerRoomClient() {
     setError(null);
   }
 
+  const pendingJoinPlayer: RememberedPlayer | null = !playerSeat
+    ? session
+      ? {
+          playerId: session.playerId,
+          name: session.name,
+          city: session.city,
+          age: session.age,
+          email: session.email,
+        }
+      : rememberedPlayer
+    : null;
+
+  function joinLobby(profile: RememberedPlayer) {
+    startTransition(async () => {
+      try {
+        await joinWithPlayer(profile.playerId, profile);
+      } catch (joinError) {
+        setError(joinError instanceof Error ? joinError.message : "No fue posible entrar a la sala.");
+      }
+    });
+  }
+
+  if (room && pendingJoinPlayer && room.phase !== "idle" && room.phase !== "lobby") {
+    return (
+      <section className="enter-rise flex h-full flex-col justify-between gap-6">
+        <div>
+          <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent-strong)]">
+            Partida en curso
+          </p>
+          <h1 className="font-display mt-4 text-4xl font-black uppercase tracking-[0.08em]">
+            Espera tu turno
+          </h1>
+          <p className="mt-4 text-base leading-7 text-[color:var(--muted)]">
+            Ya hay una sesión activa. Cuando termine, podrás unirte a la sala si hay espacio disponible.
+          </p>
+        </div>
+
+        <div className="glass-panel rounded-[1.8rem] p-5">
+          <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Jugador listo</p>
+          <p className="font-display mt-4 text-2xl font-black uppercase">
+            {pendingJoinPlayer.name}
+          </p>
+          <p className="mt-3 text-sm text-[color:var(--muted)]">No reservaremos tu espacio hasta que toques unirte.</p>
+        </div>
+
+        {error ? (
+          <div className="rounded-[1.35rem] border border-[color:var(--danger)]/40 bg-[color:var(--danger)]/10 px-4 py-3 text-sm text-red-100">
+            {error}
+          </div>
+        ) : null}
+      </section>
+    );
+  }
+
+  if (room && pendingJoinPlayer && (room.phase === "idle" || room.phase === "lobby") && !roomHasOpenSeat) {
+    return (
+      <section className="enter-rise flex h-full flex-col justify-between gap-6">
+        <div>
+          <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent-strong)]">
+            Sala ocupada
+          </p>
+          <h1 className="font-display mt-4 text-4xl font-black uppercase tracking-[0.08em]">
+            Espera a la próxima partida
+          </h1>
+          <p className="mt-4 text-base leading-7 text-[color:var(--muted)]">
+            Ya hay dos jugadores conectados en esta sesión. Cuando la sala vuelva a estar disponible, podrás intentar entrar.
+          </p>
+        </div>
+
+        <div className="glass-panel rounded-[1.8rem] p-5">
+          <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Estado actual</p>
+          <p className="font-display mt-4 text-2xl font-black uppercase">
+            {room.players.player1?.name ?? "Jugador 1"} vs {room.players.player2?.name ?? "Jugador 2"}
+          </p>
+          <p className="mt-3 text-sm text-[color:var(--muted)]">La sala admite un máximo de dos jugadores por sesión.</p>
+        </div>
+
+        {error ? (
+          <div className="rounded-[1.35rem] border border-[color:var(--danger)]/40 bg-[color:var(--danger)]/10 px-4 py-3 text-sm text-red-100">
+            {error}
+          </div>
+        ) : null}
+      </section>
+    );
+  }
+
+  if (room && pendingJoinPlayer && (room.phase === "idle" || room.phase === "lobby") && roomHasOpenSeat) {
+    return (
+      <section className="enter-rise flex h-full flex-col justify-between gap-6">
+        <div>
+          <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">
+            Listo para jugar
+          </p>
+          <h1 className="font-display mt-4 text-4xl font-black uppercase tracking-[0.08em]">
+            Únete a la sala
+          </h1>
+          <p className="mt-4 text-base leading-7 text-[color:var(--muted)]">
+            Toca el botón para reservar tu espacio. No entraremos automáticamente para darle oportunidad a todos.
+          </p>
+        </div>
+
+        <div className="glass-panel rounded-[1.8rem] p-5">
+          <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Jugador</p>
+          <p className="font-display mt-4 text-2xl font-black uppercase">{pendingJoinPlayer.name}</p>
+          <p className="mt-3 text-sm text-[color:var(--muted)]">{pendingJoinPlayer.city}</p>
+        </div>
+
+        {error ? (
+          <div className="rounded-[1.35rem] border border-[color:var(--danger)]/40 bg-[color:var(--danger)]/10 px-4 py-3 text-sm text-red-100">
+            {error}
+          </div>
+        ) : null}
+
+        <button
+          className="font-display mt-auto rounded-[1.45rem] bg-[linear-gradient(135deg,var(--accent),#ffd77a)] px-5 py-4 text-base font-black uppercase tracking-[0.14em] text-slate-950 transition hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={isPending}
+          onClick={() => joinLobby(pendingJoinPlayer)}
+          type="button"
+        >
+          {isPending ? "Uniendo..." : "Unirme a la sala"}
+        </button>
+      </section>
+    );
+  }
+
   if (!session && room && room.phase !== "idle" && room.phase !== "lobby") {
     return (
       <section className="enter-rise flex h-full flex-col justify-between gap-6">
@@ -528,21 +594,7 @@ export function PlayerRoomClient() {
             Espera tu turno
           </h1>
           <p className="mt-4 text-base leading-7 text-[color:var(--muted)]">
-            Ya hay una sesión activa. Cuando termine, podrás entrar automáticamente a la siguiente partida.
-          </p>
-        </div>
-
-        <div className="glass-panel rounded-[1.8rem] p-5">
-          <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Vista previa</p>
-          <p className="font-display mt-4 text-2xl font-black uppercase">
-            {room.phase === "question-read" || room.phase === "question"
-              ? room.currentQuestion.prompt
-              : room.phase === "battle-result"
-                ? "Duelo finalizado"
-                : "Tabla de posiciones"}
-          </p>
-          <p className="mt-3 text-sm text-[color:var(--muted)]">
-            {room.players.player1?.name ?? "P1"} vs {room.players.player2?.name ?? "P2"}
+            Ya hay una sesión activa. Cuando termine, podrás registrarte o entrar si la sala tiene espacio.
           </p>
         </div>
 
@@ -566,16 +618,8 @@ export function PlayerRoomClient() {
             Espera a la próxima partida
           </h1>
           <p className="mt-4 text-base leading-7 text-[color:var(--muted)]">
-            Ya hay dos jugadores conectados en esta sesión. Cuando el lobby vuelva a estar disponible, te dejaremos entrar.
+            Ya hay dos jugadores conectados en esta sesión. Cuando la sala vuelva a estar disponible, podrás registrarte o entrar.
           </p>
-        </div>
-
-        <div className="glass-panel rounded-[1.8rem] p-5">
-          <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Estado actual</p>
-          <p className="font-display mt-4 text-2xl font-black uppercase">
-            {room.players.player1?.name ?? "Jugador 1"} vs {room.players.player2?.name ?? "Jugador 2"}
-          </p>
-          <p className="mt-3 text-sm text-[color:var(--muted)]">La sala admite un máximo de dos jugadores por sesión.</p>
         </div>
 
         {error ? (
@@ -598,34 +642,9 @@ export function PlayerRoomClient() {
             Juega desde tu celular
           </h1>
           <p className="mt-3 text-base leading-7 text-[color:var(--muted)]">
-            Regístrate una vez y entra a competir. Si ya te conocemos, te volveremos a reconocer automáticamente.
+            Regístrate una vez y luego toca unirte para reservar tu espacio en la sala.
           </p>
         </div>
-
-        {rememberedPlayer ? (
-          <button
-            className="rounded-[1.45rem] border border-[color:var(--accent-cool)]/40 bg-[color:var(--panel-soft)] px-5 py-4 text-left transition hover:border-[color:var(--accent-cool)] hover:bg-white/7"
-            onClick={() => {
-              startTransition(async () => {
-                try {
-                  autoJoinAttempted.current = rememberedPlayer.playerId;
-                  await joinWithPlayer(rememberedPlayer.playerId, rememberedPlayer);
-                } catch (rememberedError) {
-                  setError(rememberedError instanceof Error ? rememberedError.message : "No se pudo reconectar.");
-                }
-              });
-            }}
-            type="button"
-          >
-            <p className="font-display text-lg font-black uppercase text-[color:var(--accent-cool)]">
-              Continuar como {rememberedPlayer.name}
-            </p>
-            <p className="mt-1 text-sm text-[color:var(--muted)]">
-              {rememberedPlayer.city}
-              {rememberedPlayer.email ? ` · ${rememberedPlayer.email}` : null}
-            </p>
-          </button>
-        ) : null}
 
         <label className="space-y-2">
           <span className="text-sm font-semibold text-white">Nombre</span>
@@ -743,7 +762,7 @@ export function PlayerRoomClient() {
           }}
           type="submit"
         >
-          {isPending ? "Entrando..." : "Siguiente"}
+          {isPending ? "Registrando..." : "Registrarme"}
         </button>
 
         {agePickerOpen ? (
@@ -803,7 +822,7 @@ export function PlayerRoomClient() {
           <ul className="mt-5 space-y-3 text-base leading-7 text-[color:var(--muted)]">
             <li>Tienes 15 segundos para responder cada pregunta cuando aparezcan las opciones.</li>
             <li>Entre más rápido aciertes, más puntos sumas.</li>
-            <li>Si el lobby está libre, te dejaremos continuar sin registrarte otra vez en este dispositivo.</li>
+            <li>Si la sala está libre, te dejaremos continuar sin registrarte otra vez en este dispositivo.</li>
             <li>La sala pública admite un máximo de dos jugadores conectados a la vez.</li>
           </ul>
         </div>
@@ -821,7 +840,7 @@ export function PlayerRoomClient() {
       <section className="enter-rise flex h-full flex-col justify-between gap-6">
         <div>
           <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent-strong)]">
-            Lobby
+            Sala
           </p>
           <h2 className="font-display mt-4 text-3xl font-black uppercase tracking-[0.08em]">
             {room.players.player2 ? "El duelo se está preparando" : isPlayer1 ? "Listo para comenzar" : "Esperando al jugador 1"}
@@ -844,7 +863,7 @@ export function PlayerRoomClient() {
             <p className="mt-1 text-sm text-[color:var(--muted)]">{playerSeat.city}</p>
             {waitingCountdown ? (
               <p className="mt-4 rounded-full border border-white/10 px-3 py-2 text-sm text-[color:var(--muted)]">
-                Cuenta atrás del lobby: {waitingCountdown}s
+                Cuenta atrás de la sala: {waitingCountdown}s
               </p>
             ) : null}
           </div>
