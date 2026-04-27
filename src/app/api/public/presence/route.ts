@@ -1,6 +1,6 @@
 import { ok, fail } from "@/lib/api/http";
 import { findPlayerById, requirePlayerToken } from "@/lib/api/room-auth";
-import { getRoomState, saveRoomPlayer, saveRoomState } from "@/lib/kv/room-store";
+import { getRoomState, saveRoomPlayer } from "@/lib/kv/room-store";
 import { z } from "zod";
 
 const publicPresenceSchema = z.object({
@@ -37,21 +37,12 @@ export async function POST(request: Request) {
     }
 
     const nowIso = new Date().toISOString();
-    const slotKey = player.slot === 1 ? "player1" : "player2";
     const updatedPlayer = {
       ...player,
       lastSeenAt: nowIso,
       status: "connected" as const,
     };
-    const updatedRoom = {
-      ...room,
-      players: {
-        ...room.players,
-        [slotKey]: updatedPlayer,
-      },
-    };
-
-    await Promise.all([saveRoomState(updatedRoom), saveRoomPlayer(room.roomCode, updatedPlayer)]);
+    await saveRoomPlayer(room.roomCode, updatedPlayer);
     return ok({ lastSeenAt: nowIso });
   } catch (error) {
     console.error("public presence error", error);

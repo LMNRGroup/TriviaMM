@@ -247,7 +247,11 @@ export function PlayerRoomClient() {
       try {
         const nextRoom = await loadRoomState();
 
-        if (!cancelled && nextRoom.phase !== "idle" && nextRoom.phase !== "lobby") {
+        const shouldAdvanceMatch =
+          (nextRoom.phase !== "idle" && nextRoom.phase !== "lobby") ||
+          (nextRoom.phase === "lobby" && Boolean(nextRoom.lobby.waitingEndsAt) && !nextRoom.players.player2);
+
+        if (!cancelled && shouldAdvanceMatch) {
           const tickResponse = await fetch("/api/public/tick", {
             method: "POST",
             headers: { "Content-Type": "application/json" },

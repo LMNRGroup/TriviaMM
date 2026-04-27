@@ -70,10 +70,41 @@ export async function ensurePublicRoom(baseUrl: string) {
   return room;
 }
 
+/** Overlay latest presence fields from per-player KV blobs without touching game totals (scores, streaks). */
+export async function mergePlayerPresenceFromKeys(room: RoomState): Promise<RoomState> {
+  const code = room.roomCode;
+  let player1 = room.players.player1;
+  let player2 = room.players.player2;
+
+  if (player1) {
+    const blob = await getRoomPlayer(code, player1.playerId);
+    if (blob && blob.playerId === player1.playerId) {
+      player1 = { ...player1, lastSeenAt: blob.lastSeenAt, status: blob.status };
+    }
+  }
+
+  if (player2) {
+    const blob = await getRoomPlayer(code, player2.playerId);
+    if (blob && blob.playerId === player2.playerId) {
+      player2 = { ...player2, lastSeenAt: blob.lastSeenAt, status: blob.status };
+    }
+  }
+
+  return {
+    ...room,
+    players: { player1, player2 },
+  };
+}
+
 export async function getRoomState(roomCode = PUBLIC_ROOM_CODE) {
   const kv = getKv();
   const raw = await kv.get<RoomState>(roomStateKey(roomCode));
-  return raw ? coerceRoomStateFromStorage(raw) : null;
+  if (!raw) {
+    return null;
+  }
+
+  const room = coerceRoomStateFromStorage(raw);
+  return mergePlayerPresenceFromKeys(room);
 }
 
 export async function saveRoomState(room: RoomState) {

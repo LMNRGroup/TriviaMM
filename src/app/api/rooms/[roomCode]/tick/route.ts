@@ -1,8 +1,8 @@
 import { ok, fail } from "@/lib/api/http";
 import { toPublicRoomState } from "@/lib/api/room-state";
 import { requireHost } from "@/lib/api/room-auth";
-import { tickRoom } from "@/lib/game/engine";
-import { clearQuestionBank, getQuestionBank, getRoomState, saveRoomState } from "@/lib/kv/room-store";
+import { runTickWithOptimisticRetry } from "@/lib/game/room-tick-runner";
+import { getRoomState } from "@/lib/kv/room-store";
 import { hostTokenSchema, roomCodeSchema } from "@/lib/validation/room";
 
 interface RouteContext {
@@ -42,22 +42,15 @@ export async function POST(request: Request, context: RouteContext) {
       return fail("invalid_host_token", 403, "Host token is invalid");
     }
 
-    const questionBank = await getQuestionBank(parsedRoomCode.data);
-    const result = await tickRoom({
-      room,
-      questionBank,
-      nowIso: new Date().toISOString(),
-    });
+    const outcome = await runTickWithOptimisticRetry(parsedRoomCode.data);
 
-    await saveRoomState(result.room);
-
-    if (result.room.phase === "idle") {
-      await clearQuestionBank(parsedRoomCode.data);
+    if (!outcome.ok) {
+      return fail("room_not_found", 404, "Room not found");
     }
 
     return ok({
-      room: toPublicRoomState(result.room),
-      transitionApplied: result.transitionApplied,
+      room: toPublicRoomState(outcome.room),
+      transitionApplied: outcome.transitionApplied,
     });
   } catch (error) {
     console.error("tick room error", error);

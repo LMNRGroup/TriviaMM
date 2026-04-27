@@ -1,8 +1,8 @@
 import { ok, fail } from "@/lib/api/http";
 import { assertPublicTickAllowed } from "@/lib/api/public-tick-rate-limit";
 import { toPublicRoomState } from "@/lib/api/room-state";
-import { tickRoom } from "@/lib/game/engine";
-import { clearQuestionBank, getQuestionBank, getRoomState, saveRoomState } from "@/lib/kv/room-store";
+import { PUBLIC_ROOM_CODE } from "@/lib/game/constants";
+import { runTickWithOptimisticRetry } from "@/lib/game/room-tick-runner";
 import { getRequestIp } from "@/lib/utils/request";
 
 export async function POST(request: Request) {
@@ -12,28 +12,15 @@ export async function POST(request: Request) {
       return fail("rate_limited", 429, "Demasiadas solicitudes. Espera un momento.");
     }
 
-    const room = await getRoomState();
+    const outcome = await runTickWithOptimisticRetry(PUBLIC_ROOM_CODE);
 
-    if (!room) {
+    if (!outcome.ok) {
       return fail("room_not_found", 404, "No se encontro la sala publica.");
     }
 
-    const questionBank = await getQuestionBank(room.roomCode);
-    const result = await tickRoom({
-      room,
-      questionBank,
-      nowIso: new Date().toISOString(),
-    });
-
-    await saveRoomState(result.room);
-
-    if (result.room.phase === "idle") {
-      await clearQuestionBank(result.room.roomCode);
-    }
-
     return ok({
-      room: toPublicRoomState(result.room),
-      transitionApplied: result.transitionApplied,
+      room: toPublicRoomState(outcome.room),
+      transitionApplied: outcome.transitionApplied,
     });
   } catch (error) {
     console.error("public tick error", error);
