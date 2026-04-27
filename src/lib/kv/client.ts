@@ -110,15 +110,14 @@ function isKvUnreachableError(error: unknown): boolean {
  *
  * Safety rule: if Upstash is configured but unreachable, do not silently fail over to memory.
  * Memory KV is process-local and causes split-brain room state in multi-instance environments.
- * Use `KV_USE_MEMORY=true` explicitly for local-only testing.
+ * When KV is not configured at all, we run in memory mode to keep local/testing flows usable.
  */
 function createResilientKv(): KvClient {
   const memory = fallbackKv;
   let remote: Redis | null = null;
   const forceMemory = preferMemoryKv();
   const hasRemoteConfig = hasKvConfig();
-  const runningProduction = process.env.NODE_ENV === "production";
-  let memoryOnly = forceMemory || (!hasRemoteConfig && !runningProduction);
+  let memoryOnly = forceMemory || !hasRemoteConfig;
 
   runtimeMode = memoryOnly ? "memory" : hasRemoteConfig ? "remote" : "unconfigured";
 
