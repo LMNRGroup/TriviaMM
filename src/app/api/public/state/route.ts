@@ -18,7 +18,15 @@ export async function GET(request: Request) {
 
     const ipAddress = getRequestIp(request);
     const rememberedPlayerId = await getKv().get<string>(returningPlayerByIpKey(ipAddress));
-    const rememberedPlayer = rememberedPlayerId ? await getRegisteredPlayerById(rememberedPlayerId) : null;
+    let rememberedPlayer = null;
+
+    if (rememberedPlayerId) {
+      try {
+        rememberedPlayer = await getRegisteredPlayerById(rememberedPlayerId);
+      } catch (error) {
+        console.error("remembered player lookup error", error);
+      }
+    }
 
     return ok({
       room: toPublicRoomState(room),

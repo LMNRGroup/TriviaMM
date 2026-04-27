@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { ok, fail } from "@/lib/api/http";
-import { choosePlayerSlot, ensurePublicRoom, getRoomState, joinRoom } from "@/lib/kv/room-store";
+import { choosePlayerSlot, ensurePublicRoom, getRoomState, joinRoom, withRoomMutationLock } from "@/lib/kv/room-store";
 import { getKv } from "@/lib/kv/client";
 import { returningPlayerByIpKey } from "@/lib/kv/keys";
-import { MATCH_QUESTION_COUNT } from "@/lib/game/constants";
+import { MATCH_QUESTION_COUNT, PUBLIC_ROOM_CODE } from "@/lib/game/constants";
 import { startMatch } from "@/lib/game/engine";
 import { buildLivePlayerFromRegistration, getRegisteredPlayerById } from "@/lib/sheets/player-repo";
 import { getRandomQuestions } from "@/lib/sheets/question-repo";
@@ -30,85 +30,99 @@ export async function POST(request: Request) {
 
   try {
     await ensurePublicRoom(getBaseUrl());
-    const room = await getRoomState();
-
-    if (!room) {
-      return fail("room_not_found", 404, "No se encontro la sala publica.");
-    }
-
-    if (!["idle", "lobby"].includes(room.phase)) {
-      return fail("active_session", 409, "Ya hay una partida activa. Espera a que termine para entrar.");
-    }
-
     const registration = await getRegisteredPlayerById(parsedBody.data.playerId);
 
     if (!registration) {
       return fail("player_not_found", 404, "No se encontro el registro del jugador.");
     }
 
-    const existingPlayer =
-      room.players.player1?.playerId === registration.playerId
-        ? room.players.player1
-        : room.players.player2?.playerId === registration.playerId
-          ? room.players.player2
-          : null;
+    const joinResult = await withRoomMutationLock(PUBLIC_ROOM_CODE, async () => {
+      const room = await getRoomState();
 
-    if (existingPlayer) {
-      return ok({
-        player: toJoinPlayerPayload(existingPlayer),
-        room: toPublicRoomJoinSlice({
-          phase: room.phase,
-          mode: room.mode,
-          players: room.players,
-          lobby: room.lobby,
-        }),
+      if (!room) {
+        throw new Error("room_not_found");
+      }
+
+      const existingPlayer =
+        room.players.player1?.playerId === registration.playerId
+          ? room.players.player1
+          : room.players.player2?.playerId === registration.playerId
+            ? room.players.player2
+            : null;
+
+      if (existingPlayer) {
+        return {
+          player: existingPlayer,
+          room,
+        };
+      }
+
+      if (!["idle", "lobby"].includes(room.phase)) {
+        throw new Error("active_session");
+      }
+
+      const slot = choosePlayerSlot(room, parsedBody.data.preferredSlot);
+
+      if (!slot) {
+        throw new Error("room_full");
+      }
+
+      const player = buildLivePlayerFromRegistration({
+        roomCode: room.roomCode,
+        slot,
+        sessionId: parsedBody.data.sessionId,
+        controllerToken: `ctrl_${randomUUID()}`,
+        registration,
       });
-    }
 
-    const slot = choosePlayerSlot(room, parsedBody.data.preferredSlot);
+      const updatedRoom = await joinRoom(player);
+      let responseRoom = updatedRoom;
 
-    if (!slot) {
-      return fail("room_full", 409, "La sala ya tiene dos jugadores.");
-    }
+      if (player.slot === 2 && updatedRoom.players.player1 && updatedRoom.phase === "lobby") {
+        const questions = await getRandomQuestions(MATCH_QUESTION_COUNT);
+        const { room: startedRoom } = startMatch(updatedRoom, "battle", questions, new Date().toISOString());
+        await Promise.all([saveQuestionBank(startedRoom.roomCode, questions), saveRoomState(startedRoom)]);
+        responseRoom = startedRoom;
+      }
 
-    const player = buildLivePlayerFromRegistration({
-      roomCode: room.roomCode,
-      slot,
-      sessionId: parsedBody.data.sessionId,
-      controllerToken: `ctrl_${randomUUID()}`,
-      registration,
+      return {
+        player,
+        room: responseRoom,
+      };
     });
 
-    const updatedRoom = await joinRoom(player);
-    let responseRoom = updatedRoom;
-
-    if (player.slot === 2 && updatedRoom.players.player1 && updatedRoom.phase === "lobby") {
-      const questions = await getRandomQuestions(MATCH_QUESTION_COUNT);
-      const { room: startedRoom } = startMatch(updatedRoom, "battle", questions, new Date().toISOString());
-      await Promise.all([saveQuestionBank(startedRoom.roomCode, questions), saveRoomState(startedRoom)]);
-      responseRoom = startedRoom;
-    }
-
     const ipAddress = getRequestIp(request);
-    await getKv().set(returningPlayerByIpKey(ipAddress), player.playerId, { ex: 60 * 60 * 24 * 30 });
+    await getKv().set(returningPlayerByIpKey(ipAddress), joinResult.player.playerId, { ex: 60 * 60 * 24 * 30 });
 
     return ok({
-      player: toJoinPlayerPayload(player),
+      player: toJoinPlayerPayload(joinResult.player),
       room: toPublicRoomJoinSlice({
-        phase: responseRoom.phase,
-        mode: responseRoom.mode,
-        players: responseRoom.players,
-        lobby: responseRoom.lobby,
+        phase: joinResult.room.phase,
+        mode: joinResult.room.mode,
+        players: joinResult.room.players,
+        lobby: joinResult.room.lobby,
       }),
     });
   } catch (error) {
     if (error instanceof Error) {
+      if (error.message === "room_not_found") {
+        return fail("room_not_found", 404, "No se encontro la sala publica.");
+      }
+
       if (error.message === "slot_taken") {
         return fail("slot_taken", 409, "Ese lugar ya esta ocupado.");
       }
 
+      if (error.message === "room_full") {
+        return fail("room_full", 409, "La sala ya tiene dos jugadores.");
+      }
+
       if (error.message === "match_in_progress") {
         return fail("active_session", 409, "Ya hay una partida activa. Espera a que termine.");
+      }
+
+      if (error.message === "active_session") {
+        return fail("active_session", 409, "Ya hay una partida activa. Espera a que termine para entrar.");
       }
     }
 
