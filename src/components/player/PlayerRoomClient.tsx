@@ -126,24 +126,8 @@ export function PlayerRoomClient() {
   const [room, setRoom] = useState<PublicRoomState | null>(null);
   const [rememberedPlayer, setRememberedPlayer] = useState<RememberedPlayer | null>(null);
   const [form, setForm] = useState<FormState>(initialFormState);
-  const [session, setSession] = useState<PlayerSession | null>(() => {
-    if (typeof window === "undefined") {
-      return null;
-    }
-
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-
-    if (!raw) {
-      return null;
-    }
-
-    try {
-      return normalizeStoredSession(JSON.parse(raw));
-    } catch {
-      window.localStorage.removeItem(STORAGE_KEY);
-      return null;
-    }
-  });
+  const [session, setSession] = useState<PlayerSession | null>(null);
+  const [sessionHydrated, setSessionHydrated] = useState(false);
   const [selectedChoiceState, setSelectedChoiceState] = useState<{ questionIndex: number; choice: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [joinInFlightPlayerId, setJoinInFlightPlayerId] = useState<string | null>(null);
@@ -151,6 +135,28 @@ export function PlayerRoomClient() {
   const [isPending, startTransition] = useTransition();
   const syncInFlightRef = useRef(false);
   const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+
+      if (!raw) {
+        setSessionHydrated(true);
+        return;
+      }
+
+      try {
+        setSession(normalizeStoredSession(JSON.parse(raw)));
+      } catch {
+        window.localStorage.removeItem(STORAGE_KEY);
+        setSession(null);
+      } finally {
+        setSessionHydrated(true);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   const birthYearOptions = useMemo(() => {
     const maxBirthYear = new Date().getFullYear() - 16;
@@ -534,6 +540,20 @@ export function PlayerRoomClient() {
         setError(joinError instanceof Error ? joinError.message : "No fue posible entrar a la sala.");
       }
     });
+  }
+
+  if (!sessionHydrated) {
+    return (
+      <section className="enter-rise flex h-full flex-col justify-between gap-6">
+        <div>
+          <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Preparando</p>
+          <h2 className="font-display mt-4 text-3xl font-black uppercase">Cargando sesión</h2>
+          <p className="connecting-dots mt-4 text-base text-[color:var(--muted)]">
+            Espera mientras restauramos tu estado en este dispositivo.
+          </p>
+        </div>
+      </section>
+    );
   }
 
   if (joinInFlightPlayerId) {
