@@ -2,6 +2,7 @@ import { ok, fail } from "@/lib/api/http";
 import { toJoinPlayerPayload, toPublicRoomJoinSlice } from "@/lib/api/room-state";
 import { choosePlayerSlot, getRoomState, joinRoom, withRoomMutationLock } from "@/lib/kv/room-store";
 import { buildLivePlayerFromRegistration, getRegisteredPlayerById } from "@/lib/sheets/player-repo";
+import { isMultiplayerEnabled } from "@/lib/utils/env";
 import { roomCodeSchema, joinRoomSchema } from "@/lib/validation/room";
 import { randomUUID } from "node:crypto";
 
@@ -32,6 +33,7 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   try {
+    const multiplayerEnabled = isMultiplayerEnabled();
     const registration = await getRegisteredPlayerById(parsedBody.data.playerId);
 
     if (!registration) {
@@ -45,7 +47,15 @@ export async function POST(request: Request, context: RouteContext) {
         throw new Error("room_not_found");
       }
 
-      const slot = choosePlayerSlot(existingRoom, parsedBody.data.preferredSlot);
+      if (
+        !multiplayerEnabled &&
+        existingRoom.players.player1 &&
+        existingRoom.players.player1.playerId !== registration.playerId
+      ) {
+        throw new Error("multiplayer_disabled");
+      }
+
+      const slot = choosePlayerSlot(existingRoom, multiplayerEnabled ? parsedBody.data.preferredSlot : 1);
 
       if (!slot) {
         throw new Error("room_full");
@@ -88,6 +98,10 @@ export async function POST(request: Request, context: RouteContext) {
 
       if (error.message === "match_in_progress") {
         return fail("match_in_progress", 409, "This room already has an active match");
+      }
+
+      if (error.message === "multiplayer_disabled") {
+        return fail("multiplayer_disabled", 409, "Multiplayer is temporarily disabled");
       }
     }
 

@@ -7,7 +7,7 @@ import { MATCH_QUESTION_COUNT, PUBLIC_ROOM_CODE } from "@/lib/game/constants";
 import { startMatch } from "@/lib/game/engine";
 import { buildLivePlayerFromRegistration, getRegisteredPlayerById } from "@/lib/sheets/player-repo";
 import { getRandomQuestions } from "@/lib/sheets/question-repo";
-import { getBaseUrl } from "@/lib/utils/env";
+import { getBaseUrl, isMultiplayerEnabled } from "@/lib/utils/env";
 import { getRequestIp } from "@/lib/utils/request";
 import { toJoinPlayerPayload, toPublicRoomJoinSlice } from "@/lib/api/room-state";
 import { joinRoomSchema } from "@/lib/validation/room";
@@ -31,6 +31,7 @@ export async function POST(request: Request) {
   try {
     await ensurePublicRoom(getBaseUrl());
     const registration = await getRegisteredPlayerById(parsedBody.data.playerId);
+    const multiplayerEnabled = isMultiplayerEnabled();
 
     if (!registration) {
       return fail("player_not_found", 404, "No se encontro el registro del jugador.");
@@ -61,7 +62,15 @@ export async function POST(request: Request) {
         throw new Error("active_session");
       }
 
-      const slot = choosePlayerSlot(room, parsedBody.data.preferredSlot);
+      if (
+        !multiplayerEnabled &&
+        room.players.player1 &&
+        room.players.player1.playerId !== registration.playerId
+      ) {
+        throw new Error("multiplayer_disabled");
+      }
+
+      const slot = choosePlayerSlot(room, multiplayerEnabled ? parsedBody.data.preferredSlot : 1);
 
       if (!slot) {
         throw new Error("room_full");
@@ -86,6 +95,18 @@ export async function POST(request: Request) {
         }
 
         const { room: startedRoom } = startMatch(updatedRoom, "battle", questions, new Date().toISOString());
+        await Promise.all([saveQuestionBank(startedRoom.roomCode, questions), saveRoomState(startedRoom)]);
+        responseRoom = startedRoom;
+      }
+
+      if (!multiplayerEnabled && player.slot === 1 && updatedRoom.phase === "lobby") {
+        const questions = await getRandomQuestions(MATCH_QUESTION_COUNT);
+
+        if (questions.length === 0) {
+          throw new Error("question_bank_empty");
+        }
+
+        const { room: startedRoom } = startMatch(updatedRoom, "solo", questions, new Date().toISOString());
         await Promise.all([saveQuestionBank(startedRoom.roomCode, questions), saveRoomState(startedRoom)]);
         responseRoom = startedRoom;
       }
@@ -119,7 +140,11 @@ export async function POST(request: Request) {
       }
 
       if (error.message === "room_full") {
-        return fail("room_full", 409, "La sala ya tiene dos jugadores.");
+        return fail("room_full", 409, "La sala ya esta ocupada.");
+      }
+
+      if (error.message === "multiplayer_disabled") {
+        return fail("multiplayer_disabled", 409, "Multiplayer esta temporalmente desactivado.");
       }
 
       if (error.message === "match_in_progress") {

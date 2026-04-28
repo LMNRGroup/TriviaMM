@@ -4,6 +4,7 @@ import { requireHost } from "@/lib/api/room-auth";
 import { startMatch } from "@/lib/game/engine";
 import { getRoomState, saveQuestionBank, saveRoomState, withRoomMutationLock } from "@/lib/kv/room-store";
 import { getRandomQuestions } from "@/lib/sheets/question-repo";
+import { isMultiplayerEnabled } from "@/lib/utils/env";
 import { roomCodeSchema, startRoomSchema } from "@/lib/validation/room";
 import { MATCH_QUESTION_COUNT } from "@/lib/game/constants";
 
@@ -34,6 +35,7 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   try {
+    const multiplayerEnabled = isMultiplayerEnabled();
     const questions = await getRandomQuestions(MATCH_QUESTION_COUNT);
 
     if (questions.length === 0) {
@@ -57,6 +59,10 @@ export async function POST(request: Request, context: RouteContext) {
 
       if (!room.players.player1) {
         throw new Error("missing_player_1");
+      }
+
+      if (!multiplayerEnabled && parsed.data.mode === "battle") {
+        throw new Error("multiplayer_disabled");
       }
 
       if (parsed.data.mode === "battle" && !room.players.player2) {
@@ -93,6 +99,10 @@ export async function POST(request: Request, context: RouteContext) {
 
       if (error.message === "player_2_present") {
         return fail("player_2_present", 409, "Two players are already connected. Start in battle mode");
+      }
+
+      if (error.message === "multiplayer_disabled") {
+        return fail("multiplayer_disabled", 409, "Multiplayer is temporarily disabled");
       }
     }
 

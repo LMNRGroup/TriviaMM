@@ -5,6 +5,7 @@ import { MATCH_QUESTION_COUNT, PUBLIC_ROOM_CODE } from "@/lib/game/constants";
 import { startMatch } from "@/lib/game/engine";
 import { getRoomState, saveQuestionBank, saveRoomState, withRoomMutationLock } from "@/lib/kv/room-store";
 import { getRandomQuestions } from "@/lib/sheets/question-repo";
+import { isMultiplayerEnabled } from "@/lib/utils/env";
 import { publicStartSchema } from "@/lib/validation/room";
 
 export async function POST(request: Request) {
@@ -23,6 +24,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    const multiplayerEnabled = isMultiplayerEnabled();
     const questions = await getRandomQuestions(MATCH_QUESTION_COUNT);
 
     if (questions.length === 0) {
@@ -48,6 +50,10 @@ export async function POST(request: Request) {
 
       if (room.phase !== "idle" && room.phase !== "lobby") {
         return room;
+      }
+
+      if (!multiplayerEnabled && parsed.data.mode === "battle") {
+        throw new Error("multiplayer_disabled");
       }
 
       if (parsed.data.mode === "battle" && !room.players.player2) {
@@ -84,6 +90,10 @@ export async function POST(request: Request) {
 
       if (error.message === "player_2_present") {
         return fail("player_2_present", 409, "Ya hay dos jugadores en sala. Inicia en modo duelo.");
+      }
+
+      if (error.message === "multiplayer_disabled") {
+        return fail("multiplayer_disabled", 409, "Multiplayer esta temporalmente desactivado.");
       }
     }
 

@@ -1,7 +1,14 @@
 import { ok } from "@/lib/api/http";
 import { getKvRuntimeMode } from "@/lib/kv/client";
 import { ensureAllSheetStructures } from "@/lib/sheets/bootstrap";
-import { allowMemoryKvFallback, getSheetsConfig, hasKvConfig, hasSheetsConfig, preferMemoryKv } from "@/lib/utils/env";
+import {
+  allowMemoryKvFallback,
+  getSheetsConfig,
+  hasKvConfig,
+  hasSheetsConfig,
+  isMultiplayerEnabled,
+  preferMemoryKv,
+} from "@/lib/utils/env";
 
 export async function GET() {
   const sheetsEnabled = hasSheetsConfig();
@@ -37,6 +44,7 @@ export async function GET() {
       kvUseMemory: preferMemoryKv(),
       kvAllowMemoryFallback: allowMemoryKvFallback(),
       kvRuntimeMode: getKvRuntimeMode(),
+      multiplayerEnabled: isMultiplayerEnabled(),
       sheets: sheetsEnabled,
       sheetsSingleSpreadsheet: Boolean(sheets.spreadsheetId),
       sheetsSplitSpreadsheets: Object.values(sheets.spreadsheetIds).every(Boolean),

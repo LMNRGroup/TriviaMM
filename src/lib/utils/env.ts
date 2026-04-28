@@ -49,6 +49,15 @@ export function allowMemoryKvFallback() {
   return v === "1" || v === "true" || v === "yes";
 }
 
+/**
+ * Multiplayer rollout switch.
+ * Default is disabled until single-player production stability is fully validated.
+ */
+export function isMultiplayerEnabled() {
+  const v = process.env.TRIVIA_ENABLE_MULTIPLAYER?.trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes";
+}
+
 function readServiceAccountCredentials() {
   const raw = process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim();
 

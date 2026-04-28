@@ -4,6 +4,7 @@ import { LOBBY_WAIT_DURATION_MS } from "@/lib/game/constants";
 import { coerceRoomStateFromStorage } from "@/lib/game/player-normalize";
 import type { Player, Question, RoomState } from "@/lib/types/game";
 import { getKv } from "@/lib/kv/client";
+import { isMultiplayerEnabled } from "@/lib/utils/env";
 import {
   LOCK_TTL_SECONDS,
   ROOM_TTL_SECONDS,
@@ -168,6 +169,7 @@ export function choosePlayerSlot(room: RoomState, preferredSlot?: 1 | 2) {
 
 export async function joinRoom(player: Player) {
   const kv = getKv();
+  const multiplayerEnabled = isMultiplayerEnabled();
   const room = await getRoomState(player.roomCode);
 
   if (!room) {
@@ -194,9 +196,12 @@ export async function joinRoom(player: Player) {
     },
     lobby: {
       ...room.lobby,
-      allowSoloStart: slotKey === "player1" && room.players[otherSlotKey] === null,
+      allowSoloStart:
+        !multiplayerEnabled || (slotKey === "player1" && room.players[otherSlotKey] === null),
       waitingEndsAt:
-        room.players.player1 || slotKey === "player2"
+        !multiplayerEnabled
+          ? null
+          : room.players.player1 || slotKey === "player2"
           ? room.lobby.waitingEndsAt
           : new Date(Date.now() + LOBBY_WAIT_DURATION_MS).toISOString(),
       previewMessage: null,
