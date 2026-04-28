@@ -330,7 +330,10 @@ export function PlayerRoomClient() {
           const tickResponse = await fetch("/api/public/tick", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({}),
+            body: JSON.stringify({
+              playerId: session?.playerId,
+              controllerToken: session?.controllerToken,
+            }),
           });
           const tickPayload = await tickResponse.json();
 
@@ -358,7 +361,7 @@ export function PlayerRoomClient() {
       window.clearInterval(poll);
       window.clearInterval(timer);
     };
-  }, [loadRoomState, session?.playerId]);
+  }, [loadRoomState, session?.controllerToken, session?.playerId]);
 
   useEffect(() => {
     if (!session || !playerSeat?.playerId) {

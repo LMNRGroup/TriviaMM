@@ -30,6 +30,11 @@ export const hostTokenSchema = z.object({
   hostToken: z.string().trim().min(1),
 });
 
+export const publicTickSchema = z.object({
+  playerId: z.string().trim().min(1).optional(),
+  controllerToken: z.string().trim().min(1).optional(),
+});
+
 export const resetRoomSchema = z.object({
   hostToken: z.string().trim().min(1),
   reason: z.union([z.literal("completed_cycle"), z.literal("afk"), z.literal("host_reset")]),
