@@ -80,7 +80,7 @@ export function BugFinderOverlay() {
 
         if (!kvConfigured) {
           if (!kvWarningShownRef.current) {
-            pushEvent("warning", "backend", "KV no configurado", "La app usa memoria local; multi-instancia puede desincronizar partidas.");
+            pushEvent("warning", "backend", "KV not configured", "App is using local memory; multi-instance room state can drift.");
             kvWarningShownRef.current = true;
           }
           return;
@@ -90,14 +90,14 @@ export function BugFinderOverlay() {
           pushEvent(
             "warning",
             "backend",
-            "KV en modo no remoto",
-            `kvRuntimeMode=${runtimeMode ?? "unknown"}. Esto puede causar cambios erráticos de fase.`,
+            "KV not running in remote mode",
+            `kvRuntimeMode=${runtimeMode ?? "unknown"}. This can cause erratic phase changes.`,
           );
           kvWarningShownRef.current = true;
         }
       } catch (error) {
         if (!cancelled) {
-          pushEvent("warning", "backend", "No se pudo verificar salud del backend", shortError(error));
+          pushEvent("warning", "backend", "Failed to check backend health", shortError(error));
         }
       }
     }
@@ -120,7 +120,7 @@ export function BugFinderOverlay() {
         const payload = await response.json();
 
         if (!response.ok || !payload.ok) {
-          pushEvent("warning", "network", "Fallo consultando estado de sala", payload?.message ?? response.statusText);
+          pushEvent("warning", "network", "Room state request failed", payload?.message ?? response.statusText);
           return;
         }
 
@@ -142,8 +142,8 @@ export function BugFinderOverlay() {
           pushEvent(
             "error",
             "state",
-            "Regresión inesperada de fase",
-            `De ${previous.phase} (match ${previous.currentMatchId}) a ${room.phase}.`,
+            "Unexpected phase regression",
+            `From ${previous.phase} (match ${previous.currentMatchId}) to ${room.phase}.`,
           );
         }
 
@@ -154,7 +154,7 @@ export function BugFinderOverlay() {
         };
       } catch (error) {
         if (!cancelled) {
-          pushEvent("warning", "network", "Error consultando /api/public/state", shortError(error));
+          pushEvent("warning", "network", "Error while polling /api/public/state", shortError(error));
         }
       }
     }

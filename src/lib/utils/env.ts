@@ -43,7 +43,7 @@ export function preferMemoryKv() {
 export function allowMemoryKvFallback() {
   const v = process.env.KV_ALLOW_MEMORY_FALLBACK?.trim().toLowerCase();
   if (!v) {
-    return true;
+    return process.env.VERCEL_ENV !== "production";
   }
 
   return v === "1" || v === "true" || v === "yes";

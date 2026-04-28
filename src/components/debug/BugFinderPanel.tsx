@@ -47,6 +47,7 @@ export function BugFinderPanel({ events, onClear }: BugFinderPanelProps) {
         onClick={() => setOpen((value) => !value)}
         type="button"
       >
+        <span aria-hidden="true" className="text-sm">🐞</span>
         <span>Bug Finder</span>
         <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-red-100">{errorCount}</span>
         <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-amber-100">{warningCount}</span>
@@ -56,21 +57,21 @@ export function BugFinderPanel({ events, onClear }: BugFinderPanelProps) {
         <div className="mt-3 max-h-[60vh] overflow-hidden rounded-[1rem] border border-white/15 bg-[color:var(--panel)]/96 p-3 shadow-[0_18px_45px_rgba(0,0,0,0.55)] backdrop-blur">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-              Diagnóstico en vivo
+              Live Diagnostics
             </p>
             <button
               className="rounded-md border border-white/15 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[color:var(--muted)] hover:text-white"
               onClick={onClear}
               type="button"
             >
-              Limpiar
+              Clear
             </button>
           </div>
 
           <div className="space-y-2 overflow-y-auto pr-1">
             {events.length === 0 ? (
               <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-3 text-sm text-[color:var(--muted)]">
-                No hay eventos capturados todavía.
+                No events captured yet.
               </div>
             ) : (
               events.map((event) => (
