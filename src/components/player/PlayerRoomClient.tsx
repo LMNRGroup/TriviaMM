@@ -122,6 +122,20 @@ function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isGameplayPhase(phase: PublicRoomState["phase"]) {
+  return (
+    phase === "countdown" ||
+    phase === "question-read" ||
+    phase === "question" ||
+    phase === "answer-lock" ||
+    phase === "battle-result"
+  );
+}
+
+function isPlayerInRoom(room: PublicRoomState, playerId: string) {
+  return room.players.player1?.playerId === playerId || room.players.player2?.playerId === playerId;
+}
+
 export function PlayerRoomClient() {
   const [room, setRoom] = useState<PublicRoomState | null>(null);
   const [rememberedPlayer, setRememberedPlayer] = useState<RememberedPlayer | null>(null);
@@ -216,11 +230,28 @@ export function PlayerRoomClient() {
     const nextRoom = payload.data.room as PublicRoomState;
     const remoteRememberedPlayer = (payload.data.rememberedPlayer as RememberedPlayer | null) ?? null;
 
-    setRoom(nextRoom);
+    setRoom((current) => {
+      const sessionPlayerId = session?.playerId;
+
+      if (
+        current &&
+        sessionPlayerId &&
+        isGameplayPhase(current.phase) &&
+        Boolean(current.currentMatchId) &&
+        isPlayerInRoom(current, sessionPlayerId) &&
+        (nextRoom.phase === "idle" || nextRoom.phase === "lobby") &&
+        !nextRoom.currentMatchId &&
+        !isPlayerInRoom(nextRoom, sessionPlayerId)
+      ) {
+        return current;
+      }
+
+      return nextRoom;
+    });
     setRememberedPlayer((current) => remoteRememberedPlayer ?? current);
     setError(null);
     return nextRoom;
-  }, []);
+  }, [session?.playerId]);
 
   const joinWithPlayer = useCallback(async (playerId: string, profile?: RememberedPlayer) => {
     const sessionId = crypto.randomUUID();
@@ -286,9 +317,12 @@ export function PlayerRoomClient() {
           Boolean(session?.playerId) &&
           (nextRoom.players.player1?.playerId === session?.playerId ||
             nextRoom.players.player2?.playerId === session?.playerId);
+        const tickDriverId = nextRoom.players.player1?.playerId ?? nextRoom.players.player2?.playerId ?? null;
+        const isTickDriver = tickDriverId !== null && tickDriverId === session?.playerId;
 
         const shouldAdvanceMatch =
           isSeatedPlayer &&
+          isTickDriver &&
           ((nextRoom.phase !== "idle" && nextRoom.phase !== "lobby") ||
             (nextRoom.phase === "lobby" && Boolean(nextRoom.lobby.waitingEndsAt) && !nextRoom.players.player2));
 

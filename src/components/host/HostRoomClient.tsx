@@ -95,19 +95,6 @@ export function HostRoomClient() {
           setRoom(nextRoom);
         }
 
-        if (!cancelled && nextRoom.phase !== "idle" && nextRoom.phase !== "lobby") {
-          const tickResponse = await fetch("/api/public/tick", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({}),
-          });
-          const tickPayload = await tickResponse.json();
-
-          if (tickResponse.ok && tickPayload.ok && !cancelled) {
-            setRoom(tickPayload.data.room as PublicRoomState);
-          }
-        }
-
         if (!cancelled) {
           setError(null);
         }
