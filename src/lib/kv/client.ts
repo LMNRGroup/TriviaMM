@@ -116,10 +116,7 @@ function createResilientKv(): KvClient {
   const memory = fallbackKv;
   let remote: Redis | null = null;
   const forceMemory = preferMemoryKv();
-  const allowConfiguredFallback =
-    allowMemoryKvFallback() ||
-    process.env.NODE_ENV !== "production" ||
-    process.env.VERCEL_ENV === "preview";
+  const allowConfiguredFallback = allowMemoryKvFallback();
   const hasRemoteConfig = hasKvConfig();
   let memoryOnly = forceMemory || !hasRemoteConfig;
 
@@ -150,7 +147,7 @@ function createResilientKv(): KvClient {
         }
 
         throw new Error(
-          "[kv] Upstash Redis unreachable. Refusing to auto-fallback to in-memory KV in production. Fix KV_REST_API_* or set KV_ALLOW_MEMORY_FALLBACK=true for emergency testing.",
+          "[kv] Upstash Redis unreachable and memory fallback is disabled. Fix KV_REST_API_* or set KV_ALLOW_MEMORY_FALLBACK=true.",
         );
       }
       throw error;

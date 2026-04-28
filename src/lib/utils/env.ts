@@ -35,9 +35,17 @@ export function preferMemoryKv() {
   return v === "1" || v === "true" || v === "yes";
 }
 
-/** Opt-in for memory fallback when KV is configured but unreachable. */
+/**
+ * Controls fallback behavior when KV is configured but unreachable.
+ * Default is `true` (fallback enabled). Set `KV_ALLOW_MEMORY_FALLBACK=false`
+ * to enforce strict remote-only KV behavior.
+ */
 export function allowMemoryKvFallback() {
   const v = process.env.KV_ALLOW_MEMORY_FALLBACK?.trim().toLowerCase();
+  if (!v) {
+    return true;
+  }
+
   return v === "1" || v === "true" || v === "yes";
 }
 
