@@ -35,6 +35,12 @@ export function preferMemoryKv() {
   return v === "1" || v === "true" || v === "yes";
 }
 
+/** Opt-in for memory fallback when KV is configured but unreachable. */
+export function allowMemoryKvFallback() {
+  const v = process.env.KV_ALLOW_MEMORY_FALLBACK?.trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes";
+}
+
 function readServiceAccountCredentials() {
   const raw = process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim();
 

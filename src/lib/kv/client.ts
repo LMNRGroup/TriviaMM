@@ -1,5 +1,5 @@
 import { Redis } from "@upstash/redis";
-import { getKvConfig, hasKvConfig, preferMemoryKv } from "@/lib/utils/env";
+import { allowMemoryKvFallback, getKvConfig, hasKvConfig, preferMemoryKv } from "@/lib/utils/env";
 
 type KvSetOptions = { ex?: number; nx?: boolean };
 type KvClient = Omit<Pick<Redis, "get" | "set" | "del" | "incr" | "expire">, "set"> & {
@@ -116,6 +116,10 @@ function createResilientKv(): KvClient {
   const memory = fallbackKv;
   let remote: Redis | null = null;
   const forceMemory = preferMemoryKv();
+  const allowConfiguredFallback =
+    allowMemoryKvFallback() ||
+    process.env.NODE_ENV !== "production" ||
+    process.env.VERCEL_ENV === "preview";
   const hasRemoteConfig = hasKvConfig();
   let memoryOnly = forceMemory || !hasRemoteConfig;
 
@@ -135,9 +139,9 @@ function createResilientKv(): KvClient {
       return result;
     } catch (error) {
       if (isKvUnreachableError(error)) {
-        if (forceMemory) {
+        if (forceMemory || allowConfiguredFallback) {
           console.warn(
-            "[kv] Upstash Redis unreachable. `KV_USE_MEMORY` is enabled, so this process will use in-memory KV.",
+            "[kv] Upstash Redis unreachable. Falling back to in-memory KV for this process.",
           );
           memoryOnly = true;
           remote = null;
@@ -146,7 +150,7 @@ function createResilientKv(): KvClient {
         }
 
         throw new Error(
-          "[kv] Upstash Redis unreachable. Refusing to auto-fallback to in-memory KV because it breaks shared room state across instances.",
+          "[kv] Upstash Redis unreachable. Refusing to auto-fallback to in-memory KV in production. Fix KV_REST_API_* or set KV_ALLOW_MEMORY_FALLBACK=true for emergency testing.",
         );
       }
       throw error;

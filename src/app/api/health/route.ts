@@ -1,7 +1,7 @@
 import { ok } from "@/lib/api/http";
 import { getKvRuntimeMode } from "@/lib/kv/client";
 import { ensureAllSheetStructures } from "@/lib/sheets/bootstrap";
-import { getSheetsConfig, hasKvConfig, hasSheetsConfig, preferMemoryKv } from "@/lib/utils/env";
+import { allowMemoryKvFallback, getSheetsConfig, hasKvConfig, hasSheetsConfig, preferMemoryKv } from "@/lib/utils/env";
 
 export async function GET() {
   const sheetsEnabled = hasSheetsConfig();
@@ -35,6 +35,7 @@ export async function GET() {
       appUrl: Boolean(process.env.NEXT_PUBLIC_APP_URL?.trim()),
       kv: hasKvConfig(),
       kvUseMemory: preferMemoryKv(),
+      kvAllowMemoryFallback: allowMemoryKvFallback(),
       kvRuntimeMode: getKvRuntimeMode(),
       sheets: sheetsEnabled,
       sheetsSingleSpreadsheet: Boolean(sheets.spreadsheetId),
