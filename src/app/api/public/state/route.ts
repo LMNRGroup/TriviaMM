@@ -2,32 +2,19 @@ import { ok, fail } from "@/lib/api/http";
 import { toPublicRoomState } from "@/lib/api/room-state";
 import { getKv } from "@/lib/kv/client";
 import { returningPlayerByIpKey } from "@/lib/kv/keys";
-import { ensurePublicRoom, getRoomState } from "@/lib/kv/room-store";
+import { getRoomState } from "@/lib/kv/room-store";
 import { getRegisteredPlayerById } from "@/lib/sheets/player-repo";
-import { getBaseUrl } from "@/lib/utils/env";
 import { getRequestIp } from "@/lib/utils/request";
 
 export async function GET(request: Request) {
   try {
-    const sessionPlayerId = request.headers.get("x-trivia-player-id")?.trim() ?? "";
-    const currentMatchHint = request.headers.get("x-trivia-current-match-id")?.trim() ?? "";
-    let room = await getRoomState();
-
+    const room = await getRoomState();
     if (!room) {
-      if (sessionPlayerId && currentMatchHint) {
-        return fail(
-          "room_unavailable",
-          503,
-          "El estado de la sala no esta disponible temporalmente en este nodo. Intenta de nuevo.",
-        );
-      }
-
-      await ensurePublicRoom(getBaseUrl());
-      room = await getRoomState();
-    }
-
-    if (!room) {
-      return fail("room_not_found", 404, "No se encontro la sala publica.");
+      return fail(
+        "room_unavailable",
+        503,
+        "El estado de la sala publica no esta disponible temporalmente en este nodo.",
+      );
     }
 
     const ipAddress = getRequestIp(request);

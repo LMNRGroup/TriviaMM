@@ -15,6 +15,7 @@ import { saveQuestionBank, saveRoomState } from "@/lib/kv/room-store";
 
 export async function POST(request: Request) {
   let payload: unknown;
+  const allowRoomCreate = request.headers.get("x-trivia-allow-room-create") === "1";
 
   try {
     payload = await request.json();
@@ -29,7 +30,6 @@ export async function POST(request: Request) {
   }
 
   try {
-    await ensurePublicRoom(getBaseUrl());
     const registration = await getRegisteredPlayerById(parsedBody.data.playerId);
     const multiplayerEnabled = isMultiplayerEnabled();
 
@@ -38,10 +38,15 @@ export async function POST(request: Request) {
     }
 
     const joinResult = await withRoomMutationLock(PUBLIC_ROOM_CODE, async () => {
-      const room = await getRoomState();
+      let room = await getRoomState();
+
+      if (!room && allowRoomCreate) {
+        await ensurePublicRoom(getBaseUrl());
+        room = await getRoomState();
+      }
 
       if (!room) {
-        throw new Error("room_not_found");
+        throw new Error("room_unavailable");
       }
 
       const existingPlayer =
@@ -126,8 +131,12 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     if (error instanceof Error) {
-      if (error.message === "room_not_found") {
-        return fail("room_not_found", 404, "No se encontro la sala publica.");
+      if (error.message === "room_unavailable" || error.message === "room_not_found") {
+        return fail(
+          "room_unavailable",
+          503,
+          "La sala publica no esta disponible temporalmente en este nodo. Intenta de nuevo.",
+        );
       }
 
       if (error.message === "slot_taken") {

@@ -31,7 +31,11 @@ export async function POST(request: Request) {
 
     const room = await getRoomState(PUBLIC_ROOM_CODE);
     if (!room) {
-      return fail("room_not_found", 404, "No se encontro la sala publica.");
+      return fail(
+        "room_unavailable",
+        503,
+        "La sala publica no esta disponible temporalmente en este nodo. Intenta de nuevo.",
+      );
     }
 
     const actor = findPlayerById(room, parsed.data.playerId);
@@ -58,7 +62,11 @@ export async function POST(request: Request) {
     const outcome = await runTickWithOptimisticRetry(PUBLIC_ROOM_CODE);
 
     if (!outcome.ok) {
-      return fail("room_not_found", 404, "No se encontro la sala publica.");
+      return fail(
+        "room_unavailable",
+        503,
+        "La sala publica no esta disponible temporalmente en este nodo. Intenta de nuevo.",
+      );
     }
 
     return ok({

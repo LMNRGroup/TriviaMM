@@ -27,7 +27,11 @@ export async function POST(request: Request) {
     const room = await getRoomState();
 
     if (!room) {
-      return fail("room_not_found", 404, "No se encontro la sala publica.");
+      return fail(
+        "room_unavailable",
+        503,
+        "La sala publica no esta disponible temporalmente en este nodo. Intenta de nuevo.",
+      );
     }
 
     const player = findPlayerById(room, parsed.data.playerId);

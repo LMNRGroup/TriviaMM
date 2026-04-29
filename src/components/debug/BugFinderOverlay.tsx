@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { BugFinderPanel, type BugEvent, type BugEventLevel, type BugEventSource } from "@/components/debug/BugFinderPanel";
 import type { PublicRoomState } from "@/lib/types/game";
 
+const STORAGE_KEY = "trivia:player:public";
+
 function isGameplayPhase(phase: PublicRoomState["phase"]) {
   return (
     phase === "countdown" ||
@@ -34,6 +36,14 @@ function toEnglishDiagnostic(value: unknown) {
 
   if (message === "El estado de la sala no esta disponible temporalmente en este nodo. Intenta de nuevo.") {
     return "Room state is temporarily unavailable on this runtime node. Retry shortly.";
+  }
+
+  if (message === "El estado de la sala publica no esta disponible temporalmente en este nodo.") {
+    return "Public room state is temporarily unavailable on this runtime node.";
+  }
+
+  if (message === "La sala publica no esta disponible temporalmente en este nodo. Intenta de nuevo.") {
+    return "The public room is temporarily unavailable on this runtime node. Retry shortly.";
   }
 
   return message;
@@ -134,10 +144,37 @@ export function BugFinderOverlay() {
 
     async function pollRoomState() {
       try {
-        const response = await fetch("/api/public/state", { cache: "no-store" });
+        let sessionPlayerId = "";
+
+        try {
+          const raw = window.localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw) as { playerId?: unknown };
+            if (typeof parsed.playerId === "string") {
+              sessionPlayerId = parsed.playerId;
+            }
+          }
+        } catch {
+          // Best-effort diagnostics only.
+        }
+
+        const previous = previousRoomRef.current;
+        const response = await fetch("/api/public/state", {
+          cache: "no-store",
+          headers:
+            sessionPlayerId || previous?.currentMatchId
+              ? {
+                  ...(sessionPlayerId ? { "x-trivia-player-id": sessionPlayerId } : {}),
+                  ...(previous?.currentMatchId ? { "x-trivia-current-match-id": previous.currentMatchId } : {}),
+                }
+              : undefined,
+        });
         const payload = await response.json();
 
         if (!response.ok || !payload.ok) {
+          if (payload?.error === "room_unavailable") {
+            return;
+          }
           pushEvent("warning", "network", "Room state request failed", toEnglishDiagnostic(payload?.message ?? response.statusText));
           return;
         }
@@ -146,8 +183,6 @@ export function BugFinderOverlay() {
         if (!room) {
           return;
         }
-
-        const previous = previousRoomRef.current;
 
         if (
           previous &&

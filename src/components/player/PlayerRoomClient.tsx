@@ -53,6 +53,11 @@ interface FormState {
 const STORAGE_KEY = "trivia:player:public";
 const GAMEPLAY_REGRESSION_GUARD_MS = 90_000;
 
+type ClientApiError = Error & {
+  code?: string;
+  status?: number;
+};
+
 function normalizeStoredSession(raw: unknown): PlayerSession | null {
   if (!raw || typeof raw !== "object") {
     return null;
@@ -193,6 +198,31 @@ function chooseStableRoom({
   return candidate;
 }
 
+function buildApiError(payload: unknown, status: number, fallbackMessage: string): ClientApiError {
+  const message =
+    payload && typeof payload === "object" && "message" in payload && typeof payload.message === "string"
+      ? payload.message
+      : fallbackMessage;
+  const error = new Error(message) as ClientApiError;
+  if (payload && typeof payload === "object" && "error" in payload && typeof payload.error === "string") {
+    error.code = payload.error;
+  }
+  error.status = status;
+  return error;
+}
+
+function getApiErrorCode(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return null;
+  }
+
+  return typeof (error as ClientApiError).code === "string" ? (error as ClientApiError).code ?? null : null;
+}
+
+function isTransientRoomRoutingErrorCode(code: string | null) {
+  return code === "room_unavailable" || code === "room_not_found";
+}
+
 export function PlayerRoomClient() {
   const [room, setRoom] = useState<PublicRoomState | null>(null);
   const [rememberedPlayer, setRememberedPlayer] = useState<RememberedPlayer | null>(null);
@@ -305,7 +335,7 @@ export function PlayerRoomClient() {
     const payload = await response.json();
 
     if (!response.ok || !payload.ok) {
-      throw new Error(payload.message ?? "No se pudo cargar la sala.");
+      throw buildApiError(payload, response.status, "No se pudo cargar la sala.");
     }
 
     const nextRoom = payload.data.room as PublicRoomState;
@@ -334,6 +364,7 @@ export function PlayerRoomClient() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "x-trivia-allow-room-create": !session?.playerId && !room?.currentMatchId ? "1" : "0",
       },
       body: JSON.stringify({
         playerId,
@@ -343,7 +374,7 @@ export function PlayerRoomClient() {
     const payload = await response.json();
 
     if (!response.ok || !payload.ok) {
-      throw new Error(payload.message ?? "No fue posible entrar a la sala.");
+      throw buildApiError(payload, response.status, "No fue posible entrar a la sala.");
     }
 
     const joinedPlayer = payload.data.player as JoinApiPlayer;
@@ -400,7 +431,7 @@ export function PlayerRoomClient() {
     }
 
     setJoinInFlightPlayerId(null);
-  }, [form.age, form.email, loadRoomState]);
+  }, [form.age, form.email, loadRoomState, room?.currentMatchId, session?.playerId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -428,33 +459,56 @@ export function PlayerRoomClient() {
             (nextRoom.phase === "lobby" && Boolean(nextRoom.lobby.waitingEndsAt) && !nextRoom.players.player2));
 
         if (!cancelled && shouldAdvanceMatch) {
-          const tickResponse = await fetch("/api/public/tick", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              playerId: session?.playerId,
-              controllerToken: session?.controllerToken,
-            }),
-          });
-          const tickPayload = await tickResponse.json();
-
-          if (tickResponse.ok && tickPayload.ok && !cancelled) {
-            const tickRoom = tickPayload.data.room as PublicRoomState;
-            let resolvedRoom = tickRoom;
-            setRoom((current) => {
-              resolvedRoom = chooseStableRoom({
-                current,
-                candidate: tickRoom,
-                sessionPlayerId: session?.playerId,
-                lastGameplayProgressAt: lastGameplayProgressAtRef.current,
-              });
-              return resolvedRoom;
+          for (let attempt = 0; attempt < 3; attempt += 1) {
+            const tickResponse = await fetch("/api/public/tick", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                playerId: session?.playerId,
+                controllerToken: session?.controllerToken,
+              }),
             });
-            trackGameplayProgress(resolvedRoom);
+            const tickPayload = await tickResponse.json();
+
+            if (tickResponse.ok && tickPayload.ok && !cancelled) {
+              const tickRoom = tickPayload.data.room as PublicRoomState;
+              let resolvedRoom = tickRoom;
+              setRoom((current) => {
+                resolvedRoom = chooseStableRoom({
+                  current,
+                  candidate: tickRoom,
+                  sessionPlayerId: session?.playerId,
+                  lastGameplayProgressAt: lastGameplayProgressAtRef.current,
+                });
+                return resolvedRoom;
+              });
+              trackGameplayProgress(resolvedRoom);
+              break;
+            }
+
+            const tickErrorCode =
+              tickPayload && typeof tickPayload === "object" && typeof tickPayload.error === "string"
+                ? tickPayload.error
+                : null;
+            if (!isTransientRoomRoutingErrorCode(tickErrorCode) || attempt === 2) {
+              break;
+            }
+
+            await wait(130);
           }
         }
       } catch (syncError) {
         if (!cancelled) {
+          const errorCode = getApiErrorCode(syncError);
+          if (
+            isTransientRoomRoutingErrorCode(errorCode) &&
+            room &&
+            isGameplayPhase(room.phase) &&
+            Boolean(room.currentMatchId)
+          ) {
+            return;
+          }
+
           setError(syncError instanceof Error ? syncError.message : "No se pudo sincronizar la partida.");
         }
       } finally {
@@ -473,7 +527,7 @@ export function PlayerRoomClient() {
       window.clearInterval(poll);
       window.clearInterval(timer);
     };
-  }, [loadRoomState, session?.controllerToken, session?.playerId]);
+  }, [loadRoomState, room, session?.controllerToken, session?.playerId]);
 
   useEffect(() => {
     if (!session || !playerSeat?.playerId) {
@@ -642,28 +696,37 @@ export function PlayerRoomClient() {
       choice,
     });
 
-    const response = await fetch("/api/public/answer", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        playerId: session.playerId,
-        controllerToken: session.controllerToken,
-        questionId: room.currentQuestion.questionId,
-        questionIndex: room.currentQuestion.questionIndex,
-        selectedChoice: choice,
-      }),
-    });
-    const payload = await response.json();
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const response = await fetch("/api/public/answer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          playerId: session.playerId,
+          controllerToken: session.controllerToken,
+          questionId: room.currentQuestion.questionId,
+          questionIndex: room.currentQuestion.questionIndex,
+          selectedChoice: choice,
+        }),
+      });
+      const payload = await response.json();
 
-    if (!response.ok || !payload.ok) {
+      if (response.ok && payload.ok) {
+        setError(null);
+        return;
+      }
+
+      const code = payload && typeof payload === "object" && typeof payload.error === "string" ? payload.error : null;
+      if (isTransientRoomRoutingErrorCode(code) && attempt < 2) {
+        await wait(130);
+        continue;
+      }
+
       setError(payload.message ?? "No se pudo registrar la respuesta.");
       setSelectedChoiceState(null);
       return;
     }
-
-    setError(null);
   }
 
   const pendingJoinPlayer: RememberedPlayer | null = !playerSeat

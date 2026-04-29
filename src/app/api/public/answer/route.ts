@@ -79,7 +79,11 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === "room_not_found") {
-        return fail("room_not_found", 404, "No se encontro la sala publica.");
+        return fail(
+          "room_unavailable",
+          503,
+          "La sala publica no esta disponible temporalmente en este nodo. Intenta de nuevo.",
+        );
       }
 
       if (error.message === "phase_not_answerable") {
