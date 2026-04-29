@@ -10,6 +10,24 @@ import type {
 } from "@/lib/types/game";
 import { matchAverageResponseMs } from "@/lib/game/scoring";
 
+function normalizePublicUrl(value: string) {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return trimmed;
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith("//")) {
+    return `https:${trimmed}`;
+  }
+
+  return `https://${trimmed}`;
+}
+
 /** Display city from a live or legacy `Player` (KV may still have `country` only). */
 export function playerDisplayCity(player: Pick<Player, "city" | "country">): string {
   const value = (player.city || player.country || "").trim();
@@ -90,7 +108,7 @@ export function toPublicRoomState(room: RoomState): PublicRoomState {
     expiresAt: room.expiresAt,
     currentMatchId: room.currentMatchId,
     matchStartedAt: room.matchStartedAt,
-    qrUrl: room.qrUrl,
+    qrUrl: normalizePublicUrl(room.qrUrl),
     players: {
       player1: toPublicPlayer(room.players.player1),
       player2: toPublicPlayer(room.players.player2),

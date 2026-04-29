@@ -25,11 +25,33 @@ function firstDefinedBoolean(...values: Array<string | undefined | null>) {
   return null;
 }
 
+function normalizeHttpUrl(raw: string) {
+  const trimmed = raw.trim().replace(/\/+$/, "");
+
+  if (!trimmed) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith("//")) {
+    return `https:${trimmed}`;
+  }
+
+  if (/^(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$/i.test(trimmed)) {
+    return `http://${trimmed}`;
+  }
+
+  return `https://${trimmed}`;
+}
+
 export function getBaseUrl() {
-  return (
+  return normalizeHttpUrl(
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
     process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() ||
-    "http://localhost:3000"
+    "http://localhost:3000",
   );
 }
 
