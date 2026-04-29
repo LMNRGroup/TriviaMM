@@ -3,6 +3,7 @@ import { toPublicRoomState } from "@/lib/api/room-state";
 import { findPlayerById, requirePlayerToken } from "@/lib/api/room-auth";
 import { MATCH_QUESTION_COUNT, PUBLIC_ROOM_CODE } from "@/lib/game/constants";
 import { startMatch } from "@/lib/game/engine";
+import { recoverPublicRoomState } from "@/lib/game/room-recovery";
 import { getRoomState, saveQuestionBank, saveRoomState, withRoomMutationLock } from "@/lib/kv/room-store";
 import { getRandomQuestions } from "@/lib/sheets/question-repo";
 import { isBattleModeEnabled, isMultiplayerEnabled } from "@/lib/utils/env";
@@ -27,6 +28,11 @@ export async function POST(request: Request) {
     const multiplayerEnabled = isMultiplayerEnabled();
     const battleModeEnabled = isBattleModeEnabled();
     const questions = await getRandomQuestions(MATCH_QUESTION_COUNT);
+
+    const preRoom = await getRoomState(PUBLIC_ROOM_CODE);
+    if (preRoom && preRoom.phase !== "idle" && preRoom.phase !== "lobby") {
+      await recoverPublicRoomState(preRoom, { allowHardReset: true, maxTransitions: 8 });
+    }
 
     if (questions.length === 0) {
       return fail("question_bank_empty", 409, "No hay preguntas disponibles para iniciar la partida.");

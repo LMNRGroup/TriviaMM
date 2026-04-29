@@ -3,6 +3,7 @@ import { ok, fail } from "@/lib/api/http";
 import { choosePlayerSlot, ensurePublicRoom, getRoomState, joinRoom, withRoomMutationLock } from "@/lib/kv/room-store";
 import { MATCH_QUESTION_COUNT, PUBLIC_ROOM_CODE } from "@/lib/game/constants";
 import { startMatch } from "@/lib/game/engine";
+import { recoverPublicRoomState } from "@/lib/game/room-recovery";
 import { buildLivePlayerFromRegistration, getRegisteredPlayerById } from "@/lib/sheets/player-repo";
 import { getRandomQuestions } from "@/lib/sheets/question-repo";
 import { getBaseUrl, isBattleModeEnabled, isMultiplayerEnabled } from "@/lib/utils/env";
@@ -29,6 +30,11 @@ export async function POST(request: Request) {
     const registration = await getRegisteredPlayerById(parsedBody.data.playerId);
     const multiplayerEnabled = isMultiplayerEnabled();
     const battleModeEnabled = isBattleModeEnabled();
+
+    const preRoom = await getRoomState(PUBLIC_ROOM_CODE);
+    if (preRoom && preRoom.phase !== "idle" && preRoom.phase !== "lobby") {
+      await recoverPublicRoomState(preRoom, { allowHardReset: true, maxTransitions: 8 });
+    }
 
     if (!registration) {
       return fail("player_not_found", 404, "No se encontro el registro del jugador.");

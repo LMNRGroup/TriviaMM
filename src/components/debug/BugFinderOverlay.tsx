@@ -58,9 +58,11 @@ function toEnglishDiagnostic(value: unknown) {
 export function BugFinderOverlay() {
   const [events, setEvents] = useState<BugEvent[]>([]);
   const [runtimeStats, setRuntimeStats] = useState<BugFinderRuntimeStats>({});
+  const [recovering, setRecovering] = useState(false);
   const previousRoomRef = useRef<Pick<PublicRoomState, "phase" | "currentMatchId" | "version"> | null>(null);
   const kvWarningShownRef = useRef(false);
   const gameplayWarningShownRef = useRef(false);
+  const stuckPhaseFingerprintRef = useRef<string | null>(null);
 
   function pushEvent(level: BugEventLevel, source: BugEventSource, message: string, details?: string) {
     const entry: BugEvent = {
@@ -281,6 +283,26 @@ export function BugFinderOverlay() {
           );
         }
 
+        if (room.phase !== "idle" && room.phase !== "lobby") {
+          const elapsedMs = Math.max(0, Date.now() - room.phaseStartedAt);
+          const phaseLimitMs = room.phase === "finished" || room.phase === "reset" ? 20_000 : 90_000;
+
+          if (elapsedMs >= phaseLimitMs) {
+            const fingerprint = `${room.currentMatchId ?? "no_match"}:${room.phase}:${room.version}`;
+            if (stuckPhaseFingerprintRef.current !== fingerprint) {
+              stuckPhaseFingerprintRef.current = fingerprint;
+              pushEvent(
+                "warning",
+                "state",
+                "Phase running longer than expected",
+                `${room.phase} has been active for ${Math.round(elapsedMs / 1000)}s (v${room.version}).`,
+              );
+            }
+          }
+        } else {
+          stuckPhaseFingerprintRef.current = null;
+        }
+
         previousRoomRef.current = {
           phase: room.phase,
           currentMatchId: room.currentMatchId,
@@ -302,5 +324,61 @@ export function BugFinderOverlay() {
     };
   }, []);
 
-  return <BugFinderPanel events={events} runtimeStats={runtimeStats} onClear={() => setEvents([])} />;
+  async function recoverRoom(force: boolean) {
+    if (recovering) {
+      return;
+    }
+
+    setRecovering(true);
+
+    try {
+      const response = await fetch("/api/public/recover", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ force }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok || !payload?.ok) {
+        pushEvent("error", "backend", force ? "Force reset failed" : "Recovery failed", toEnglishDiagnostic(payload?.message ?? response.statusText));
+        return;
+      }
+
+      const room = payload?.data?.room as PublicRoomState | undefined;
+      if (room) {
+        previousRoomRef.current = {
+          phase: room.phase,
+          currentMatchId: room.currentMatchId,
+          version: room.version,
+        };
+        setRuntimeStats((current) => ({
+          ...current,
+          roomVersion: room.version,
+        }));
+      }
+
+      pushEvent(
+        "info",
+        "backend",
+        force ? "Force reset applied" : "Recovery executed",
+        `Room is now in ${room?.phase ?? "unknown"} phase (v${room?.version ?? "--"}).`,
+      );
+    } catch (error) {
+      pushEvent("error", "backend", force ? "Force reset request failed" : "Recovery request failed", toEnglishDiagnostic(error));
+    } finally {
+      setRecovering(false);
+    }
+  }
+
+  return (
+    <BugFinderPanel
+      events={events}
+      runtimeStats={runtimeStats}
+      recovering={recovering}
+      onClear={() => setEvents([])}
+      onRecover={recoverRoom}
+    />
+  );
 }

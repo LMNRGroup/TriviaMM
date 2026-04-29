@@ -1,7 +1,6 @@
 import { ok, fail } from "@/lib/api/http";
 import { toPublicRoomState } from "@/lib/api/room-state";
-import { PUBLIC_ROOM_CODE } from "@/lib/game/constants";
-import { runAuthoritativeRoomTick } from "@/lib/game/room-tick-runner";
+import { recoverPublicRoomState } from "@/lib/game/room-recovery";
 import { ensurePublicRoom, getRoomState } from "@/lib/kv/room-store";
 import { getBaseUrl } from "@/lib/utils/env";
 
@@ -22,12 +21,10 @@ export async function GET() {
       );
     }
 
-    if (room.phase === "finished" || room.phase === "reset") {
-      const outcome = await runAuthoritativeRoomTick(PUBLIC_ROOM_CODE);
-      if (outcome.ok) {
-        room = outcome.room;
-      }
-    }
+    room = await recoverPublicRoomState(room, {
+      allowHardReset: true,
+      maxTransitions: 8,
+    });
 
     return ok({
       room: toPublicRoomState(room),

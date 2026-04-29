@@ -13,7 +13,7 @@ const bodyFont = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Trivia Battle",
+  title: "Reto Justas - Mayagüez",
   description: "Arena competitiva de trivia con pantalla principal y control móvil.",
 };
 

@@ -1114,35 +1114,34 @@ export function PlayerRoomClient() {
           </select>
         </label>
 
-        <div className="grid gap-5 sm:grid-cols-2">
-          <label className="space-y-2">
-            <span className="text-sm font-semibold text-white">¿En qué año naciste?</span>
-            <select
-              className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-[color:var(--accent)] focus:bg-white/7"
-              onChange={(event) => updateField("age", event.target.value)}
-              value={form.age}
-            >
-              <option value="">Selecciona tu año</option>
-              {birthYearOptions.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="space-y-2">
-            <span className="text-sm font-semibold text-white">Email</span>
-            <input
-              className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-[color:var(--accent)] focus:bg-white/7"
-              autoCapitalize="none"
-              autoComplete="email"
-              onChange={(event) => updateField("email", event.target.value)}
-              placeholder="nombre@correo.com"
-              type="email"
-              value={form.email}
-            />
-          </label>
-        </div>
+        <label className="space-y-2">
+          <span className="text-sm font-semibold text-white">¿En qué año naciste?</span>
+          <select
+            className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-[color:var(--accent)] focus:bg-white/7"
+            onChange={(event) => updateField("age", event.target.value)}
+            value={form.age}
+          >
+            <option value="">Selecciona tu año</option>
+            {birthYearOptions.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="space-y-2">
+          <span className="text-sm font-semibold text-white">Email</span>
+          <input
+            className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-[color:var(--accent)] focus:bg-white/7"
+            autoCapitalize="none"
+            autoComplete="email"
+            onChange={(event) => updateField("email", event.target.value)}
+            placeholder="nombre@correo.com"
+            type="email"
+            value={form.email}
+          />
+        </label>
 
         <label className="rounded-[1rem] border border-white/5 bg-white/[0.025] px-3 py-2 transition hover:bg-white/5">
           <div className="flex items-start gap-2.5">

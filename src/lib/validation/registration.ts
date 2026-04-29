@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getUniversityByName } from "@/lib/data/universities";
+import { findBlockedNameTerm, isAllowedRegistrationEmail } from "@/lib/validation/content-filter";
 
 const strictEmailSchema = z
   .string()
@@ -8,6 +9,9 @@ const strictEmailSchema = z
   .email()
   .refine((value) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value), {
     message: "Email must be a valid address",
+  })
+  .refine((value) => isAllowedRegistrationEmail(value), {
+    message: "Please enter a valid personal or school email address.",
   });
 
 export const registrationSchema = z
@@ -35,6 +39,10 @@ export const registrationSchema = z
   })
   .refine((data) => data.name.split(" ").filter((part) => part.trim().length > 0).length >= 2, {
     message: "Please enter first and last name.",
+    path: ["name"],
+  })
+  .refine((data) => !findBlockedNameTerm(data.name), {
+    message: "Please use a real name without profanity.",
     path: ["name"],
   });
 

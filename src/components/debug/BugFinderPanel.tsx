@@ -29,6 +29,8 @@ interface BugFinderPanelProps {
   events: BugEvent[];
   runtimeStats: BugFinderRuntimeStats;
   onClear: () => void;
+  onRecover: (force: boolean) => void;
+  recovering: boolean;
 }
 
 function formatTime(timestamp: number) {
@@ -63,7 +65,7 @@ function toLabelValue(value: unknown) {
   return String(value);
 }
 
-export function BugFinderPanel({ events, runtimeStats, onClear }: BugFinderPanelProps) {
+export function BugFinderPanel({ events, runtimeStats, onClear, onRecover, recovering }: BugFinderPanelProps) {
   const [open, setOpen] = useState(false);
   const issueCount = useMemo(
     () => events.filter((event) => event.level === "error" || event.level === "warning").length,
@@ -111,16 +113,34 @@ export function BugFinderPanel({ events, runtimeStats, onClear }: BugFinderPanel
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
               Live Diagnostics
             </p>
-            <button
-              className="rounded-md border border-white/15 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[color:var(--muted)] hover:text-white"
-              onClick={() => {
-                onClear();
-                setOpen(false);
-              }}
-              type="button"
-            >
-              Clear
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                className="rounded-md border border-white/15 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[color:var(--muted)] hover:text-white"
+                disabled={recovering}
+                onClick={() => onRecover(false)}
+                type="button"
+              >
+                {recovering ? "Recovering..." : "Recover"}
+              </button>
+              <button
+                className="rounded-md border border-red-300/30 bg-red-500/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-red-100 hover:bg-red-500/20"
+                disabled={recovering}
+                onClick={() => onRecover(true)}
+                type="button"
+              >
+                Force Reset
+              </button>
+              <button
+                className="rounded-md border border-white/15 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[color:var(--muted)] hover:text-white"
+                onClick={() => {
+                  onClear();
+                  setOpen(false);
+                }}
+                type="button"
+              >
+                Clear
+              </button>
+            </div>
           </div>
 
           <div className="mb-3 grid grid-cols-2 gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-3 text-[11px] uppercase tracking-[0.08em] text-[color:var(--muted)]">
