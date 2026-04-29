@@ -3,7 +3,24 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { LeaderboardList } from "@/components/leaderboard/LeaderboardList";
+import { decideRoomAcceptance } from "@/lib/game/public-room-guard";
 import type { AnswerFeedback, PublicRoomState } from "@/lib/types/game";
+
+const BATTLE_MODE_ENABLED =
+  (process.env.NEXT_PUBLIC_ENABLE_BATTLE_MODE ?? "").trim().toLowerCase() === "1" ||
+  (process.env.NEXT_PUBLIC_ENABLE_BATTLE_MODE ?? "").trim().toLowerCase() === "true" ||
+  (process.env.NEXT_PUBLIC_ENABLE_BATTLE_MODE ?? "").trim().toLowerCase() === "yes";
+
+function emitHostDebug(detail: Record<string, unknown>) {
+  window.dispatchEvent(
+    new CustomEvent("trivia:client-debug", {
+      detail: {
+        role: "host",
+        ...detail,
+      },
+    }),
+  );
+}
 
 function formatSeconds(iso: string | null, now: number, decimals = 0) {
   if (!iso) {
@@ -70,6 +87,9 @@ export function HostRoomClient() {
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const syncInFlightRef = useRef(false);
+  const lastAcceptedVersionRef = useRef(0);
+  const ignoredStaleStateCountRef = useRef(0);
+  const currentMatchIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,17 +102,68 @@ export function HostRoomClient() {
       syncInFlightRef.current = true;
 
       try {
-        const stateResponse = await fetch("/api/public/state", { cache: "no-store" });
+        const stateResponse = await fetch("/api/public/state", {
+          cache: "no-store",
+          headers: currentMatchIdRef.current
+            ? {
+                "x-trivia-current-match-id": currentMatchIdRef.current,
+              }
+            : undefined,
+        });
         const statePayload = await stateResponse.json();
 
         if (!stateResponse.ok || !statePayload.ok) {
+          if (statePayload?.error === "room_unavailable") {
+            return;
+          }
           throw new Error(statePayload.message ?? "No se pudo cargar la pantalla principal.");
         }
 
         const nextRoom = statePayload.data.room as PublicRoomState;
+        let accepted = true;
+        let reason = "";
+        let details = "";
+        let previousVersion = lastAcceptedVersionRef.current;
+        let previousPhase: PublicRoomState["phase"] | null = null;
 
-        if (!cancelled) {
-          setRoom(nextRoom);
+        setRoom((current) => {
+          if (current) {
+            previousVersion = current.version;
+            previousPhase = current.phase;
+          }
+
+          const decision = decideRoomAcceptance(current, nextRoom);
+          accepted = decision.accept;
+          reason = decision.reason;
+          details = decision.details;
+
+          return decision.accept ? nextRoom : current ?? nextRoom;
+        });
+
+        if (!accepted) {
+          ignoredStaleStateCountRef.current += 1;
+          emitHostDebug({
+            level: "warning",
+            event: "stale_state_ignored",
+            reason,
+            details,
+            previousVersion,
+            incomingVersion: nextRoom.version,
+            previousPhase,
+            incomingPhase: nextRoom.phase,
+            ignoredStaleStateCount: ignoredStaleStateCountRef.current,
+          });
+        } else {
+          lastAcceptedVersionRef.current = nextRoom.version;
+          currentMatchIdRef.current = nextRoom.currentMatchId;
+          emitHostDebug({
+            roomVersion: nextRoom.version,
+            lastAcceptedRoomVersion: nextRoom.version,
+            ignoredStaleStateCount: ignoredStaleStateCountRef.current,
+            tickDriver: nextRoom.players.player1?.playerId ?? nextRoom.players.player2?.playerId ?? null,
+            phase: nextRoom.phase,
+            currentMatchId: nextRoom.currentMatchId,
+          });
         }
 
         if (!cancelled) {
@@ -147,6 +218,9 @@ export function HostRoomClient() {
       case "idle":
         return "Escanea y entra a la arena.";
       case "lobby":
+        if (!BATTLE_MODE_ENABLED) {
+          return "Modo battle temporalmente desactivado. Sala en modo solo.";
+        }
         return room.players.player2 ? "Duelo listo para comenzar." : "Esperando al segundo jugador.";
       case "countdown":
         return "Preparando la arena.";

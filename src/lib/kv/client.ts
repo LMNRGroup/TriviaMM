@@ -1,5 +1,11 @@
 import { Redis } from "@upstash/redis";
-import { allowMemoryKvFallback, getKvConfig, hasKvConfig, preferMemoryKv } from "@/lib/utils/env";
+import {
+  allowMemoryKvFallback,
+  getKvConfig,
+  hasKvConfig,
+  isProductionRuntime,
+  preferMemoryKv,
+} from "@/lib/utils/env";
 
 type KvSetOptions = { ex?: number; nx?: boolean };
 type KvClient = Omit<Pick<Redis, "get" | "set" | "del" | "incr" | "expire">, "set"> & {
@@ -108,22 +114,61 @@ function isKvUnreachableError(error: unknown): boolean {
 /**
  * Single process-wide KV client.
  *
- * Safety rule: if Upstash is configured but unreachable, do not silently fail over to memory.
- * Memory KV is process-local and causes split-brain room state in multi-instance environments.
- * When KV is not configured at all, we run in memory mode to keep local/testing flows usable.
+ * Safety rule: in production, remote KV is authoritative.
+ * Memory KV is process-local and can cause split-brain room state in multi-instance deployments.
+ * Memory fallback is only allowed in production if explicitly overridden for emergency testing.
  */
 function createResilientKv(): KvClient {
   const memory = fallbackKv;
   let remote: Redis | null = null;
   const forceMemory = preferMemoryKv();
   const allowConfiguredFallback = allowMemoryKvFallback();
+  const productionRuntime = isProductionRuntime();
   const hasRemoteConfig = hasKvConfig();
   let memoryOnly = forceMemory || !hasRemoteConfig;
+  let productionMemoryWarningShown = false;
 
   runtimeMode = memoryOnly ? "memory" : hasRemoteConfig ? "remote" : "unconfigured";
 
+  function productionUnsafeReason() {
+    if (!productionRuntime) {
+      return null;
+    }
+
+    if (allowConfiguredFallback) {
+      return null;
+    }
+
+    if (runtimeMode === "remote") {
+      return null;
+    }
+
+    if (!hasRemoteConfig) {
+      return "Remote KV is not configured in production and memory fallback is disabled.";
+    }
+
+    return "Remote KV unavailable in production and memory fallback is disabled.";
+  }
+
+  function maybeWarnUnsafeProductionMemoryMode() {
+    if (!productionRuntime || !memoryOnly || !allowConfiguredFallback || productionMemoryWarningShown) {
+      return;
+    }
+
+    productionMemoryWarningShown = true;
+    console.error(
+      "[kv] Running in memory fallback mode in production due explicit override. This is unsafe for consistent gameplay.",
+    );
+  }
+
   async function run<T>(operation: (client: KvClient) => Promise<T>): Promise<T> {
     if (memoryOnly) {
+      const unsafe = productionUnsafeReason();
+      if (unsafe) {
+        throw new Error(`[kv] ${unsafe}`);
+      }
+
+      maybeWarnUnsafeProductionMemoryMode();
       return operation(memory);
     }
 
@@ -143,11 +188,14 @@ function createResilientKv(): KvClient {
           memoryOnly = true;
           remote = null;
           runtimeMode = "memory";
+          maybeWarnUnsafeProductionMemoryMode();
           return operation(memory);
         }
 
         throw new Error(
-          "[kv] Upstash Redis unreachable and memory fallback is disabled. Fix KV_REST_API_* or set KV_ALLOW_MEMORY_FALLBACK=true.",
+          productionRuntime
+            ? "[kv] Remote KV unavailable in production. Memory fallback is disabled for safe gameplay."
+            : "[kv] Upstash Redis unreachable and memory fallback is disabled.",
         );
       }
       throw error;

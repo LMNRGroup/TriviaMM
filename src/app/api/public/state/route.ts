@@ -2,13 +2,20 @@ import { ok, fail } from "@/lib/api/http";
 import { toPublicRoomState } from "@/lib/api/room-state";
 import { getKv } from "@/lib/kv/client";
 import { returningPlayerByIpKey } from "@/lib/kv/keys";
-import { getRoomState } from "@/lib/kv/room-store";
+import { ensurePublicRoom, getRoomState } from "@/lib/kv/room-store";
 import { getRegisteredPlayerById } from "@/lib/sheets/player-repo";
+import { getBaseUrl } from "@/lib/utils/env";
 import { getRequestIp } from "@/lib/utils/request";
 
 export async function GET(request: Request) {
   try {
-    const room = await getRoomState();
+    let room = await getRoomState();
+
+    if (!room) {
+      await ensurePublicRoom(getBaseUrl());
+      room = await getRoomState();
+    }
+
     if (!room) {
       return fail(
         "room_unavailable",
@@ -44,6 +51,9 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("public state error", error);
+    if (error instanceof Error && error.message.includes("[kv]")) {
+      return fail("kv_unavailable", 503, error.message);
+    }
     return fail("server_error", 500, "No se pudo cargar la sala publica.");
   }
 }

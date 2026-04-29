@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { HostRoomClient } from "@/components/host/HostRoomClient";
+import { decideRoomAcceptance } from "@/lib/game/public-room-guard";
 import type { PublicRoomState } from "@/lib/types/game";
 
 function formatSeconds(iso: string | null, now: number) {
@@ -17,23 +18,43 @@ function formatSeconds(iso: string | null, now: number) {
 export default function HomePage() {
   const [room, setRoom] = useState<PublicRoomState | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [currentMatchId, setCurrentMatchId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     async function syncRoom() {
       try {
-        const stateResponse = await fetch("/api/public/state", { cache: "no-store" });
+        const stateResponse = await fetch("/api/public/state", {
+          cache: "no-store",
+          headers: currentMatchId ? { "x-trivia-current-match-id": currentMatchId } : undefined,
+        });
         const statePayload = await stateResponse.json();
 
         if (!stateResponse.ok || !statePayload.ok) {
+          if (statePayload?.error === "room_unavailable") {
+            return;
+          }
           return;
         }
 
-        let nextRoom = statePayload.data.room as PublicRoomState;
+        const nextRoom = statePayload.data.room as PublicRoomState;
 
         if (!cancelled) {
-          setRoom(nextRoom);
+          let acceptedMatchId: string | null | undefined;
+          setRoom((current) => {
+            const decision = decideRoomAcceptance(current, nextRoom);
+            if (!decision.accept) {
+              return current ?? nextRoom;
+            }
+
+            acceptedMatchId = nextRoom.currentMatchId;
+            return nextRoom;
+          });
+
+          if (acceptedMatchId !== undefined) {
+            setCurrentMatchId(acceptedMatchId);
+          }
         }
       } catch {
         // Keep the display resilient even if polling fails briefly.
@@ -51,7 +72,7 @@ export default function HomePage() {
       window.clearInterval(poll);
       window.clearInterval(timer);
     };
-  }, []);
+  }, [currentMatchId]);
 
   const countdown = useMemo(() => {
     if (!room || room.phase !== "countdown") {

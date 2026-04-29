@@ -182,10 +182,14 @@ export interface RoomState {
   roomCode: string;
   hostSessionId: string;
   hostToken: string;
+  version: number;
   phase: RoomPhase;
+  /** Epoch milliseconds when the current phase began. */
+  phaseStartedAt: number;
   mode: RoomMode | null;
   createdAt: string;
-  updatedAt: string;
+  /** Epoch milliseconds of the latest persisted room mutation. */
+  updatedAt: number;
   expiresAt: string;
   currentMatchId: string | null;
   /** Real match start (countdown start); used for Sheets match records. */
@@ -262,10 +266,12 @@ export interface RoomState {
 /** Room payload safe to expose to browsers and unauthenticated callers. */
 export interface PublicRoomState {
   roomCode: string;
+  version: number;
   phase: RoomPhase;
+  phaseStartedAt: number;
   mode: RoomMode | null;
   createdAt: string;
-  updatedAt: string;
+  updatedAt: number;
   expiresAt: string;
   currentMatchId: string | null;
   matchStartedAt: MatchStartedAt;

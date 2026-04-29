@@ -17,14 +17,18 @@ export function createInitialRoomState({
   createdAt,
   expiresAt,
 }: CreateInitialRoomStateInput): RoomState {
+  const createdAtMs = Date.parse(createdAt);
+
   return {
     roomCode,
     hostSessionId,
     hostToken,
+    version: 1,
     phase: "idle",
+    phaseStartedAt: Number.isFinite(createdAtMs) ? createdAtMs : Date.now(),
     mode: null,
     createdAt,
-    updatedAt: createdAt,
+    updatedAt: Number.isFinite(createdAtMs) ? createdAtMs : Date.now(),
     expiresAt,
     currentMatchId: null,
     matchStartedAt: null,

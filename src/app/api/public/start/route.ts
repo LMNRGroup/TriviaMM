@@ -5,7 +5,7 @@ import { MATCH_QUESTION_COUNT, PUBLIC_ROOM_CODE } from "@/lib/game/constants";
 import { startMatch } from "@/lib/game/engine";
 import { getRoomState, saveQuestionBank, saveRoomState, withRoomMutationLock } from "@/lib/kv/room-store";
 import { getRandomQuestions } from "@/lib/sheets/question-repo";
-import { isMultiplayerEnabled } from "@/lib/utils/env";
+import { isBattleModeEnabled, isMultiplayerEnabled } from "@/lib/utils/env";
 import { publicStartSchema } from "@/lib/validation/room";
 
 export async function POST(request: Request) {
@@ -25,6 +25,7 @@ export async function POST(request: Request) {
 
   try {
     const multiplayerEnabled = isMultiplayerEnabled();
+    const battleModeEnabled = isBattleModeEnabled();
     const questions = await getRandomQuestions(MATCH_QUESTION_COUNT);
 
     if (questions.length === 0) {
@@ -56,6 +57,10 @@ export async function POST(request: Request) {
         throw new Error("multiplayer_disabled");
       }
 
+      if (!battleModeEnabled && parsed.data.mode === "battle") {
+        throw new Error("battle_mode_disabled");
+      }
+
       if (parsed.data.mode === "battle" && !room.players.player2) {
         throw new Error("missing_player_2");
       }
@@ -65,8 +70,8 @@ export async function POST(request: Request) {
       }
 
       const { room: nextRoom } = startMatch(room, parsed.data.mode, questions, new Date().toISOString());
-      await Promise.all([saveQuestionBank(room.roomCode, questions), saveRoomState(nextRoom)]);
-      return nextRoom;
+      const [, persistedRoom] = await Promise.all([saveQuestionBank(room.roomCode, questions), saveRoomState(nextRoom)]);
+      return persistedRoom;
     });
 
     return ok({ room: toPublicRoomState(startedRoom) });
@@ -98,6 +103,14 @@ export async function POST(request: Request) {
 
       if (error.message === "multiplayer_disabled") {
         return fail("multiplayer_disabled", 409, "Multiplayer esta temporalmente desactivado.");
+      }
+
+      if (error.message === "battle_mode_disabled") {
+        return fail("battle_mode_disabled", 409, "Battle mode esta temporalmente desactivado.");
+      }
+
+      if (error.message.includes("[kv]")) {
+        return fail("kv_unavailable", 503, error.message);
       }
     }
 

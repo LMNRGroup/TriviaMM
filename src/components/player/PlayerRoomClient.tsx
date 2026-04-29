@@ -7,6 +7,7 @@ import {
   PUERTO_RICO_MUNICIPALITY_OPTIONS,
   US_STATE_AND_TERRITORY_OPTIONS,
 } from "@/lib/data/regions";
+import { decideRoomAcceptance } from "@/lib/game/public-room-guard";
 import type { PublicRoomState, RoomMode } from "@/lib/types/game";
 import { registrationSchema } from "@/lib/validation/registration";
 
@@ -51,7 +52,10 @@ interface FormState {
 }
 
 const STORAGE_KEY = "trivia:player:public";
-const GAMEPLAY_REGRESSION_GUARD_MS = 90_000;
+const BATTLE_MODE_ENABLED =
+  (process.env.NEXT_PUBLIC_ENABLE_BATTLE_MODE ?? "").trim().toLowerCase() === "1" ||
+  (process.env.NEXT_PUBLIC_ENABLE_BATTLE_MODE ?? "").trim().toLowerCase() === "true" ||
+  (process.env.NEXT_PUBLIC_ENABLE_BATTLE_MODE ?? "").trim().toLowerCase() === "yes";
 
 type ClientApiError = Error & {
   code?: string;
@@ -138,66 +142,6 @@ function isGameplayPhase(phase: PublicRoomState["phase"]) {
   );
 }
 
-function isPlayerInRoom(room: PublicRoomState, playerId: string) {
-  return room.players.player1?.playerId === playerId || room.players.player2?.playerId === playerId;
-}
-
-function parseIsoMilliseconds(value: string | null | undefined) {
-  if (!value) {
-    return null;
-  }
-
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function chooseStableRoom({
-  current,
-  candidate,
-  sessionPlayerId,
-  lastGameplayProgressAt,
-}: {
-  current: PublicRoomState | null;
-  candidate: PublicRoomState;
-  sessionPlayerId: string | null | undefined;
-  lastGameplayProgressAt: number | null;
-}) {
-  if (!current) {
-    return candidate;
-  }
-
-  const currentUpdatedAt = parseIsoMilliseconds(current.updatedAt);
-  const candidateUpdatedAt = parseIsoMilliseconds(candidate.updatedAt);
-
-  if (
-    currentUpdatedAt !== null &&
-    candidateUpdatedAt !== null &&
-    candidateUpdatedAt < currentUpdatedAt
-  ) {
-    return current;
-  }
-
-  if (
-    sessionPlayerId &&
-    isGameplayPhase(current.phase) &&
-    Boolean(current.currentMatchId) &&
-    isPlayerInRoom(current, sessionPlayerId) &&
-    (candidate.phase === "idle" || candidate.phase === "lobby") &&
-    !candidate.currentMatchId
-  ) {
-    if (
-      typeof lastGameplayProgressAt === "number" &&
-      Date.now() - lastGameplayProgressAt > GAMEPLAY_REGRESSION_GUARD_MS
-    ) {
-      return candidate;
-    }
-
-    return current;
-  }
-
-  return candidate;
-}
-
 function buildApiError(payload: unknown, status: number, fallbackMessage: string): ClientApiError {
   const message =
     payload && typeof payload === "object" && "message" in payload && typeof payload.message === "string"
@@ -223,6 +167,17 @@ function isTransientRoomRoutingErrorCode(code: string | null) {
   return code === "room_unavailable" || code === "room_not_found";
 }
 
+function emitPlayerDebug(detail: Record<string, unknown>) {
+  window.dispatchEvent(
+    new CustomEvent("trivia:client-debug", {
+      detail: {
+        role: "player",
+        ...detail,
+      },
+    }),
+  );
+}
+
 export function PlayerRoomClient() {
   const [room, setRoom] = useState<PublicRoomState | null>(null);
   const [rememberedPlayer, setRememberedPlayer] = useState<RememberedPlayer | null>(null);
@@ -235,22 +190,88 @@ export function PlayerRoomClient() {
   const [isStarting, setIsStarting] = useState(false);
   const [isPending, startTransition] = useTransition();
   const syncInFlightRef = useRef(false);
-  const lastGameplayProgressAtRef = useRef<number | null>(null);
   const lastGameplayFingerprintRef = useRef<string | null>(null);
+  const lastAcceptedRoomVersionRef = useRef<number>(0);
+  const lastAcceptedPhaseRef = useRef<PublicRoomState["phase"] | null>(null);
+  const currentMatchIdRef = useRef<string | null>(null);
+  const ignoredStaleStateCountRef = useRef(0);
   const [now, setNow] = useState(() => Date.now());
 
-  function trackGameplayProgress(nextRoom: PublicRoomState) {
+  const emitAcceptanceDebug = useCallback((roomState: PublicRoomState, tickDriver: string | null) => {
+    lastAcceptedRoomVersionRef.current = roomState.version;
+    lastAcceptedPhaseRef.current = roomState.phase;
+    currentMatchIdRef.current = roomState.currentMatchId;
+    emitPlayerDebug({
+      roomVersion: roomState.version,
+      lastAcceptedRoomVersion: roomState.version,
+      ignoredStaleStateCount: ignoredStaleStateCountRef.current,
+      tickDriver,
+      phase: roomState.phase,
+      currentMatchId: roomState.currentMatchId,
+    });
+  }, []);
+
+  const trackGameplayProgress = useCallback((nextRoom: PublicRoomState) => {
     if (!isGameplayPhase(nextRoom.phase) || !nextRoom.currentMatchId) {
       lastGameplayFingerprintRef.current = null;
       return;
     }
 
-    const fingerprint = `${nextRoom.currentMatchId}:${nextRoom.updatedAt}`;
+    const fingerprint = `${nextRoom.currentMatchId}:${nextRoom.version}`;
     if (lastGameplayFingerprintRef.current !== fingerprint) {
       lastGameplayFingerprintRef.current = fingerprint;
-      lastGameplayProgressAtRef.current = Date.now();
     }
-  }
+  }, []);
+
+  const acceptRoomCandidate = useCallback((candidate: PublicRoomState, source: string, tickDriver: string | null) => {
+    let accepted = true;
+    let acceptedRoom = candidate;
+    let decisionDetails = "";
+    let decisionReason = "";
+    let previousVersion = lastAcceptedRoomVersionRef.current;
+    let previousPhase: PublicRoomState["phase"] | null = lastAcceptedPhaseRef.current;
+
+    setRoom((current) => {
+      if (current) {
+        previousVersion = current.version;
+        previousPhase = current.phase;
+      }
+
+      const decision = decideRoomAcceptance(current, candidate);
+      decisionDetails = decision.details;
+      decisionReason = decision.reason;
+
+      if (!decision.accept) {
+        accepted = false;
+        acceptedRoom = current ?? candidate;
+        return current ?? candidate;
+      }
+
+      acceptedRoom = candidate;
+      return candidate;
+    });
+
+    if (!accepted) {
+      ignoredStaleStateCountRef.current += 1;
+      emitPlayerDebug({
+        level: "warning",
+        event: "stale_state_ignored",
+        source,
+        reason: decisionReason,
+        details: decisionDetails,
+        previousVersion,
+        incomingVersion: candidate.version,
+        previousPhase,
+        incomingPhase: candidate.phase,
+        ignoredStaleStateCount: ignoredStaleStateCountRef.current,
+      });
+      return acceptedRoom;
+    }
+
+    emitAcceptanceDebug(acceptedRoom, tickDriver);
+    trackGameplayProgress(acceptedRoom);
+    return acceptedRoom;
+  }, [emitAcceptanceDebug, trackGameplayProgress]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -325,10 +346,10 @@ export function PlayerRoomClient() {
     const response = await fetch("/api/public/state", {
       cache: "no-store",
       headers:
-        session?.playerId || room?.currentMatchId
+        session?.playerId || currentMatchIdRef.current
           ? {
               ...(session?.playerId ? { "x-trivia-player-id": session.playerId } : {}),
-              ...(room?.currentMatchId ? { "x-trivia-current-match-id": room.currentMatchId } : {}),
+              ...(currentMatchIdRef.current ? { "x-trivia-current-match-id": currentMatchIdRef.current } : {}),
             }
           : undefined,
     });
@@ -341,44 +362,59 @@ export function PlayerRoomClient() {
     const nextRoom = payload.data.room as PublicRoomState;
     const remoteRememberedPlayer = (payload.data.rememberedPlayer as RememberedPlayer | null) ?? null;
 
-    let resolvedRoom = nextRoom;
-    setRoom((current) => {
-      resolvedRoom = chooseStableRoom({
-        current,
-        candidate: nextRoom,
-        sessionPlayerId: session?.playerId,
-        lastGameplayProgressAt: lastGameplayProgressAtRef.current,
-      });
-      return resolvedRoom;
-    });
-
-    trackGameplayProgress(resolvedRoom);
+    const tickDriverId = nextRoom.players.player1?.playerId ?? nextRoom.players.player2?.playerId ?? null;
+    const resolvedRoom = acceptRoomCandidate(nextRoom, "poll_state", tickDriverId);
     setRememberedPlayer((current) => remoteRememberedPlayer ?? current);
     setError(null);
     return resolvedRoom;
-  }, [room?.currentMatchId, session?.playerId]);
+  }, [acceptRoomCandidate, session]);
 
   const joinWithPlayer = useCallback(async (playerId: string, profile?: RememberedPlayer) => {
     const sessionId = crypto.randomUUID();
-    const response = await fetch("/api/public/join", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-trivia-allow-room-create": !session?.playerId && !room?.currentMatchId ? "1" : "0",
-      },
-      body: JSON.stringify({
-        playerId,
-        sessionId,
-      }),
-    });
-    const payload = await response.json();
+    let response: Response | null = null;
+    let payload: unknown = null;
 
-    if (!response.ok || !payload.ok) {
-      throw buildApiError(payload, response.status, "No fue posible entrar a la sala.");
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      response = await fetch("/api/public/join", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-trivia-allow-room-create": !session?.playerId && !currentMatchIdRef.current ? "1" : "0",
+        },
+        body: JSON.stringify({
+          playerId,
+          sessionId,
+        }),
+      });
+      payload = await response.json();
+
+      if (response.ok && payload && typeof payload === "object" && (payload as { ok?: boolean }).ok) {
+        break;
+      }
+
+      const code =
+        payload && typeof payload === "object" && typeof (payload as { error?: unknown }).error === "string"
+          ? ((payload as { error?: string }).error ?? null)
+          : null;
+      if (!isTransientRoomRoutingErrorCode(code) || attempt === 2) {
+        break;
+      }
+
+      await wait(150);
     }
 
-    const joinedPlayer = payload.data.player as JoinApiPlayer;
-    const joinedRoom = payload.data.room as PublicRoomState | undefined;
+    if (!response || !payload || !response.ok || !(payload as { ok?: boolean }).ok) {
+      throw buildApiError(payload, response?.status ?? 500, "No fue posible entrar a la sala.");
+    }
+
+    const joinedPayload = payload as {
+      data: {
+        player: JoinApiPlayer;
+        room?: PublicRoomState;
+      };
+    };
+    const joinedPlayer = joinedPayload.data.player as JoinApiPlayer;
+    const joinedRoom = joinedPayload.data.room as PublicRoomState | undefined;
     setJoinInFlightPlayerId(joinedPlayer.playerId);
     persistSession({
       playerId: joinedPlayer.playerId,
@@ -393,17 +429,8 @@ export function PlayerRoomClient() {
     setRememberedPlayer(null);
 
     if (joinedRoom) {
-      let resolvedRoom = joinedRoom;
-      setRoom((current) => {
-        resolvedRoom = chooseStableRoom({
-          current,
-          candidate: joinedRoom,
-          sessionPlayerId: joinedPlayer.playerId,
-          lastGameplayProgressAt: lastGameplayProgressAtRef.current,
-        });
-        return resolvedRoom;
-      });
-      trackGameplayProgress(resolvedRoom);
+      const tickDriverId = joinedRoom.players.player1?.playerId ?? joinedRoom.players.player2?.playerId ?? null;
+      acceptRoomCandidate(joinedRoom, "join_response", tickDriverId);
     }
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -431,7 +458,7 @@ export function PlayerRoomClient() {
     }
 
     setJoinInFlightPlayerId(null);
-  }, [form.age, form.email, loadRoomState, room?.currentMatchId, session?.playerId]);
+  }, [acceptRoomCandidate, form.age, form.email, loadRoomState, session]);
 
   useEffect(() => {
     let cancelled = false;
@@ -451,6 +478,14 @@ export function PlayerRoomClient() {
             nextRoom.players.player2?.playerId === session?.playerId);
         const tickDriverId = nextRoom.players.player1?.playerId ?? nextRoom.players.player2?.playerId ?? null;
         const isTickDriver = tickDriverId !== null && tickDriverId === session?.playerId;
+        emitPlayerDebug({
+          roomVersion: nextRoom.version,
+          lastAcceptedRoomVersion: lastAcceptedRoomVersionRef.current,
+          ignoredStaleStateCount: ignoredStaleStateCountRef.current,
+          tickDriver: tickDriverId,
+          phase: nextRoom.phase,
+          currentMatchId: nextRoom.currentMatchId,
+        });
 
         const shouldAdvanceMatch =
           isSeatedPlayer &&
@@ -472,17 +507,8 @@ export function PlayerRoomClient() {
 
             if (tickResponse.ok && tickPayload.ok && !cancelled) {
               const tickRoom = tickPayload.data.room as PublicRoomState;
-              let resolvedRoom = tickRoom;
-              setRoom((current) => {
-                resolvedRoom = chooseStableRoom({
-                  current,
-                  candidate: tickRoom,
-                  sessionPlayerId: session?.playerId,
-                  lastGameplayProgressAt: lastGameplayProgressAtRef.current,
-                });
-                return resolvedRoom;
-              });
-              trackGameplayProgress(resolvedRoom);
+              const tickDriver = tickRoom.players.player1?.playerId ?? tickRoom.players.player2?.playerId ?? null;
+              acceptRoomCandidate(tickRoom, "tick_response", tickDriver);
               break;
             }
 
@@ -500,11 +526,12 @@ export function PlayerRoomClient() {
       } catch (syncError) {
         if (!cancelled) {
           const errorCode = getApiErrorCode(syncError);
+          const lastPhase = lastAcceptedPhaseRef.current;
           if (
             isTransientRoomRoutingErrorCode(errorCode) &&
-            room &&
-            isGameplayPhase(room.phase) &&
-            Boolean(room.currentMatchId)
+            Boolean(currentMatchIdRef.current) &&
+            lastPhase !== null &&
+            isGameplayPhase(lastPhase)
           ) {
             return;
           }
@@ -527,7 +554,7 @@ export function PlayerRoomClient() {
       window.clearInterval(poll);
       window.clearInterval(timer);
     };
-  }, [loadRoomState, room, session?.controllerToken, session?.playerId]);
+  }, [acceptRoomCandidate, loadRoomState, session?.controllerToken, session?.playerId]);
 
   useEffect(() => {
     if (!session || !playerSeat?.playerId) {
@@ -658,29 +685,45 @@ export function PlayerRoomClient() {
       return;
     }
 
+    if (mode === "battle" && !BATTLE_MODE_ENABLED) {
+      setError("Battle mode esta temporalmente desactivado.");
+      return;
+    }
+
     setIsStarting(true);
 
     try {
-      const response = await fetch("/api/public/start", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          playerId: session.playerId,
-          controllerToken: session.controllerToken,
-          mode,
-        }),
-      });
-      const payload = await response.json();
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const response = await fetch("/api/public/start", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            playerId: session.playerId,
+            controllerToken: session.controllerToken,
+            mode,
+          }),
+        });
+        const payload = await response.json();
 
-      if (!response.ok || !payload.ok) {
+        if (response.ok && payload.ok) {
+          const nextRoom = payload.data.room as PublicRoomState;
+          const tickDriverId = nextRoom.players.player1?.playerId ?? nextRoom.players.player2?.playerId ?? null;
+          acceptRoomCandidate(nextRoom, "start_response", tickDriverId);
+          setError(null);
+          return;
+        }
+
+        const code = payload && typeof payload.error === "string" ? payload.error : null;
+        if (isTransientRoomRoutingErrorCode(code) && attempt < 2) {
+          await wait(150);
+          continue;
+        }
+
         setError(payload.message ?? "No se pudo iniciar la partida.");
         return;
       }
-
-      setRoom(payload.data.room as PublicRoomState);
-      setError(null);
     } finally {
       setIsStarting(false);
     }
@@ -1110,10 +1153,16 @@ export function PlayerRoomClient() {
             Sala
           </p>
           <h2 className="font-display mt-4 text-3xl font-black uppercase tracking-[0.08em]">
-            {room.players.player2 ? "El duelo se está preparando" : isPlayer1 ? "Listo para comenzar" : "Esperando al jugador 1"}
+            {room.players.player2
+              ? "El duelo se está preparando"
+              : isPlayer1
+              ? "Listo para comenzar"
+              : "Esperando al jugador 1"}
           </h2>
           <p className="mt-4 text-base leading-7 text-[color:var(--muted)]">
-            {room.players.player2
+            {!BATTLE_MODE_ENABLED
+              ? "El modo battle está temporalmente desactivado. Esta sala funciona en modo solo para asegurar estabilidad."
+              : room.players.player2
               ? "Jugador 2 ya entró. La cuenta regresiva del duelo arrancará automáticamente."
               : isPlayer1
                 ? "Tienes 60 segundos para comenzar solo o esperar a que entre un segundo jugador."

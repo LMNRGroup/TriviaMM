@@ -29,6 +29,11 @@ function plusMs(baseIso: string, milliseconds: number) {
   return new Date(new Date(baseIso).getTime() + milliseconds).toISOString();
 }
 
+function toMs(iso: string) {
+  const parsed = Date.parse(iso);
+  return Number.isFinite(parsed) ? parsed : Date.now();
+}
+
 function activePlayers(room: RoomState) {
   return [room.players.player1, room.players.player2].filter((player): player is Player => {
     if (!player) return false;
@@ -109,11 +114,13 @@ function resetPlayers(room: RoomState) {
 export function startMatch(room: RoomState, mode: RoomMode, questions: Question[], nowIso: string) {
   const match = createMatch(room, mode, questions, nowIso);
   const countdownDurationMs = mode === "battle" ? BATTLE_COUNTDOWN_DURATION_MS : SOLO_COUNTDOWN_DURATION_MS;
+  const nowMs = toMs(nowIso);
 
   return {
     room: {
       ...room,
       phase: "countdown" as const,
+      phaseStartedAt: nowMs,
       mode,
       currentMatchId: match.matchId,
       matchStartedAt: nowIso,
@@ -355,6 +362,7 @@ export async function finalizeQuestion({
     room: {
       ...nextRoom,
       phase: "answer-lock" as const,
+      phaseStartedAt: toMs(nowIso),
       currentQuestion: {
         ...nextRoom.currentQuestion,
         answerLockEndsAt: plusMs(nowIso, ANSWER_LOCK_DURATION_MS),
@@ -460,9 +468,12 @@ export async function finalizeMatch(room: RoomState, nowIso: string) {
 }
 
 export function resetRoom(room: RoomState, nowIso: string): RoomState {
+  const nowMs = toMs(nowIso);
+
   return {
     ...room,
     phase: "idle",
+    phaseStartedAt: nowMs,
     mode: null,
     currentMatchId: null,
     matchStartedAt: null,
@@ -529,7 +540,7 @@ export function resetRoom(room: RoomState, nowIso: string): RoomState {
       player1: null,
       player2: null,
     },
-    updatedAt: nowIso,
+    updatedAt: nowMs,
   };
 }
 
@@ -571,6 +582,7 @@ export async function tickRoom({
       room: {
         ...room,
         phase: "question-read",
+        phaseStartedAt: toMs(nowIso),
         currentQuestion: buildQuestionReadState(nextQuestion, room, nowIso),
         answers: {
           player1: null,
@@ -594,6 +606,7 @@ export async function tickRoom({
       room: {
         ...room,
         phase: "question",
+        phaseStartedAt: toMs(nowIso),
       },
       transitionApplied: true,
     };
@@ -617,6 +630,7 @@ export async function tickRoom({
         room: {
           ...resetRoom(room, nowIso),
           phase: "reset",
+          phaseStartedAt: toMs(nowIso),
           countdown: {
             startedAt: nowIso,
             endsAt: plusMs(nowIso, FINISHED_DURATION_MS),
@@ -635,6 +649,7 @@ export async function tickRoom({
         room: {
           ...room,
           phase: "question-read",
+          phaseStartedAt: toMs(nowIso),
           currentQuestion: buildQuestionReadState(nextQuestion, room, nowIso),
           answers: {
             player1: null,
@@ -653,10 +668,15 @@ export async function tickRoom({
     return {
       room:
         room.mode === "battle"
-          ? { ...finalized.room, phase: "battle-result" }
+          ? {
+              ...finalized.room,
+              phase: "battle-result",
+              phaseStartedAt: toMs(nowIso),
+            }
           : {
               ...finalized.room,
               phase: "leaderboard",
+              phaseStartedAt: toMs(nowIso),
               leaderboard: {
                 ...finalized.room.leaderboard,
                 shownAt: nowIso,
@@ -671,6 +691,7 @@ export async function tickRoom({
       room: {
         ...room,
         phase: "leaderboard",
+        phaseStartedAt: toMs(nowIso),
         leaderboard: {
           ...room.leaderboard,
           shownAt: nowIso,
@@ -689,6 +710,7 @@ export async function tickRoom({
       room: {
         ...room,
         phase: "finished",
+        phaseStartedAt: toMs(nowIso),
         countdown: {
           startedAt: nowIso,
           endsAt: plusMs(nowIso, FINISHED_DURATION_MS),

@@ -15,6 +15,7 @@ import {
   roomPlayersKey,
   roomQuestionBankKey,
   roomStateKey,
+  roomVersionKey,
 } from "@/lib/kv/keys";
 import { createHostToken, createSessionId } from "@/lib/utils/ids";
 
@@ -87,6 +88,7 @@ export async function ensurePublicRoom(baseUrl: string) {
 
   await Promise.all([
     kv.set(roomStateKey(PUBLIC_ROOM_CODE), room, { ex: ROOM_TTL_SECONDS }),
+    kv.set(roomVersionKey(PUBLIC_ROOM_CODE), room.version, { ex: ROOM_TTL_SECONDS }),
     kv.set(roomMetaKey(PUBLIC_ROOM_CODE), meta, { ex: ROOM_TTL_SECONDS }),
     kv.set(
       roomHostKey(PUBLIC_ROOM_CODE),
@@ -141,9 +143,21 @@ export async function getRoomState(roomCode = PUBLIC_ROOM_CODE) {
 
 export async function saveRoomState(room: RoomState) {
   const kv = getKv();
+  const versionKey = roomVersionKey(room.roomCode);
+  let nextVersion = await kv.incr(versionKey);
+
+  if (nextVersion <= room.version) {
+    nextVersion = room.version + 1;
+    await kv.set(versionKey, nextVersion, { ex: ROOM_TTL_SECONDS });
+  } else {
+    await kv.expire(versionKey, ROOM_TTL_SECONDS);
+  }
+
+  const nowMs = Date.now();
   const updatedRoom: RoomState = {
     ...room,
-    updatedAt: new Date().toISOString(),
+    version: nextVersion,
+    updatedAt: nowMs,
   };
 
   await kv.set(roomStateKey(room.roomCode), updatedRoom, { ex: ROOM_TTL_SECONDS });
@@ -190,6 +204,7 @@ export async function joinRoom(player: Player) {
   const updatedRoom: RoomState = {
     ...room,
     phase: "lobby",
+    phaseStartedAt: room.phase === "lobby" ? room.phaseStartedAt : Date.now(),
     players: {
       ...room.players,
       [slotKey]: player,
@@ -208,7 +223,7 @@ export async function joinRoom(player: Player) {
     },
   };
 
-  await Promise.all([
+  const [persistedRoom] = await Promise.all([
     saveRoomState(updatedRoom),
     kv.set(roomPlayerKey(player.roomCode, player.playerId), player, { ex: ROOM_TTL_SECONDS }),
     kv.set(
@@ -221,7 +236,7 @@ export async function joinRoom(player: Player) {
     ),
   ]);
 
-  return updatedRoom;
+  return persistedRoom;
 }
 
 export async function getRoomPlayer(roomCode: string, playerId: string) {

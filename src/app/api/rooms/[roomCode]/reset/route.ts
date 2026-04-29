@@ -1,7 +1,7 @@
 import { ok, fail } from "@/lib/api/http";
 import { toPublicRoomState } from "@/lib/api/room-state";
 import { requireHost } from "@/lib/api/room-auth";
-import { clearQuestionBank, getRoomState, saveRoomState } from "@/lib/kv/room-store";
+import { clearQuestionBank, getRoomState, saveRoomState, withRoomMutationLock } from "@/lib/kv/room-store";
 import { resetRoom } from "@/lib/game/engine";
 import { resetRoomSchema, roomCodeSchema } from "@/lib/validation/room";
 
@@ -32,21 +32,33 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   try {
-    const room = await getRoomState(parsedRoomCode.data);
+    const resetRoomState = await withRoomMutationLock(parsedRoomCode.data, async () => {
+      const room = await getRoomState(parsedRoomCode.data);
 
-    if (!room) {
-      return fail("room_not_found", 404, "Room not found");
-    }
+      if (!room) {
+        throw new Error("room_not_found");
+      }
 
-    if (!requireHost(room, parsed.data.hostToken)) {
-      return fail("invalid_host_token", 403, "Host token is invalid");
-    }
+      if (!requireHost(room, parsed.data.hostToken)) {
+        throw new Error("invalid_host_token");
+      }
 
-    const updatedRoom = resetRoom(room, new Date().toISOString());
-    await Promise.all([saveRoomState(updatedRoom), clearQuestionBank(parsedRoomCode.data)]);
+      const updatedRoom = resetRoom(room, new Date().toISOString());
+      const [persistedRoom] = await Promise.all([saveRoomState(updatedRoom), clearQuestionBank(parsedRoomCode.data)]);
+      return persistedRoom;
+    });
 
-    return ok({ room: toPublicRoomState(updatedRoom) });
+    return ok({ room: toPublicRoomState(resetRoomState) });
   } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === "room_not_found") {
+        return fail("room_not_found", 404, "Room not found");
+      }
+
+      if (error.message === "invalid_host_token") {
+        return fail("invalid_host_token", 403, "Host token is invalid");
+      }
+    }
     console.error("reset room error", error);
     return fail("server_error", 500, "Unable to reset room");
   }

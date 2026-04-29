@@ -81,7 +81,9 @@ function toPublicLeaderboardEntry(entry: LeaderboardEntry): PublicLeaderboardEnt
 export function toPublicRoomState(room: RoomState): PublicRoomState {
   return {
     roomCode: room.roomCode,
+    version: room.version,
     phase: room.phase,
+    phaseStartedAt: room.phaseStartedAt,
     mode: room.mode,
     createdAt: room.createdAt,
     updatedAt: room.updatedAt,
@@ -117,13 +119,17 @@ export function toPublicRoomState(room: RoomState): PublicRoomState {
 }
 
 /** Minimal public room slice for join responses (no tokens). */
-export function toPublicRoomJoinSlice(room: Pick<RoomState, "phase" | "mode" | "lobby"> & { players: RoomState["players"] }): {
+export function toPublicRoomJoinSlice(room: Pick<RoomState, "version" | "phaseStartedAt" | "phase" | "mode" | "lobby"> & { players: RoomState["players"] }): {
+  version: number;
+  phaseStartedAt: number;
   phase: RoomState["phase"];
   mode: RoomState["mode"];
   lobby: RoomState["lobby"];
   players: PublicRoomState["players"];
 } {
   return {
+    version: room.version,
+    phaseStartedAt: room.phaseStartedAt,
     phase: room.phase,
     mode: room.mode,
     lobby: room.lobby,

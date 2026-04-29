@@ -4,7 +4,7 @@ import { requireHost } from "@/lib/api/room-auth";
 import { startMatch } from "@/lib/game/engine";
 import { getRoomState, saveQuestionBank, saveRoomState, withRoomMutationLock } from "@/lib/kv/room-store";
 import { getRandomQuestions } from "@/lib/sheets/question-repo";
-import { isMultiplayerEnabled } from "@/lib/utils/env";
+import { isBattleModeEnabled, isMultiplayerEnabled } from "@/lib/utils/env";
 import { roomCodeSchema, startRoomSchema } from "@/lib/validation/room";
 import { MATCH_QUESTION_COUNT } from "@/lib/game/constants";
 
@@ -36,6 +36,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   try {
     const multiplayerEnabled = isMultiplayerEnabled();
+    const battleModeEnabled = isBattleModeEnabled();
     const questions = await getRandomQuestions(MATCH_QUESTION_COUNT);
 
     if (questions.length === 0) {
@@ -65,6 +66,10 @@ export async function POST(request: Request, context: RouteContext) {
         throw new Error("multiplayer_disabled");
       }
 
+      if (!battleModeEnabled && parsed.data.mode === "battle") {
+        throw new Error("battle_mode_disabled");
+      }
+
       if (parsed.data.mode === "battle" && !room.players.player2) {
         throw new Error("missing_player_2");
       }
@@ -74,8 +79,8 @@ export async function POST(request: Request, context: RouteContext) {
       }
 
       const { room: nextRoom } = startMatch(room, parsed.data.mode, questions, new Date().toISOString());
-      await Promise.all([saveQuestionBank(parsedRoomCode.data, questions), saveRoomState(nextRoom)]);
-      return nextRoom;
+      const [, persistedRoom] = await Promise.all([saveQuestionBank(parsedRoomCode.data, questions), saveRoomState(nextRoom)]);
+      return persistedRoom;
     });
 
     return ok({ room: toPublicRoomState(startedRoom) });
@@ -103,6 +108,10 @@ export async function POST(request: Request, context: RouteContext) {
 
       if (error.message === "multiplayer_disabled") {
         return fail("multiplayer_disabled", 409, "Multiplayer is temporarily disabled");
+      }
+
+      if (error.message === "battle_mode_disabled") {
+        return fail("battle_mode_disabled", 409, "Battle mode is temporarily disabled");
       }
     }
 

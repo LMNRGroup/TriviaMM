@@ -37,6 +37,9 @@ export async function POST(request: Request) {
     return ok({ player });
   } catch (error) {
     console.error("registration error", error);
+    if (error instanceof Error && error.message.includes("[kv]")) {
+      return fail("kv_unavailable", 503, error.message);
+    }
     return fail("server_error", 500, "Unable to save registration");
   }
 }

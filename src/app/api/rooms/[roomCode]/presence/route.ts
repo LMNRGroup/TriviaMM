@@ -1,6 +1,6 @@
 import { ok, fail } from "@/lib/api/http";
 import { findPlayerById, requireHost, requirePlayerToken } from "@/lib/api/room-auth";
-import { getRoomState, saveRoomPlayer, saveRoomState } from "@/lib/kv/room-store";
+import { getRoomState, saveRoomPlayer } from "@/lib/kv/room-store";
 import { presenceSchema } from "@/lib/validation/answer";
 import { roomCodeSchema } from "@/lib/validation/room";
 
@@ -44,11 +44,7 @@ export async function POST(request: Request, context: RouteContext) {
         return fail("invalid_host_token", 403, "Host token is invalid");
       }
 
-      const updated = {
-        ...room,
-        updatedAt: nowIso,
-      };
-      await saveRoomState(updated);
+      // Host presence is tracked out-of-band; avoid room writes to prevent stale-state overwrite races.
       return ok({ lastSeenAt: nowIso });
     }
 
@@ -58,21 +54,12 @@ export async function POST(request: Request, context: RouteContext) {
       return fail("invalid_player_token", 403, "Player token is invalid");
     }
 
-    const slotKey = player.slot === 1 ? "player1" : "player2";
     const updatedPlayer = {
       ...player,
       lastSeenAt: nowIso,
       status: "connected" as const,
     };
-    const updatedRoom = {
-      ...room,
-      players: {
-        ...room.players,
-        [slotKey]: updatedPlayer,
-      },
-    };
-
-    await Promise.all([saveRoomState(updatedRoom), saveRoomPlayer(parsedRoomCode.data, updatedPlayer)]);
+    await saveRoomPlayer(parsedRoomCode.data, updatedPlayer);
     return ok({ lastSeenAt: nowIso });
   } catch (error) {
     console.error("presence error", error);

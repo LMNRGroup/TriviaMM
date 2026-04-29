@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BugFinderPanel, type BugEvent, type BugEventLevel, type BugEventSource } from "@/components/debug/BugFinderPanel";
+import {
+  BugFinderPanel,
+  type BugEvent,
+  type BugEventLevel,
+  type BugEventSource,
+  type BugFinderRuntimeStats,
+} from "@/components/debug/BugFinderPanel";
 import type { PublicRoomState } from "@/lib/types/game";
 
 const STORAGE_KEY = "trivia:player:public";
@@ -51,8 +57,10 @@ function toEnglishDiagnostic(value: unknown) {
 
 export function BugFinderOverlay() {
   const [events, setEvents] = useState<BugEvent[]>([]);
-  const previousRoomRef = useRef<Pick<PublicRoomState, "phase" | "currentMatchId" | "updatedAt"> | null>(null);
+  const [runtimeStats, setRuntimeStats] = useState<BugFinderRuntimeStats>({});
+  const previousRoomRef = useRef<Pick<PublicRoomState, "phase" | "currentMatchId" | "version"> | null>(null);
   const kvWarningShownRef = useRef(false);
+  const gameplayWarningShownRef = useRef(false);
 
   function pushEvent(level: BugEventLevel, source: BugEventSource, message: string, details?: string) {
     const entry: BugEvent = {
@@ -91,6 +99,47 @@ export function BugFinderOverlay() {
   }, []);
 
   useEffect(() => {
+    const onClientDebug = (event: Event) => {
+      const custom = event as CustomEvent<Record<string, unknown>>;
+      const detail = custom.detail ?? {};
+
+      setRuntimeStats((current) => ({
+        ...current,
+        roomVersion:
+          typeof detail.roomVersion === "number"
+            ? detail.roomVersion
+            : current.roomVersion,
+        lastAcceptedRoomVersion:
+          typeof detail.lastAcceptedRoomVersion === "number"
+            ? detail.lastAcceptedRoomVersion
+            : current.lastAcceptedRoomVersion,
+        ignoredStaleStateCount:
+          typeof detail.ignoredStaleStateCount === "number"
+            ? detail.ignoredStaleStateCount
+            : current.ignoredStaleStateCount,
+        tickDriver:
+          typeof detail.tickDriver === "string" || detail.tickDriver === null
+            ? (detail.tickDriver as string | null)
+            : current.tickDriver,
+      }));
+
+      if (detail.event === "stale_state_ignored") {
+        pushEvent(
+          "warning",
+          "state",
+          "Stale state ignored",
+          `v${String(detail.previousVersion ?? "--")} ${String(detail.previousPhase ?? "--")} -> v${String(detail.incomingVersion ?? "--")} ${String(detail.incomingPhase ?? "--")} (${String(detail.reason ?? "unknown")})`,
+        );
+      }
+    };
+
+    window.addEventListener("trivia:client-debug", onClientDebug as EventListener);
+    return () => {
+      window.removeEventListener("trivia:client-debug", onClientDebug as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function checkBackendHealth() {
@@ -105,6 +154,19 @@ export function BugFinderOverlay() {
 
         const runtimeMode = payload?.data?.ready?.kvRuntimeMode as string | undefined;
         const kvConfigured = Boolean(payload?.data?.ready?.kv);
+        const kvConsistent = Boolean(payload?.data?.ready?.kvConsistent);
+        const gameplaySafe = Boolean(payload?.data?.ready?.gameplaySafe);
+        const battleModeEnabled = Boolean(payload?.data?.ready?.battleModeEnabled);
+        const gameplayUnsafeReason =
+          (payload?.data?.ready?.gameplayUnsafeReason as string | null | undefined) ?? null;
+
+        setRuntimeStats((current) => ({
+          ...current,
+          kvRuntimeMode: runtimeMode ?? current.kvRuntimeMode,
+          kvConsistent,
+          gameplaySafe,
+          battleModeEnabled,
+        }));
 
         if (!kvConfigured) {
           if (!kvWarningShownRef.current) {
@@ -122,6 +184,11 @@ export function BugFinderOverlay() {
             `kvRuntimeMode=${runtimeMode ?? "unknown"}. This can cause erratic phase changes.`,
           );
           kvWarningShownRef.current = true;
+        }
+
+        if (!gameplaySafe && gameplayUnsafeReason && !gameplayWarningShownRef.current) {
+          pushEvent("error", "backend", "Gameplay safety check failed", gameplayUnsafeReason);
+          gameplayWarningShownRef.current = true;
         }
       } catch (error) {
         if (!cancelled) {
@@ -184,9 +251,23 @@ export function BugFinderOverlay() {
           return;
         }
 
+        setRuntimeStats((current) => ({
+          ...current,
+          roomVersion: room.version,
+        }));
+
+        if (previous && room.version < previous.version) {
+          pushEvent(
+            "warning",
+            "state",
+            "Received lower room version",
+            `Incoming v${room.version} is older than previous v${previous.version}.`,
+          );
+        }
+
         if (
           previous &&
-          previous.updatedAt !== room.updatedAt &&
+          previous.version !== room.version &&
           isGameplayPhase(previous.phase) &&
           (room.phase === "idle" || room.phase === "lobby") &&
           previous.currentMatchId &&
@@ -203,7 +284,7 @@ export function BugFinderOverlay() {
         previousRoomRef.current = {
           phase: room.phase,
           currentMatchId: room.currentMatchId,
-          updatedAt: room.updatedAt,
+          version: room.version,
         };
       } catch (error) {
         if (!cancelled) {
@@ -221,5 +302,5 @@ export function BugFinderOverlay() {
     };
   }, []);
 
-  return <BugFinderPanel events={events} onClear={() => setEvents([])} />;
+  return <BugFinderPanel events={events} runtimeStats={runtimeStats} onClear={() => setEvents([])} />;
 }

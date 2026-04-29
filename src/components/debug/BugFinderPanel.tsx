@@ -14,8 +14,20 @@ export interface BugEvent {
   details?: string;
 }
 
+export interface BugFinderRuntimeStats {
+  kvRuntimeMode?: string;
+  kvConsistent?: boolean;
+  gameplaySafe?: boolean;
+  roomVersion?: number;
+  lastAcceptedRoomVersion?: number;
+  ignoredStaleStateCount?: number;
+  tickDriver?: string | null;
+  battleModeEnabled?: boolean;
+}
+
 interface BugFinderPanelProps {
   events: BugEvent[];
+  runtimeStats: BugFinderRuntimeStats;
   onClear: () => void;
 }
 
@@ -35,7 +47,23 @@ function levelStyles(level: BugEventLevel) {
   return "border-sky-300/40 bg-sky-500/10 text-sky-100";
 }
 
-export function BugFinderPanel({ events, onClear }: BugFinderPanelProps) {
+function toLabelValue(value: unknown) {
+  if (typeof value === "boolean") {
+    return value ? "true" : "false";
+  }
+
+  if (value === null) {
+    return "none";
+  }
+
+  if (value === undefined) {
+    return "--";
+  }
+
+  return String(value);
+}
+
+export function BugFinderPanel({ events, runtimeStats, onClear }: BugFinderPanelProps) {
   const [open, setOpen] = useState(false);
   const errorCount = useMemo(() => events.filter((event) => event.level === "error").length, [events]);
   const warningCount = useMemo(() => events.filter((event) => event.level === "warning").length, [events]);
@@ -66,6 +94,17 @@ export function BugFinderPanel({ events, onClear }: BugFinderPanelProps) {
             >
               Clear
             </button>
+          </div>
+
+          <div className="mb-3 grid grid-cols-2 gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-3 text-[11px] uppercase tracking-[0.08em] text-[color:var(--muted)]">
+            <p>kvRuntimeMode: {toLabelValue(runtimeStats.kvRuntimeMode)}</p>
+            <p>kvConsistent: {toLabelValue(runtimeStats.kvConsistent)}</p>
+            <p>gameplaySafe: {toLabelValue(runtimeStats.gameplaySafe)}</p>
+            <p>battleModeEnabled: {toLabelValue(runtimeStats.battleModeEnabled)}</p>
+            <p>roomVersion: {toLabelValue(runtimeStats.roomVersion)}</p>
+            <p>lastAcceptedRoomVersion: {toLabelValue(runtimeStats.lastAcceptedRoomVersion)}</p>
+            <p>ignoredStaleStateCount: {toLabelValue(runtimeStats.ignoredStaleStateCount)}</p>
+            <p>tickDriver: {toLabelValue(runtimeStats.tickDriver)}</p>
           </div>
 
           <div className="space-y-2 overflow-y-auto pr-1">

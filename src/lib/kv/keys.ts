@@ -10,6 +10,10 @@ export function roomStateKey(roomCode: string) {
   return `trivia:rooms:${roomCode}:state`;
 }
 
+export function roomVersionKey(roomCode: string) {
+  return `trivia:rooms:${roomCode}:state:version`;
+}
+
 export function roomHostKey(roomCode: string) {
   return `trivia:rooms:${roomCode}:host`;
 }

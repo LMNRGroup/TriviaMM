@@ -10,6 +10,21 @@ function requireEnv(name: string) {
   return value;
 }
 
+function parseBoolean(raw: string | undefined | null) {
+  const value = raw?.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes";
+}
+
+function firstDefinedBoolean(...values: Array<string | undefined | null>) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      return parseBoolean(value);
+    }
+  }
+
+  return null;
+}
+
 export function getBaseUrl() {
   return (
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
@@ -31,22 +46,33 @@ export function getKvConfig() {
 
 /** When true, never connects to Upstash (local dev). */
 export function preferMemoryKv() {
-  const v = process.env.KV_USE_MEMORY?.trim().toLowerCase();
-  return v === "1" || v === "true" || v === "yes";
+  return parseBoolean(process.env.KV_USE_MEMORY);
+}
+
+/**
+ * Production runtime detector for gameplay safety rules.
+ * We treat `NODE_ENV=production` or `VERCEL_ENV=production` as production behavior.
+ */
+export function isProductionRuntime() {
+  return process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
 }
 
 /**
  * Controls fallback behavior when KV is configured but unreachable.
- * Default is `true` (fallback enabled). Set `KV_ALLOW_MEMORY_FALLBACK=false`
- * to enforce strict remote-only KV behavior.
+ * Default is disabled in production and enabled elsewhere.
+ * Use `ALLOW_MEMORY_KV_FALLBACK=true` (or legacy `KV_ALLOW_MEMORY_FALLBACK=true`)
+ * only for emergency testing in production.
  */
 export function allowMemoryKvFallback() {
-  const v = process.env.KV_ALLOW_MEMORY_FALLBACK?.trim().toLowerCase();
-  if (!v) {
-    return true;
+  const explicit = firstDefinedBoolean(
+    process.env.ALLOW_MEMORY_KV_FALLBACK,
+    process.env.KV_ALLOW_MEMORY_FALLBACK,
+  );
+  if (explicit !== null) {
+    return explicit;
   }
 
-  return v === "1" || v === "true" || v === "yes";
+  return !isProductionRuntime();
 }
 
 /**
@@ -54,8 +80,20 @@ export function allowMemoryKvFallback() {
  * Default is disabled until single-player production stability is fully validated.
  */
 export function isMultiplayerEnabled() {
-  const v = process.env.TRIVIA_ENABLE_MULTIPLAYER?.trim().toLowerCase();
-  return v === "1" || v === "true" || v === "yes";
+  return parseBoolean(process.env.TRIVIA_ENABLE_MULTIPLAYER);
+}
+
+/**
+ * Battle mode switch.
+ * Default is disabled; must be explicitly enabled for player-vs-player gameplay.
+ */
+export function isBattleModeEnabled() {
+  const explicit = firstDefinedBoolean(
+    process.env.ENABLE_BATTLE_MODE,
+    process.env.NEXT_PUBLIC_ENABLE_BATTLE_MODE,
+  );
+
+  return explicit === true;
 }
 
 function readServiceAccountCredentials() {

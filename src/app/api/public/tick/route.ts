@@ -3,7 +3,7 @@ import { assertPublicTickAllowed } from "@/lib/api/public-tick-rate-limit";
 import { findPlayerById, requirePlayerToken } from "@/lib/api/room-auth";
 import { toPublicRoomState } from "@/lib/api/room-state";
 import { PUBLIC_ROOM_CODE } from "@/lib/game/constants";
-import { runTickWithOptimisticRetry } from "@/lib/game/room-tick-runner";
+import { runAuthoritativeRoomTick } from "@/lib/game/room-tick-runner";
 import { getRoomState } from "@/lib/kv/room-store";
 import { getRequestIp } from "@/lib/utils/request";
 import { publicTickSchema } from "@/lib/validation/room";
@@ -59,9 +59,14 @@ export async function POST(request: Request) {
       }
     }
 
-    const outcome = await runTickWithOptimisticRetry(PUBLIC_ROOM_CODE);
+    const outcome = await runAuthoritativeRoomTick(PUBLIC_ROOM_CODE, {
+      expectedDriverPlayerId: actor.playerId,
+    });
 
     if (!outcome.ok) {
+      if (outcome.error === "driver_mismatch") {
+        return fail("invalid_tick_driver", 409, "El jugador controlador cambio. Reintenta con el estado mas reciente.");
+      }
       return fail(
         "room_unavailable",
         503,
@@ -75,6 +80,9 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("public tick error", error);
+    if (error instanceof Error && error.message.includes("[kv]")) {
+      return fail("kv_unavailable", 503, error.message);
+    }
     return fail("server_error", 500, "No se pudo avanzar la partida.");
   }
 }

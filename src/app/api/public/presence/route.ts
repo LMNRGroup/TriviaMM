@@ -50,6 +50,9 @@ export async function POST(request: Request) {
     return ok({ lastSeenAt: nowIso });
   } catch (error) {
     console.error("public presence error", error);
+    if (error instanceof Error && error.message.includes("[kv]")) {
+      return fail("kv_unavailable", 503, error.message);
+    }
     return fail("server_error", 500, "No se pudo actualizar la presencia.");
   }
 }

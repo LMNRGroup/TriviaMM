@@ -105,6 +105,10 @@ export async function POST(request: Request) {
       if (error.message === "question_not_found") {
         return fail("question_not_found", 404, "No se encontro la pregunta actual.");
       }
+
+      if (error.message.includes("[kv]")) {
+        return fail("kv_unavailable", 503, error.message);
+      }
     }
 
     console.error("public answer error", error);

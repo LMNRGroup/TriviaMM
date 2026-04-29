@@ -2,7 +2,7 @@ import { ok, fail } from "@/lib/api/http";
 import { toJoinPlayerPayload, toPublicRoomJoinSlice } from "@/lib/api/room-state";
 import { choosePlayerSlot, getRoomState, joinRoom, withRoomMutationLock } from "@/lib/kv/room-store";
 import { buildLivePlayerFromRegistration, getRegisteredPlayerById } from "@/lib/sheets/player-repo";
-import { isMultiplayerEnabled } from "@/lib/utils/env";
+import { isBattleModeEnabled, isMultiplayerEnabled } from "@/lib/utils/env";
 import { roomCodeSchema, joinRoomSchema } from "@/lib/validation/room";
 import { randomUUID } from "node:crypto";
 
@@ -34,6 +34,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   try {
     const multiplayerEnabled = isMultiplayerEnabled();
+    const battleModeEnabled = isBattleModeEnabled();
     const registration = await getRegisteredPlayerById(parsedBody.data.playerId);
 
     if (!registration) {
@@ -55,7 +56,18 @@ export async function POST(request: Request, context: RouteContext) {
         throw new Error("multiplayer_disabled");
       }
 
-      const slot = choosePlayerSlot(existingRoom, multiplayerEnabled ? parsedBody.data.preferredSlot : 1);
+      if (
+        !battleModeEnabled &&
+        existingRoom.players.player1 &&
+        existingRoom.players.player1.playerId !== registration.playerId
+      ) {
+        throw new Error("battle_mode_disabled");
+      }
+
+      const slot = choosePlayerSlot(
+        existingRoom,
+        multiplayerEnabled && battleModeEnabled ? parsedBody.data.preferredSlot : 1,
+      );
 
       if (!slot) {
         throw new Error("room_full");
@@ -76,6 +88,8 @@ export async function POST(request: Request, context: RouteContext) {
     return ok({
       player: toJoinPlayerPayload(result.player),
       room: toPublicRoomJoinSlice({
+        version: result.room.version,
+        phaseStartedAt: result.room.phaseStartedAt,
         phase: result.room.phase,
         mode: result.room.mode,
         players: result.room.players,
@@ -102,6 +116,10 @@ export async function POST(request: Request, context: RouteContext) {
 
       if (error.message === "multiplayer_disabled") {
         return fail("multiplayer_disabled", 409, "Multiplayer is temporarily disabled");
+      }
+
+      if (error.message === "battle_mode_disabled") {
+        return fail("battle_mode_disabled", 409, "Battle mode is temporarily disabled");
       }
     }
 
