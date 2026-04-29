@@ -1,14 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { ok, fail } from "@/lib/api/http";
 import { choosePlayerSlot, ensurePublicRoom, getRoomState, joinRoom, withRoomMutationLock } from "@/lib/kv/room-store";
-import { getKv } from "@/lib/kv/client";
-import { returningPlayerByIpKey } from "@/lib/kv/keys";
 import { MATCH_QUESTION_COUNT, PUBLIC_ROOM_CODE } from "@/lib/game/constants";
 import { startMatch } from "@/lib/game/engine";
 import { buildLivePlayerFromRegistration, getRegisteredPlayerById } from "@/lib/sheets/player-repo";
 import { getRandomQuestions } from "@/lib/sheets/question-repo";
 import { getBaseUrl, isBattleModeEnabled, isMultiplayerEnabled } from "@/lib/utils/env";
-import { getRequestIp } from "@/lib/utils/request";
 import { toJoinPlayerPayload, toPublicRoomState } from "@/lib/api/room-state";
 import { joinRoomSchema } from "@/lib/validation/room";
 import { saveQuestionBank, saveRoomState } from "@/lib/kv/room-store";
@@ -138,9 +135,6 @@ export async function POST(request: Request) {
         room: responseRoom,
       };
     });
-
-    const ipAddress = getRequestIp(request);
-    await getKv().set(returningPlayerByIpKey(ipAddress), joinResult.player.playerId, { ex: 60 * 60 * 24 * 30 });
 
     return ok({
       player: toJoinPlayerPayload(joinResult.player),

@@ -1,13 +1,9 @@
 import { ok, fail } from "@/lib/api/http";
 import { toPublicRoomState } from "@/lib/api/room-state";
-import { getKv } from "@/lib/kv/client";
-import { returningPlayerByIpKey } from "@/lib/kv/keys";
 import { ensurePublicRoom, getRoomState } from "@/lib/kv/room-store";
-import { getRegisteredPlayerById } from "@/lib/sheets/player-repo";
 import { getBaseUrl } from "@/lib/utils/env";
-import { getRequestIp } from "@/lib/utils/request";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     let room = await getRoomState();
 
@@ -24,29 +20,9 @@ export async function GET(request: Request) {
       );
     }
 
-    const ipAddress = getRequestIp(request);
-    const rememberedPlayerId = await getKv().get<string>(returningPlayerByIpKey(ipAddress));
-    let rememberedPlayer = null;
-
-    if (rememberedPlayerId) {
-      try {
-        rememberedPlayer = await getRegisteredPlayerById(rememberedPlayerId);
-      } catch (error) {
-        console.error("remembered player lookup error", error);
-      }
-    }
-
     return ok({
       room: toPublicRoomState(room),
-      rememberedPlayer: rememberedPlayer
-        ? {
-            playerId: rememberedPlayer.playerId,
-            name: rememberedPlayer.name,
-            city: rememberedPlayer.city,
-            age: rememberedPlayer.age,
-            email: rememberedPlayer.email,
-          }
-        : null,
+      rememberedPlayer: null,
       serverTime: new Date().toISOString(),
     });
   } catch (error) {

@@ -1,8 +1,5 @@
 import { ok, fail } from "@/lib/api/http";
-import { getKv } from "@/lib/kv/client";
-import { returningPlayerByIpKey } from "@/lib/kv/keys";
 import { createRegisteredPlayer, findRegisteredPlayerByEmail } from "@/lib/sheets/player-repo";
-import { getRequestIp } from "@/lib/utils/request";
 import { registrationSchema } from "@/lib/validation/registration";
 
 export async function POST(request: Request) {
@@ -29,10 +26,6 @@ export async function POST(request: Request) {
           city: existing.city,
         }
       : await createRegisteredPlayer(parsed.data);
-
-    await getKv().set(returningPlayerByIpKey(getRequestIp(request)), player.playerId, {
-      ex: 60 * 60 * 24 * 30,
-    });
 
     return ok({ player });
   } catch (error) {

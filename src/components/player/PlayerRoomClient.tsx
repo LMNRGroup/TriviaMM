@@ -363,6 +363,16 @@ export function PlayerRoomClient() {
     setSession(null);
   }
 
+  function switchPlayer() {
+    persistSession(null);
+    setRememberedPlayer(null);
+    setJoinInFlightPlayerId(null);
+    setSelectedChoiceState(null);
+    setAnswerFeedbackSnapshot(null);
+    setForm(initialFormState);
+    setError(null);
+  }
+
   const loadRoomState = useCallback(async () => {
     const response = await fetch("/api/public/state", {
       cache: "no-store",
@@ -381,11 +391,9 @@ export function PlayerRoomClient() {
     }
 
     const nextRoom = payload.data.room as PublicRoomState;
-    const remoteRememberedPlayer = (payload.data.rememberedPlayer as RememberedPlayer | null) ?? null;
 
     const tickDriverId = nextRoom.players.player1?.playerId ?? nextRoom.players.player2?.playerId ?? null;
     const resolvedRoom = acceptRoomCandidate(nextRoom, "poll_state", tickDriverId);
-    setRememberedPlayer((current) => remoteRememberedPlayer ?? current);
     setError(null);
     return resolvedRoom;
   }, [acceptRoomCandidate, session]);
@@ -890,6 +898,13 @@ export function PlayerRoomClient() {
             {pendingJoinPlayer.name}
           </p>
           <p className="mt-3 text-sm text-[color:var(--muted)]">No reservaremos tu espacio hasta que toques unirte.</p>
+          <button
+            className="mt-5 rounded-[1.1rem] border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)] transition hover:bg-white/10 hover:text-white"
+            onClick={switchPlayer}
+            type="button"
+          >
+            Usar otro jugador
+          </button>
         </div>
 
         {error ? (
@@ -922,6 +937,13 @@ export function PlayerRoomClient() {
             {room.players.player1?.name ?? "Jugador 1"} vs {room.players.player2?.name ?? "Jugador 2"}
           </p>
           <p className="mt-3 text-sm text-[color:var(--muted)]">La sala admite un máximo de dos jugadores por sesión.</p>
+          <button
+            className="mt-5 rounded-[1.1rem] border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)] transition hover:bg-white/10 hover:text-white"
+            onClick={switchPlayer}
+            type="button"
+          >
+            Usar otro jugador
+          </button>
         </div>
 
         {error ? (
@@ -952,6 +974,13 @@ export function PlayerRoomClient() {
           <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Jugador</p>
           <p className="font-display mt-4 text-2xl font-black uppercase">{pendingJoinPlayer.name}</p>
           <p className="mt-3 text-sm text-[color:var(--muted)]">{pendingJoinPlayer.city}</p>
+          <button
+            className="mt-5 rounded-[1.1rem] border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)] transition hover:bg-white/10 hover:text-white"
+            onClick={switchPlayer}
+            type="button"
+          >
+            Usar otro jugador
+          </button>
         </div>
 
         {error ? (
