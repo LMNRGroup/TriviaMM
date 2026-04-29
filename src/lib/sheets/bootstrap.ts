@@ -27,6 +27,7 @@ const sheetHeaders: Record<SheetResourceKey, string[]> = {
     "best_battle_score",
     "average_response_ms",
     "last_room_code",
+    "university",
   ],
   questions: [
     "question_id",

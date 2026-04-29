@@ -71,7 +71,7 @@ function parseLeaderboardRow(row: string[]): LeaderboardEntry | null {
     wins: Number(row[5] ?? 0),
     soloBestScore: Number(row[6] ?? 0),
     battleBestScore: Number(row[7] ?? 0),
-    lifetimePoints: Number(row[8] ?? 0),
+    lifetimePoints: Math.min(Number(row[8] ?? 0), 10),
     averageResponseMs: row[9] ? Number(row[9]) : null,
     rank: Number(row[10] ?? 0),
     updatedAt: row[11] ?? new Date().toISOString(),
@@ -168,7 +168,7 @@ export async function upsertLeaderboardEntry(input: {
       input.mode === "battle"
         ? Math.max(existing?.battleBestScore ?? 0, input.matchScore)
         : existing?.battleBestScore ?? 0,
-    lifetimePoints: (existing?.lifetimePoints ?? 0) + input.matchScore,
+    lifetimePoints: Math.max(Math.min(existing?.lifetimePoints ?? 0, 10), input.matchScore),
     averageResponseMs:
       input.averageResponseMs === null
         ? existing?.averageResponseMs ?? null

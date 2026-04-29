@@ -25,6 +25,7 @@ export interface Player {
   name: string;
   /** Primary location field for registration and display */
   city: string;
+  university?: string;
   /**
    * Legacy KV/Sheets rows may only have `country`; prefer `city` when present.
    * @deprecated use `city`
@@ -135,6 +136,7 @@ export interface PublicPlayer {
   slot: 1 | 2;
   name: string;
   city: string;
+  university?: string;
   status: PlayerStatus;
   unansweredStreak: number;
   totalScore: number;

@@ -635,8 +635,8 @@ export function HostRoomClient() {
                 <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Instrucciones visibles</p>
                 <ul className="mt-4 space-y-3 text-sm leading-6 text-[color:var(--muted)]">
                   <li>1. Escanea el QR y completa el registro.</li>
-                  <li>2. Lee la pregunta durante 10 segundos.</li>
-                  <li>3. Cuando aparezcan las respuestas, tendrás 15 segundos para contestar.</li>
+                  <li>2. Lee la pregunta durante 5 segundos.</li>
+                  <li>3. Cuando aparezcan las respuestas, tendrás 10 segundos para contestar.</li>
                   <li>4. Gana quien acierte más rápido.</li>
                 </ul>
               </div>

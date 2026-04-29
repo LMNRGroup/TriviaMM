@@ -23,8 +23,8 @@ async function registerPlayer() {
   const suffix = Date.now();
   const registration = {
     roomCode: "PUBLICO",
-    name: `Soak ${suffix}`,
-    city: "Mayaguez",
+    name: `Soak Tester${suffix % 100}`,
+    university: "Universidad de Puerto Rico Recinto Universitario de Mayagüez",
     age: 28,
     email: `soak-${suffix}@example.com`,
     acceptedTerms: true,

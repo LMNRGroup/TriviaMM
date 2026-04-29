@@ -2,11 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { LeaderboardList } from "@/components/leaderboard/LeaderboardList";
-import {
-  COUNTRY_OPTIONS,
-  PUERTO_RICO_MUNICIPALITY_OPTIONS,
-  US_STATE_AND_TERRITORY_OPTIONS,
-} from "@/lib/data/regions";
+import { UNIVERSITY_OPTIONS } from "@/lib/data/universities";
 import { decideRoomAcceptance } from "@/lib/game/public-room-guard";
 import type { PublicRoomState, RoomMode } from "@/lib/types/game";
 import { registrationSchema } from "@/lib/validation/registration";
@@ -15,6 +11,7 @@ interface JoinApiPlayer {
   playerId: string;
   name: string;
   city: string;
+  university?: string;
   slot: 1 | 2;
   roomCode: string;
   controllerToken: string;
@@ -25,6 +22,7 @@ interface PlayerSession {
   playerId: string;
   name: string;
   city: string;
+  university?: string;
   age: number;
   email: string;
   controllerToken: string;
@@ -35,6 +33,7 @@ interface RememberedPlayer {
   playerId: string;
   name: string;
   city: string;
+  university?: string;
   age: number;
   /** Same-device hint from server; never part of `PublicRoomState`. */
   email?: string;
@@ -42,9 +41,7 @@ interface RememberedPlayer {
 
 interface FormState {
   name: string;
-  country: string;
-  region: string;
-  city: string;
+  university: string;
   age: string;
   email: string;
   acceptedTerms: boolean;
@@ -91,6 +88,7 @@ function normalizeStoredSession(raw: unknown): PlayerSession | null {
     playerId: data.playerId,
     name: data.name,
     city,
+    university: typeof data.university === "string" ? data.university : undefined,
     age: typeof data.age === "number" ? data.age : Number(data.age ?? 0),
     email: typeof data.email === "string" ? data.email : "",
     controllerToken: data.controllerToken,
@@ -100,9 +98,7 @@ function normalizeStoredSession(raw: unknown): PlayerSession | null {
 
 const initialFormState: FormState = {
   name: "",
-  country: "",
-  region: "",
-  city: "",
+  university: "",
   age: "",
   email: "",
   acceptedTerms: false,
@@ -323,18 +319,6 @@ export function PlayerRoomClient() {
     return years;
   }, []);
 
-  const regionOptions = useMemo(() => {
-    if (form.country === "United States") {
-      return US_STATE_AND_TERRITORY_OPTIONS;
-    }
-
-    if (form.country === "Puerto Rico") {
-      return PUERTO_RICO_MUNICIPALITY_OPTIONS;
-    }
-
-    return [];
-  }, [form.country]);
-
   const playerSeat = room
     ? room.players.player1?.playerId === session?.playerId
       ? room.players.player1
@@ -449,6 +433,7 @@ export function PlayerRoomClient() {
       playerId: joinedPlayer.playerId,
       name: joinedPlayer.name,
       city: joinedPlayer.city,
+      university: profile?.university ?? joinedPlayer.university,
       age: Number(profile?.age ?? birthYearToAge(form.age) ?? 0),
       email: profile?.email ?? form.email,
       controllerToken: joinedPlayer.controllerToken,
@@ -629,7 +614,7 @@ export function PlayerRoomClient() {
     return registrationSchema.safeParse({
       roomCode: "PUBLICO",
       name: form.name,
-      city: form.region,
+      university: form.university,
       age: Number.isFinite(numericAge) ? numericAge : Number.NaN,
       email: form.email,
       acceptedTerms: form.acceptedTerms,
@@ -651,23 +636,6 @@ export function PlayerRoomClient() {
     setForm((current) => ({
       ...current,
       [key]: value,
-    }));
-  }
-
-  function updateCountry(country: string) {
-    setForm((current) => ({
-      ...current,
-      country,
-      region: "",
-      city: "",
-    }));
-  }
-
-  function updateRegion(region: string) {
-    setForm((current) => ({
-      ...current,
-      region,
-      city: region,
     }));
   }
 
@@ -697,8 +665,9 @@ export function PlayerRoomClient() {
         const player = registrationPayload.data.player as RememberedPlayer;
         setRememberedPlayer({
           playerId: player.playerId,
-          name: form.name,
-          city: form.region,
+          name: player.name,
+          city: player.city,
+          university: player.university ?? form.university,
           age: birthYearToAge(form.age),
           email: form.email,
         });
@@ -830,6 +799,7 @@ export function PlayerRoomClient() {
           playerId: session.playerId,
           name: session.name,
           city: session.city,
+          university: session.university,
           age: session.age,
           email: session.email,
         }
@@ -973,7 +943,7 @@ export function PlayerRoomClient() {
         <div className="glass-panel rounded-[1.8rem] p-5">
           <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Jugador</p>
           <p className="font-display mt-4 text-2xl font-black uppercase">{pendingJoinPlayer.name}</p>
-          <p className="mt-3 text-sm text-[color:var(--muted)]">{pendingJoinPlayer.city}</p>
+          <p className="mt-3 text-sm text-[color:var(--muted)]">{pendingJoinPlayer.university ?? pendingJoinPlayer.city}</p>
           <button
             className="mt-5 rounded-[1.1rem] border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)] transition hover:bg-white/10 hover:text-white"
             onClick={switchPlayer}
@@ -1074,44 +1044,21 @@ export function PlayerRoomClient() {
           />
         </label>
 
-        <div className="grid gap-5 sm:grid-cols-2">
-          <label className="space-y-2">
-            <span className="text-sm font-semibold text-white">País</span>
-            <select
-              className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-[color:var(--accent)] focus:bg-white/7"
-              onChange={(event) => updateCountry(event.target.value)}
-              value={form.country}
-            >
-              <option value="">Selecciona un país</option>
-              {COUNTRY_OPTIONS.map((country) => (
-                <option key={country} value={country}>
-                  {country}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="space-y-2">
-            <span className="text-sm font-semibold text-white">
-              {form.country === "Puerto Rico" ? "Municipio" : "Estado o territorio"}
-            </span>
-            <select
-              className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-[color:var(--accent)] focus:bg-white/7 disabled:cursor-not-allowed disabled:opacity-40"
-              disabled={regionOptions.length === 0}
-              onChange={(event) => updateRegion(event.target.value)}
-              value={form.region}
-            >
-              <option value="">
-                {form.country ? "Selecciona una opción" : "Selecciona primero el país"}
+        <label className="space-y-2">
+          <span className="text-sm font-semibold text-white">Universidad que representas</span>
+          <select
+            className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-[color:var(--accent)] focus:bg-white/7"
+            onChange={(event) => updateField("university", event.target.value)}
+            value={form.university}
+          >
+            <option value="">Selecciona tu universidad</option>
+            {UNIVERSITY_OPTIONS.map((university) => (
+              <option key={university.acronym} value={university.name}>
+                {university.name} ({university.acronym})
               </option>
-              {regionOptions.map((region) => (
-                <option key={region} value={region}>
-                  {region}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+            ))}
+          </select>
+        </label>
 
         <div className="grid gap-5 sm:grid-cols-2">
           <label className="space-y-2">
@@ -1204,7 +1151,7 @@ export function PlayerRoomClient() {
         <div className="glass-panel rounded-[1.8rem] p-5">
           <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Cómo jugar</p>
           <ul className="mt-5 space-y-3 text-base leading-7 text-[color:var(--muted)]">
-            <li>Tienes 15 segundos para responder cada pregunta cuando aparezcan las opciones.</li>
+            <li>Tienes 10 segundos para responder cada pregunta cuando aparezcan las opciones.</li>
             <li>Entre más rápido aciertes, más puntos sumas.</li>
             <li>Si la sala está libre, te dejaremos continuar sin registrarte otra vez en este dispositivo.</li>
             <li>La sala pública admite un máximo de dos jugadores conectados a la vez.</li>
@@ -1250,7 +1197,7 @@ export function PlayerRoomClient() {
             <p className="font-display mt-3 text-3xl font-black uppercase">
               P{playerSeat.slot} · {playerSeat.name}
             </p>
-            <p className="mt-1 text-sm text-[color:var(--muted)]">{playerSeat.city}</p>
+            <p className="mt-1 text-sm text-[color:var(--muted)]">{playerSeat.university ?? playerSeat.city}</p>
             {waitingCountdown ? (
               <p className="mt-4 rounded-full border border-white/10 px-3 py-2 text-sm text-[color:var(--muted)]">
                 Cuenta atrás de la sala: {waitingCountdown}s
