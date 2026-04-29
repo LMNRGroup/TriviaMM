@@ -16,29 +16,48 @@ function rankHighlightClass(rank: number) {
 export function LeaderboardList({
   entries,
   highlightRanks = [],
+  variant = "compact",
 }: {
   entries: PublicLeaderboardEntry[];
   /** Any rank value (e.g. current players) to emphasize if missing from `entries`. */
   highlightRanks?: number[];
+  variant?: "compact" | "dramatic";
 }) {
   const extraRanks = [...new Set(highlightRanks.filter((r) => typeof r === "number"))];
+  const rowClass =
+    variant === "dramatic"
+      ? "flex items-center justify-between rounded-[1.6rem] border px-7 py-6 transition"
+      : "flex items-center justify-between rounded-[1.4rem] border px-5 py-4 transition";
+  const titleClass =
+    variant === "dramatic"
+      ? "font-display text-2xl font-black uppercase"
+      : "font-display text-lg font-black uppercase";
+  const cityClass = variant === "dramatic" ? "text-base text-[color:var(--muted)]" : "text-sm text-[color:var(--muted)]";
+  const pointsClass =
+    variant === "dramatic"
+      ? "font-display text-4xl font-black text-[color:var(--accent)]"
+      : "font-display text-2xl font-black text-[color:var(--accent)]";
+  const pointsLabelClass =
+    variant === "dramatic"
+      ? "text-sm uppercase tracking-[0.3em] text-[color:var(--muted)]"
+      : "text-xs uppercase tracking-[0.3em] text-[color:var(--muted)]";
 
   return (
     <div className="grid gap-3">
       {entries.map((entry) => (
         <div
-          className={`flex items-center justify-between rounded-[1.4rem] border px-5 py-4 transition ${rankHighlightClass(entry.rank)}`}
+          className={`${rowClass} ${rankHighlightClass(entry.rank)}`}
           key={entry.playerId}
         >
           <div>
-            <p className="font-display text-lg font-black uppercase">
+            <p className={titleClass}>
               #{entry.rank} {entry.playerName}
             </p>
-            <p className="text-sm text-[color:var(--muted)]">{entry.city}</p>
+            <p className={cityClass}>{entry.city}</p>
           </div>
           <div className="text-right">
-            <p className="font-display text-2xl font-black text-[color:var(--accent)]">{entry.lifetimePoints}</p>
-            <p className="text-xs uppercase tracking-[0.3em] text-[color:var(--muted)]">puntos</p>
+            <p className={pointsClass}>{entry.lifetimePoints}</p>
+            <p className={pointsLabelClass}>puntos</p>
           </div>
         </div>
       ))}

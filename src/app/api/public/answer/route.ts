@@ -74,6 +74,14 @@ export async function POST(request: Request) {
         accepted: true,
         locked: false,
         receivedAt: result.submission.submittedAt,
+        feedback:
+          result.submission.status === "timeout"
+            ? "timeout"
+            : result.submission.isCorrect
+              ? "correct"
+              : "incorrect",
+        responseTimeMs: result.submission.responseTimeMs,
+        awardedPoints: result.submission.awardedPoints,
       },
     });
   } catch (error) {

@@ -454,8 +454,8 @@ export async function finalizeMatch(room: RoomState, nowIso: string) {
       ...room,
       battleResult: {
         winner,
-        shownAt: mode === "battle" ? nowIso : null,
-        displayUntil: mode === "battle" ? plusMs(nowIso, BATTLE_RESULT_DURATION_MS) : null,
+        shownAt: nowIso,
+        displayUntil: plusMs(nowIso, BATTLE_RESULT_DURATION_MS),
       },
       leaderboard: {
         visibleTop: leaderboardTop,
@@ -666,22 +666,11 @@ export async function tickRoom({
 
     const finalized = await finalizeMatch(room, nowIso);
     return {
-      room:
-        room.mode === "battle"
-          ? {
-              ...finalized.room,
-              phase: "battle-result",
-              phaseStartedAt: toMs(nowIso),
-            }
-          : {
-              ...finalized.room,
-              phase: "leaderboard",
-              phaseStartedAt: toMs(nowIso),
-              leaderboard: {
-                ...finalized.room.leaderboard,
-                shownAt: nowIso,
-              },
-            },
+      room: {
+        ...finalized.room,
+        phase: "battle-result",
+        phaseStartedAt: toMs(nowIso),
+      },
       transitionApplied: true,
     };
   }

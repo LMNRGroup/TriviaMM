@@ -57,25 +57,27 @@ function SeatCard({
   cityLabel,
   score,
   slot,
+  compact = false,
 }: {
   title: string;
   playerName: string;
   cityLabel: string;
   score: number;
   slot: "P1" | "P2";
+  compact?: boolean;
 }) {
   return (
-    <div className="glass-panel battle-card rounded-[1.8rem] p-5">
-      <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">{title}</p>
-      <div className="mt-4 flex items-end justify-between gap-4">
+    <div className={`glass-panel battle-card rounded-[1.8rem] ${compact ? "p-4" : "p-5"}`}>
+      <p className={`uppercase tracking-[0.35em] text-[color:var(--muted)] ${compact ? "text-[11px]" : "text-xs"}`}>{title}</p>
+      <div className={`${compact ? "mt-3" : "mt-4"} flex items-end justify-between gap-4`}>
         <div>
-          <p className="font-display text-4xl font-black uppercase">{slot}</p>
-          <p className="mt-2 font-display text-2xl font-black uppercase">{playerName}</p>
-          <p className="mt-1 text-sm text-[color:var(--muted)]">{cityLabel}</p>
+          <p className={`font-display font-black uppercase ${compact ? "text-3xl" : "text-4xl"}`}>{slot}</p>
+          <p className={`font-display font-black uppercase ${compact ? "mt-1 text-xl" : "mt-2 text-2xl"}`}>{playerName}</p>
+          <p className={`${compact ? "text-xs" : "text-sm"} text-[color:var(--muted)]`}>{cityLabel}</p>
         </div>
         <div className="text-right">
-          <p className="font-display text-4xl font-black text-[color:var(--accent)]">{score}</p>
-          <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">pts</p>
+          <p className={`font-display font-black text-[color:var(--accent)] ${compact ? "text-3xl" : "text-4xl"}`}>{score}</p>
+          <p className={`${compact ? "text-[11px]" : "text-xs"} uppercase tracking-[0.35em] text-[color:var(--muted)]`}>pts</p>
         </div>
       </div>
     </div>
@@ -179,7 +181,7 @@ export function HostRoomClient() {
     }
 
     syncRoom();
-    const poll = window.setInterval(syncRoom, 700);
+    const poll = window.setInterval(syncRoom, 450);
     const timer = window.setInterval(() => setNow(Date.now()), 100);
 
     return () => {
@@ -229,9 +231,9 @@ export function HostRoomClient() {
       case "question":
         return "Responde antes de que acabe el tiempo.";
       case "answer-lock":
-        return "Respuestas cerradas. Procesando...";
+        return "Respuestas cerradas.";
       case "battle-result":
-        return "Resultado final del duelo.";
+        return "Resultados finales.";
       case "leaderboard":
         return "Tabla general en pantalla.";
       case "finished":
@@ -281,6 +283,107 @@ export function HostRoomClient() {
 
     return [p1, p2].filter((value): value is number => typeof value === "number");
   }, [room]);
+
+  const isShowcasePhase = room?.phase === "battle-result" || room?.phase === "leaderboard";
+
+  if (room && isShowcasePhase) {
+    return (
+      <section className="mx-auto flex w-full max-w-[1920px] items-center justify-center">
+        <div className="glass-panel battle-card app-shell aspect-[16/9] w-full overflow-hidden rounded-[2.6rem] p-8 xl:p-10">
+          <div className="hero-mesh" />
+          <div className="relative flex h-full flex-col">
+            {room.phase === "battle-result" ? (
+              <div className="flex h-full flex-col items-center justify-center text-center">
+                <p className="font-display text-base uppercase tracking-[0.5em] text-[color:var(--accent-strong)]">
+                  Resultado oficial
+                </p>
+                <h2 className="font-display mt-6 text-7xl font-black uppercase leading-[0.92] xl:text-[8.8rem]">
+                  {room.mode === "battle"
+                    ? room.battleResult.winner === "player1"
+                      ? room.players.player1?.name ?? "Jugador 1"
+                      : room.battleResult.winner === "player2"
+                        ? room.players.player2?.name ?? "Jugador 2"
+                        : "Empate"
+                    : room.players.player1?.name ?? "Jugador"}
+                </h2>
+                <div className="mt-8 grid w-full max-w-6xl gap-4 xl:grid-cols-2">
+                  <div className="rounded-[1.9rem] border border-white/15 bg-white/6 px-7 py-7 text-left">
+                    <p className="text-xs uppercase tracking-[0.38em] text-[color:var(--muted)]">Jugador 1</p>
+                    <p className="font-display mt-4 text-4xl font-black uppercase">{room.players.player1?.name ?? "—"}</p>
+                    <div className="mt-5 flex items-end justify-between gap-6">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Puntuación</p>
+                        <p className="font-display mt-2 text-6xl font-black text-[color:var(--accent)]">{room.scores.player1}/10</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Promedio</p>
+                        <p className="font-display mt-2 text-5xl font-black text-[color:var(--foreground)]">
+                          {formatAverageSeconds(room.players.player1?.matchAverageResponseMs)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  {room.mode === "battle" && room.players.player2 ? (
+                    <div className="rounded-[1.9rem] border border-white/15 bg-white/6 px-7 py-7 text-left">
+                      <p className="text-xs uppercase tracking-[0.38em] text-[color:var(--muted)]">Jugador 2</p>
+                      <p className="font-display mt-4 text-4xl font-black uppercase">{room.players.player2.name}</p>
+                      <div className="mt-5 flex items-end justify-between gap-6">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Puntuación</p>
+                          <p className="font-display mt-2 text-6xl font-black text-[color:var(--accent)]">{room.scores.player2}/10</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Promedio</p>
+                          <p className="font-display mt-2 text-5xl font-black text-[color:var(--foreground)]">
+                            {formatAverageSeconds(room.players.player2.matchAverageResponseMs)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            {room.phase === "leaderboard" ? (
+              <div className="flex h-full flex-col">
+                <div className="text-center">
+                  <p className="font-display text-base uppercase tracking-[0.55em] text-[color:var(--accent)]">Leaderboard</p>
+                  <h2 className="font-display mt-4 text-7xl font-black uppercase xl:text-[9rem]">Top jugadores</h2>
+                </div>
+                <div className="mt-8 grid flex-1 gap-8 xl:grid-cols-[0.8fr_1.2fr]">
+                  <div className="space-y-4">
+                    <div className="rounded-[1.8rem] border border-white/15 bg-white/6 p-6">
+                      <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Jugador 1</p>
+                      <p className="font-display mt-3 text-4xl font-black uppercase">{room.players.player1?.name ?? "—"}</p>
+                      <p className="mt-4 text-sm uppercase tracking-[0.35em] text-[color:var(--muted)]">Puntuación final</p>
+                      <p className="font-display mt-1 text-6xl font-black text-[color:var(--accent)]">{room.scores.player1}/10</p>
+                    </div>
+                    {room.mode === "battle" && room.players.player2 ? (
+                      <div className="rounded-[1.8rem] border border-white/15 bg-white/6 p-6">
+                        <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Jugador 2</p>
+                        <p className="font-display mt-3 text-4xl font-black uppercase">{room.players.player2.name}</p>
+                        <p className="mt-4 text-sm uppercase tracking-[0.35em] text-[color:var(--muted)]">Puntuación final</p>
+                        <p className="font-display mt-1 text-6xl font-black text-[color:var(--accent)]">{room.scores.player2}/10</p>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="rounded-[2rem] border border-white/15 bg-[linear-gradient(180deg,rgba(7,14,28,0.78),rgba(9,16,34,0.96))] p-6">
+                    <LeaderboardList
+                      entries={room.leaderboard.visibleTop}
+                      highlightRanks={leaderboardHighlightRanks}
+                      variant="dramatic"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="mx-auto flex w-full max-w-[1920px] items-center justify-center">
@@ -393,7 +496,7 @@ export function HostRoomClient() {
                           {room.currentQuestion.category}
                         </p>
                       ) : null}
-                      <h2 className="font-display mt-4 text-4xl font-black uppercase leading-[1.02] xl:text-6xl">
+                      <h2 className="font-display mt-4 text-5xl font-black uppercase leading-[1.02] xl:text-7xl">
                         {room.currentQuestion.prompt}
                       </h2>
                     </div>
@@ -409,8 +512,8 @@ export function HostRoomClient() {
                         }`}
                         key={key}
                       >
-                        <p className="font-display text-2xl font-black uppercase text-[color:var(--accent-cool)]">{key}</p>
-                        <p className="mt-2">{value}</p>
+                        <p className="font-display text-3xl font-black uppercase text-[color:var(--accent-cool)]">{key}</p>
+                        <p className="mt-2 text-xl">{value}</p>
                       </div>
                     ))}
                   </div>
@@ -434,12 +537,10 @@ export function HostRoomClient() {
                     Respuestas cerradas
                   </p>
                   <h2 className="font-display mt-5 text-5xl font-black uppercase xl:text-7xl">
-                    Calculando la ronda
+                    Siguiente pregunta
                   </h2>
                   <p className="mt-5 text-lg text-[color:var(--muted)]">
-                    {room.mode === "battle"
-                      ? "La pantalla se enciende a cada lado según el resultado de cada jugador."
-                      : "Preparando la siguiente pregunta."}
+                    Preparando la siguiente ronda.
                   </p>
                 </div>
               ) : null}
@@ -520,6 +621,7 @@ export function HostRoomClient() {
                 playerName={room?.players.player1?.name ?? "Disponible"}
                 cityLabel={room?.players.player1?.city ?? "Espera a que alguien escanee"}
                 score={room?.scores.player1 ?? 0}
+                compact
               />
               <SeatCard
                 title="Lado derecho"
@@ -527,6 +629,7 @@ export function HostRoomClient() {
                 playerName={room?.players.player2?.name ?? "Disponible"}
                 cityLabel={room?.players.player2?.city ?? "Modo duelo opcional"}
                 score={room?.scores.player2 ?? 0}
+                compact
               />
               <div className="glass-panel rounded-[1.8rem] p-5">
                 <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Instrucciones visibles</p>

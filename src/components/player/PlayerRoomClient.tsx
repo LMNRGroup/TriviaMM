@@ -51,6 +51,14 @@ interface FormState {
   newsletterOptIn: boolean;
 }
 
+interface AnswerFeedbackSnapshot {
+  questionIndex: number;
+  status: "submitting" | "confirmed";
+  feedback: "correct" | "incorrect" | "timeout" | null;
+  responseTimeMs: number | null;
+  awardedPoints: number | null;
+}
+
 const STORAGE_KEY = "trivia:player:public";
 const BATTLE_MODE_ENABLED =
   (process.env.NEXT_PUBLIC_ENABLE_BATTLE_MODE ?? "").trim().toLowerCase() === "1" ||
@@ -116,6 +124,14 @@ function formatAverageSeconds(milliseconds: number | null | undefined) {
   }
 
   return `${(milliseconds / 1000).toFixed(1)}s`;
+}
+
+function formatResponseSeconds(milliseconds: number | null | undefined) {
+  if (typeof milliseconds !== "number") {
+    return "--";
+  }
+
+  return `${(milliseconds / 1000).toFixed(2)}s`;
 }
 
 function birthYearToAge(value: string) {
@@ -185,6 +201,7 @@ export function PlayerRoomClient() {
   const [session, setSession] = useState<PlayerSession | null>(null);
   const [sessionHydrated, setSessionHydrated] = useState(false);
   const [selectedChoiceState, setSelectedChoiceState] = useState<{ questionIndex: number; choice: string } | null>(null);
+  const [answerFeedbackSnapshot, setAnswerFeedbackSnapshot] = useState<AnswerFeedbackSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [joinInFlightPlayerId, setJoinInFlightPlayerId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
@@ -329,6 +346,10 @@ export function PlayerRoomClient() {
   const selectedChoice =
     selectedChoiceState && selectedChoiceState.questionIndex === room?.currentQuestion.questionIndex
       ? selectedChoiceState.choice
+      : null;
+  const localAnswerForCurrentQuestion =
+    answerFeedbackSnapshot && answerFeedbackSnapshot.questionIndex === room?.currentQuestion.questionIndex
+      ? answerFeedbackSnapshot
       : null;
 
   function persistSession(nextSession: PlayerSession | null) {
@@ -546,7 +567,7 @@ export function PlayerRoomClient() {
     void sync();
     const poll = window.setInterval(() => {
       void sync();
-    }, 900);
+    }, 450);
     const timer = window.setInterval(() => setNow(Date.now()), 100);
 
     return () => {
@@ -734,9 +755,17 @@ export function PlayerRoomClient() {
       return;
     }
 
+    const questionIndex = room.currentQuestion.questionIndex;
     setSelectedChoiceState({
-      questionIndex: room.currentQuestion.questionIndex,
+      questionIndex,
       choice,
+    });
+    setAnswerFeedbackSnapshot({
+      questionIndex,
+      status: "submitting",
+      feedback: null,
+      responseTimeMs: null,
+      awardedPoints: null,
     });
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -756,6 +785,20 @@ export function PlayerRoomClient() {
       const payload = await response.json();
 
       if (response.ok && payload.ok) {
+        const submission = payload.data?.submission as
+          | {
+              feedback?: "correct" | "incorrect" | "timeout";
+              responseTimeMs?: number | null;
+              awardedPoints?: number;
+            }
+          | undefined;
+        setAnswerFeedbackSnapshot({
+          questionIndex,
+          status: "confirmed",
+          feedback: submission?.feedback ?? null,
+          responseTimeMs: typeof submission?.responseTimeMs === "number" ? submission.responseTimeMs : null,
+          awardedPoints: typeof submission?.awardedPoints === "number" ? submission.awardedPoints : null,
+        });
         setError(null);
         return;
       }
@@ -768,6 +811,7 @@ export function PlayerRoomClient() {
 
       setError(payload.message ?? "No se pudo registrar la respuesta.");
       setSelectedChoiceState(null);
+      setAnswerFeedbackSnapshot(null);
       return;
     }
   }
@@ -992,9 +1036,10 @@ export function PlayerRoomClient() {
         </div>
 
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-white">Nombre</span>
+          <span className="text-sm font-semibold text-white">Nombre y apellido</span>
           <input
             className="w-full rounded-[1.35rem] border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-[color:var(--accent)] focus:bg-white/7"
+            placeholder="Ej. Ana Rivera"
             onChange={(event) => updateField("name", event.target.value)}
             value={form.name}
           />
@@ -1257,7 +1302,8 @@ export function PlayerRoomClient() {
   }
 
   if (room.phase === "question") {
-    const alreadyAnswered = Boolean(room.answers[playerSeat.slot === 1 ? "player1" : "player2"]);
+    const alreadyAnswered =
+      Boolean(room.answers[playerSeat.slot === 1 ? "player1" : "player2"]) || Boolean(localAnswerForCurrentQuestion);
 
     return (
       <section className="enter-rise flex h-full flex-col gap-5">
@@ -1307,33 +1353,49 @@ export function PlayerRoomClient() {
         </div>
 
         <p className="text-sm text-[color:var(--muted)]">
-          {alreadyAnswered ? "Respuesta enviada." : "Toca una opción antes de que termine el tiempo."}
+          {!alreadyAnswered
+            ? "Toca una opción antes de que termine el tiempo."
+            : localAnswerForCurrentQuestion?.status === "submitting"
+              ? "Respuesta enviada. Validando..."
+              : localAnswerForCurrentQuestion?.feedback === "correct"
+                ? `¡Correcta! +${localAnswerForCurrentQuestion.awardedPoints ?? 0} pts • ${formatResponseSeconds(localAnswerForCurrentQuestion.responseTimeMs)}`
+                : localAnswerForCurrentQuestion?.feedback === "incorrect"
+                  ? `Incorrecta • +${localAnswerForCurrentQuestion.awardedPoints ?? 0} pts • ${formatResponseSeconds(localAnswerForCurrentQuestion.responseTimeMs)}`
+                  : "Respuesta enviada."}
         </p>
       </section>
     );
   }
 
   if (room.phase === "answer-lock") {
+    const resolvedFeedback =
+      playerFeedback ??
+      (localAnswerForCurrentQuestion?.status === "confirmed" ? localAnswerForCurrentQuestion.feedback : null);
     const glowClass =
-      playerFeedback === "correct"
+      resolvedFeedback === "correct"
         ? "border-[color:var(--success)]/50 bg-[color:var(--success)]/12"
-        : playerFeedback === "incorrect" || playerFeedback === "timeout"
+        : resolvedFeedback === "incorrect" || resolvedFeedback === "timeout"
           ? "border-[color:var(--danger)]/50 bg-[color:var(--danger)]/12"
           : "border-white/10 bg-white/5";
 
     return (
       <section className="enter-scale flex h-full flex-col justify-center gap-6 text-center">
-        <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Respuestas cerradas</p>
+        <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Respuesta bloqueada</p>
         <div className={`rounded-[1.8rem] border px-5 py-8 ${glowClass}`}>
           <h2 className="font-display text-4xl font-black uppercase tracking-[0.08em]">
-            {playerFeedback === "correct"
+            {resolvedFeedback === "correct"
               ? "¡Correcta!"
-              : playerFeedback === "incorrect"
+              : resolvedFeedback === "incorrect"
                 ? "Incorrecta"
-                : playerFeedback === "timeout"
+                : resolvedFeedback === "timeout"
                   ? "Sin respuesta"
-                  : "Procesando"}
+                  : "Preparando siguiente pregunta"}
           </h2>
+          {localAnswerForCurrentQuestion?.status === "confirmed" ? (
+            <p className="mt-4 text-sm text-[color:var(--muted)]">
+              Tiempo: {formatResponseSeconds(localAnswerForCurrentQuestion.responseTimeMs)} · Puntos: +{localAnswerForCurrentQuestion.awardedPoints ?? 0}
+            </p>
+          ) : null}
         </div>
         {(playerSeat.slot === 1 ? room.warnings.player1AfkWarningVisible : room.warnings.player2AfkWarningVisible) ? (
           <p className="rounded-[1.35rem] border border-[color:var(--danger)]/40 bg-[color:var(--danger)]/10 px-4 py-3 text-sm text-red-100">
@@ -1349,12 +1411,17 @@ export function PlayerRoomClient() {
       <section className="enter-scale flex h-full flex-col justify-center gap-6 text-center">
         <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent-strong)]">Resultado</p>
         <h2 className="font-display text-4xl font-black uppercase tracking-[0.08em]">
-          {room.battleResult.winner === "player1"
-            ? `${room.players.player1?.name ?? "Jugador 1"} gana`
-            : room.battleResult.winner === "player2"
-              ? `${room.players.player2?.name ?? "Jugador 2"} gana`
-              : "Empate"}
+          {room.mode === "solo"
+            ? `${room.players.player1?.name ?? "Jugador"} termina la ronda`
+            : room.battleResult.winner === "player1"
+              ? `${room.players.player1?.name ?? "Jugador 1"} gana`
+              : room.battleResult.winner === "player2"
+                ? `${room.players.player2?.name ?? "Jugador 2"} gana`
+                : "Empate"}
         </h2>
+        <p className="text-sm text-[color:var(--muted)]">
+          Puntos: {playerSeat.totalScore}/10 · Promedio: {formatAverageSeconds(playerSeat.matchAverageResponseMs)}
+        </p>
       </section>
     );
   }

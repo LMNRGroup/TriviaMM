@@ -23,7 +23,7 @@ export const registrationSchema = z
   })
   .transform((data) => ({
     roomCode: data.roomCode,
-    name: data.name,
+    name: data.name.replace(/\s+/g, " ").trim(),
     city: (data.city?.trim() || data.country?.trim() || "").trim(),
     age: data.age,
     email: data.email,
@@ -33,6 +33,10 @@ export const registrationSchema = z
   .refine((data) => data.city.length >= 2, {
     message: "City must be at least 2 characters",
     path: ["city"],
+  })
+  .refine((data) => data.name.split(" ").filter((part) => part.trim().length > 0).length >= 2, {
+    message: "Please enter first and last name.",
+    path: ["name"],
   });
 
 export type RegistrationInput = z.infer<typeof registrationSchema>;
