@@ -9,8 +9,22 @@ import { getRequestIp } from "@/lib/utils/request";
 
 export async function GET(request: Request) {
   try {
-    await ensurePublicRoom(getBaseUrl());
-    const room = await getRoomState();
+    const sessionPlayerId = request.headers.get("x-trivia-player-id")?.trim() ?? "";
+    const currentMatchHint = request.headers.get("x-trivia-current-match-id")?.trim() ?? "";
+    let room = await getRoomState();
+
+    if (!room) {
+      if (sessionPlayerId && currentMatchHint) {
+        return fail(
+          "room_unavailable",
+          503,
+          "El estado de la sala no esta disponible temporalmente en este nodo. Intenta de nuevo.",
+        );
+      }
+
+      await ensurePublicRoom(getBaseUrl());
+      room = await getRoomState();
+    }
 
     if (!room) {
       return fail("room_not_found", 404, "No se encontro la sala publica.");

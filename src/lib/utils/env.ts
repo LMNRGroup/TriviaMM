@@ -43,6 +43,10 @@ export function preferMemoryKv() {
 export function allowMemoryKvFallback() {
   const v = process.env.KV_ALLOW_MEMORY_FALLBACK?.trim().toLowerCase();
   if (!v) {
+    if (!isMultiplayerEnabled()) {
+      return true;
+    }
+
     return process.env.VERCEL_ENV !== "production";
   }
 

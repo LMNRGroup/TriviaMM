@@ -35,25 +35,6 @@ export default function HomePage() {
         if (!cancelled) {
           setRoom(nextRoom);
         }
-
-        // Advance the solo-lobby wait timer only. Live match progression is driven by HostRoomClient and
-        // /play to avoid duplicate /api/public/tick calls from the same display (which was double-advancing state).
-        const lobbyNeedsTick =
-          nextRoom.phase === "lobby" && Boolean(nextRoom.lobby.waitingEndsAt) && !nextRoom.players.player2;
-
-        if (!cancelled && lobbyNeedsTick) {
-          const tickResponse = await fetch("/api/public/tick", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({}),
-          });
-          const tickPayload = await tickResponse.json();
-
-          if (tickResponse.ok && tickPayload.ok && !cancelled) {
-            nextRoom = tickPayload.data.room as PublicRoomState;
-            setRoom(nextRoom);
-          }
-        }
       } catch {
         // Keep the display resilient even if polling fails briefly.
       }

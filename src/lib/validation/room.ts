@@ -31,8 +31,8 @@ export const hostTokenSchema = z.object({
 });
 
 export const publicTickSchema = z.object({
-  playerId: z.string().trim().min(1).optional(),
-  controllerToken: z.string().trim().min(1).optional(),
+  playerId: z.string().trim().min(1),
+  controllerToken: z.string().trim().min(1),
 });
 
 export const resetRoomSchema = z.object({

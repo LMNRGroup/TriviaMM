@@ -51,6 +51,7 @@ interface FormState {
 }
 
 const STORAGE_KEY = "trivia:player:public";
+const GAMEPLAY_REGRESSION_GUARD_MS = 90_000;
 
 function normalizeStoredSession(raw: unknown): PlayerSession | null {
   if (!raw || typeof raw !== "object") {
@@ -136,6 +137,62 @@ function isPlayerInRoom(room: PublicRoomState, playerId: string) {
   return room.players.player1?.playerId === playerId || room.players.player2?.playerId === playerId;
 }
 
+function parseIsoMilliseconds(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function chooseStableRoom({
+  current,
+  candidate,
+  sessionPlayerId,
+  lastGameplayProgressAt,
+}: {
+  current: PublicRoomState | null;
+  candidate: PublicRoomState;
+  sessionPlayerId: string | null | undefined;
+  lastGameplayProgressAt: number | null;
+}) {
+  if (!current) {
+    return candidate;
+  }
+
+  const currentUpdatedAt = parseIsoMilliseconds(current.updatedAt);
+  const candidateUpdatedAt = parseIsoMilliseconds(candidate.updatedAt);
+
+  if (
+    currentUpdatedAt !== null &&
+    candidateUpdatedAt !== null &&
+    candidateUpdatedAt < currentUpdatedAt
+  ) {
+    return current;
+  }
+
+  if (
+    sessionPlayerId &&
+    isGameplayPhase(current.phase) &&
+    Boolean(current.currentMatchId) &&
+    isPlayerInRoom(current, sessionPlayerId) &&
+    (candidate.phase === "idle" || candidate.phase === "lobby") &&
+    !candidate.currentMatchId
+  ) {
+    if (
+      typeof lastGameplayProgressAt === "number" &&
+      Date.now() - lastGameplayProgressAt > GAMEPLAY_REGRESSION_GUARD_MS
+    ) {
+      return candidate;
+    }
+
+    return current;
+  }
+
+  return candidate;
+}
+
 export function PlayerRoomClient() {
   const [room, setRoom] = useState<PublicRoomState | null>(null);
   const [rememberedPlayer, setRememberedPlayer] = useState<RememberedPlayer | null>(null);
@@ -148,7 +205,22 @@ export function PlayerRoomClient() {
   const [isStarting, setIsStarting] = useState(false);
   const [isPending, startTransition] = useTransition();
   const syncInFlightRef = useRef(false);
+  const lastGameplayProgressAtRef = useRef<number | null>(null);
+  const lastGameplayFingerprintRef = useRef<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
+
+  function trackGameplayProgress(nextRoom: PublicRoomState) {
+    if (!isGameplayPhase(nextRoom.phase) || !nextRoom.currentMatchId) {
+      lastGameplayFingerprintRef.current = null;
+      return;
+    }
+
+    const fingerprint = `${nextRoom.currentMatchId}:${nextRoom.updatedAt}`;
+    if (lastGameplayFingerprintRef.current !== fingerprint) {
+      lastGameplayFingerprintRef.current = fingerprint;
+      lastGameplayProgressAtRef.current = Date.now();
+    }
+  }
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -220,7 +292,16 @@ export function PlayerRoomClient() {
   }
 
   const loadRoomState = useCallback(async () => {
-    const response = await fetch("/api/public/state", { cache: "no-store" });
+    const response = await fetch("/api/public/state", {
+      cache: "no-store",
+      headers:
+        session?.playerId || room?.currentMatchId
+          ? {
+              ...(session?.playerId ? { "x-trivia-player-id": session.playerId } : {}),
+              ...(room?.currentMatchId ? { "x-trivia-current-match-id": room.currentMatchId } : {}),
+            }
+          : undefined,
+    });
     const payload = await response.json();
 
     if (!response.ok || !payload.ok) {
@@ -230,28 +311,22 @@ export function PlayerRoomClient() {
     const nextRoom = payload.data.room as PublicRoomState;
     const remoteRememberedPlayer = (payload.data.rememberedPlayer as RememberedPlayer | null) ?? null;
 
+    let resolvedRoom = nextRoom;
     setRoom((current) => {
-      const sessionPlayerId = session?.playerId;
-
-      if (
-        current &&
-        sessionPlayerId &&
-        isGameplayPhase(current.phase) &&
-        Boolean(current.currentMatchId) &&
-        isPlayerInRoom(current, sessionPlayerId) &&
-        (nextRoom.phase === "idle" || nextRoom.phase === "lobby") &&
-        !nextRoom.currentMatchId &&
-        !isPlayerInRoom(nextRoom, sessionPlayerId)
-      ) {
-        return current;
-      }
-
-      return nextRoom;
+      resolvedRoom = chooseStableRoom({
+        current,
+        candidate: nextRoom,
+        sessionPlayerId: session?.playerId,
+        lastGameplayProgressAt: lastGameplayProgressAtRef.current,
+      });
+      return resolvedRoom;
     });
+
+    trackGameplayProgress(resolvedRoom);
     setRememberedPlayer((current) => remoteRememberedPlayer ?? current);
     setError(null);
-    return nextRoom;
-  }, [session?.playerId]);
+    return resolvedRoom;
+  }, [room?.currentMatchId, session?.playerId]);
 
   const joinWithPlayer = useCallback(async (playerId: string, profile?: RememberedPlayer) => {
     const sessionId = crypto.randomUUID();
@@ -272,6 +347,7 @@ export function PlayerRoomClient() {
     }
 
     const joinedPlayer = payload.data.player as JoinApiPlayer;
+    const joinedRoom = payload.data.room as PublicRoomState | undefined;
     setJoinInFlightPlayerId(joinedPlayer.playerId);
     persistSession({
       playerId: joinedPlayer.playerId,
@@ -285,8 +361,33 @@ export function PlayerRoomClient() {
 
     setRememberedPlayer(null);
 
+    if (joinedRoom) {
+      let resolvedRoom = joinedRoom;
+      setRoom((current) => {
+        resolvedRoom = chooseStableRoom({
+          current,
+          candidate: joinedRoom,
+          sessionPlayerId: joinedPlayer.playerId,
+          lastGameplayProgressAt: lastGameplayProgressAtRef.current,
+        });
+        return resolvedRoom;
+      });
+      trackGameplayProgress(resolvedRoom);
+    }
+
     for (let attempt = 0; attempt < 3; attempt += 1) {
-      const nextRoom = await loadRoomState();
+      let nextRoom: PublicRoomState;
+
+      try {
+        nextRoom = await loadRoomState();
+      } catch (error) {
+        if (attempt === 2) {
+          throw error;
+        }
+        await wait(250);
+        continue;
+      }
+
       const joinedSeat =
         nextRoom.players.player1?.playerId === joinedPlayer.playerId ||
         nextRoom.players.player2?.playerId === joinedPlayer.playerId;
@@ -338,7 +439,18 @@ export function PlayerRoomClient() {
           const tickPayload = await tickResponse.json();
 
           if (tickResponse.ok && tickPayload.ok && !cancelled) {
-            setRoom(tickPayload.data.room as PublicRoomState);
+            const tickRoom = tickPayload.data.room as PublicRoomState;
+            let resolvedRoom = tickRoom;
+            setRoom((current) => {
+              resolvedRoom = chooseStableRoom({
+                current,
+                candidate: tickRoom,
+                sessionPlayerId: session?.playerId,
+                lastGameplayProgressAt: lastGameplayProgressAtRef.current,
+              });
+              return resolvedRoom;
+            });
+            trackGameplayProgress(resolvedRoom);
           }
         }
       } catch (syncError) {
@@ -394,9 +506,7 @@ export function PlayerRoomClient() {
 
     if (room.phase === "idle" && room.lobby.previewMessage === "lobby_timeout" && !playerStillInRoom) {
       const timeoutId = window.setTimeout(() => {
-        persistSession(null);
-        setRememberedPlayer(null);
-        setError("Tu tiempo en la sala expiró. Entra de nuevo cuando estés listo.");
+        setError("Tu tiempo de espera en la sala expiró. Toca unirte de nuevo para continuar.");
       }, 0);
 
       return () => window.clearTimeout(timeoutId);

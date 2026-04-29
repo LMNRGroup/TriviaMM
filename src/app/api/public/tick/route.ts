@@ -34,6 +34,11 @@ export async function POST(request: Request) {
       return fail("room_not_found", 404, "No se encontro la sala publica.");
     }
 
+    const actor = findPlayerById(room, parsed.data.playerId);
+    if (!actor || !requirePlayerToken(actor, parsed.data.controllerToken)) {
+      return fail("invalid_tick_actor", 403, "El avance de tiempo requiere un jugador valido con token.");
+    }
+
     const activeOrWaiting =
       room.phase !== "idle" &&
       (room.phase !== "lobby" || Boolean(room.lobby.waitingEndsAt));
@@ -45,13 +50,7 @@ export async function POST(request: Request) {
         return fail("missing_tick_driver", 409, "No hay jugador controlador para avanzar la partida.");
       }
 
-      if (!parsed.data.playerId || !parsed.data.controllerToken) {
-        return fail("tick_auth_required", 403, "El avance de tiempo requiere el token del jugador controlador.");
-      }
-
-      const actor = findPlayerById(room, parsed.data.playerId);
-
-      if (!actor || actor.playerId !== tickDriver.playerId || !requirePlayerToken(actor, parsed.data.controllerToken)) {
+      if (actor.playerId !== tickDriver.playerId) {
         return fail("invalid_tick_driver", 403, "Solo el jugador controlador puede avanzar el tiempo.");
       }
     }

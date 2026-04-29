@@ -9,7 +9,7 @@ import { buildLivePlayerFromRegistration, getRegisteredPlayerById } from "@/lib/
 import { getRandomQuestions } from "@/lib/sheets/question-repo";
 import { getBaseUrl, isMultiplayerEnabled } from "@/lib/utils/env";
 import { getRequestIp } from "@/lib/utils/request";
-import { toJoinPlayerPayload, toPublicRoomJoinSlice } from "@/lib/api/room-state";
+import { toJoinPlayerPayload, toPublicRoomState } from "@/lib/api/room-state";
 import { joinRoomSchema } from "@/lib/validation/room";
 import { saveQuestionBank, saveRoomState } from "@/lib/kv/room-store";
 
@@ -122,12 +122,7 @@ export async function POST(request: Request) {
 
     return ok({
       player: toJoinPlayerPayload(joinResult.player),
-      room: toPublicRoomJoinSlice({
-        phase: joinResult.room.phase,
-        mode: joinResult.room.mode,
-        players: joinResult.room.players,
-        lobby: joinResult.room.lobby,
-      }),
+      room: toPublicRoomState(joinResult.room),
     });
   } catch (error) {
     if (error instanceof Error) {

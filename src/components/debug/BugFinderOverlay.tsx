@@ -21,6 +21,24 @@ function shortError(value: unknown) {
   return String(value);
 }
 
+function toEnglishDiagnostic(value: unknown) {
+  const message = typeof value === "string" ? value : shortError(value);
+
+  if (message === "No se pudo cargar la sala publica.") {
+    return "Failed to load the public room.";
+  }
+
+  if (message === "No se encontro la sala publica.") {
+    return "Public room not found.";
+  }
+
+  if (message === "El estado de la sala no esta disponible temporalmente en este nodo. Intenta de nuevo.") {
+    return "Room state is temporarily unavailable on this runtime node. Retry shortly.";
+  }
+
+  return message;
+}
+
 export function BugFinderOverlay() {
   const [events, setEvents] = useState<BugEvent[]>([]);
   const previousRoomRef = useRef<Pick<PublicRoomState, "phase" | "currentMatchId" | "updatedAt"> | null>(null);
@@ -71,7 +89,7 @@ export function BugFinderOverlay() {
         const payload = await response.json();
 
         if (!response.ok || !payload.ok) {
-          pushEvent("warning", "backend", "Health endpoint failed", payload?.message ?? response.statusText);
+          pushEvent("warning", "backend", "Health endpoint failed", toEnglishDiagnostic(payload?.message ?? response.statusText));
           return;
         }
 
@@ -97,7 +115,7 @@ export function BugFinderOverlay() {
         }
       } catch (error) {
         if (!cancelled) {
-          pushEvent("warning", "backend", "Failed to check backend health", shortError(error));
+          pushEvent("warning", "backend", "Failed to check backend health", toEnglishDiagnostic(error));
         }
       }
     }
@@ -120,7 +138,7 @@ export function BugFinderOverlay() {
         const payload = await response.json();
 
         if (!response.ok || !payload.ok) {
-          pushEvent("warning", "network", "Room state request failed", payload?.message ?? response.statusText);
+          pushEvent("warning", "network", "Room state request failed", toEnglishDiagnostic(payload?.message ?? response.statusText));
           return;
         }
 
@@ -154,7 +172,7 @@ export function BugFinderOverlay() {
         };
       } catch (error) {
         if (!cancelled) {
-          pushEvent("warning", "network", "Error while polling /api/public/state", shortError(error));
+          pushEvent("warning", "network", "Error while polling /api/public/state", toEnglishDiagnostic(error));
         }
       }
     }
