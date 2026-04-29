@@ -120,6 +120,62 @@ function SeatCard({
   );
 }
 
+function toUniversityIconLabel(value: string | null | undefined) {
+  const cleaned = (value ?? "")
+    .trim()
+    .replace(/[^a-zA-Z]/g, "")
+    .toUpperCase();
+
+  if (cleaned.length >= 4) {
+    return cleaned.slice(0, 4);
+  }
+
+  if (cleaned.length >= 2) {
+    return cleaned;
+  }
+
+  return "UNI";
+}
+
+function BroadcastTopPlayerPanel({
+  side,
+  slot,
+  name,
+  university,
+  points,
+}: {
+  side: "left" | "right";
+  slot: "P1" | "P2";
+  name: string;
+  university: string;
+  points: number;
+}) {
+  const icon = (
+    <span className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-full border border-white/15 bg-white/7 px-2 text-[11px] font-black uppercase tracking-[0.1em] text-[color:var(--accent-cool)]">
+      {toUniversityIconLabel(university)}
+    </span>
+  );
+
+  return (
+    <div className="glass-panel battle-card h-full rounded-[1.4rem] px-4 py-3">
+      <div className="flex h-full items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[color:var(--muted)]">{slot}</p>
+          <div className="mt-2 flex items-center gap-2">
+            {side === "left" ? icon : null}
+            <p className="truncate font-display text-xl font-black uppercase">{name}</p>
+            {side === "right" ? icon : null}
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="font-display text-5xl font-black text-[color:var(--accent)]">{points}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[color:var(--muted)]">pts</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function HostRoomClient() {
   const [room, setRoom] = useState<PublicRoomState | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -434,6 +490,122 @@ export function HostRoomClient() {
             <p className="mt-6 max-w-3xl text-lg text-[color:var(--muted)]">
               Estamos preparando una ronda limpia para los próximos jugadores.
             </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (room && showQuestion) {
+    const p1Name = room.players.player1?.name ?? "Jugador 1";
+    const p1University = room.players.player1?.university ?? room.players.player1?.city ?? "Universidad";
+    const p2Name = room.players.player2?.name ?? "Jugador 2";
+    const p2University = room.players.player2?.university ?? room.players.player2?.city ?? "Universidad";
+
+    return (
+      <section className="mx-auto flex w-full max-w-[1920px] items-center justify-center">
+        <div className="glass-panel battle-card app-shell aspect-[16/9] w-full overflow-hidden rounded-[2.6rem] p-6 xl:p-8">
+          <div className="hero-mesh" />
+          <div className="relative h-full">
+            <div className="absolute inset-x-0 top-0 h-[12%]">
+              <div
+                className="grid h-full items-center gap-4"
+                style={{ gridTemplateColumns: "minmax(18rem,22rem) minmax(0,1fr) minmax(18rem,22rem)" }}
+              >
+                <BroadcastTopPlayerPanel
+                  side="left"
+                  slot="P1"
+                  name={p1Name}
+                  university={p1University}
+                  points={room.scores.player1}
+                />
+                <div className="px-2 text-center">
+                  <h1 className="font-display text-5xl font-black uppercase tracking-[0.12em] xl:text-6xl">RETO JUSTAS</h1>
+                </div>
+                <BroadcastTopPlayerPanel
+                  side="right"
+                  slot="P2"
+                  name={p2Name}
+                  university={p2University}
+                  points={room.scores.player2}
+                />
+              </div>
+            </div>
+
+            <div className="absolute inset-x-0 top-[12%] h-[68%]">
+              <div className="grid h-full gap-4" style={{ gridTemplateColumns: "78% 22%" }}>
+                <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(5,10,20,0.78),rgba(7,12,24,0.96))] p-6">
+                  <div className="absolute right-5 top-5 rounded-[1.3rem] border border-white/10 bg-white/7 px-4 py-3 text-right">
+                    <p className="text-[11px] uppercase tracking-[0.35em] text-[color:var(--muted)]">
+                      {room.phase === "question-read" ? "lectura" : "respuesta"}
+                    </p>
+                    <p
+                      className={`font-display mt-2 text-5xl font-black ${room.phase === "question" && Number(timerLabel) <= 5 ? "timer-critical" : ""}`}
+                    >
+                      {timerLabel}
+                    </p>
+                  </div>
+
+                  <div className="flex h-full flex-col">
+                    <div className="max-w-[92%]">
+                      <p className="font-display text-3xl font-black uppercase tracking-[0.08em] text-[color:var(--accent)]">
+                        Pregunta {room.currentQuestion.questionIndex}/{room.currentQuestion.totalQuestions}
+                      </p>
+                      {room.currentQuestion.category ? (
+                        <p className="mt-3 font-display text-xl font-black uppercase tracking-[0.18em] text-[color:var(--accent-strong)]">
+                          {room.currentQuestion.category}
+                        </p>
+                      ) : null}
+                      <h2 className="font-display mt-6 text-left text-6xl font-black uppercase leading-[1.02] tracking-[0.02em] xl:text-7xl">
+                        {room.currentQuestion.prompt}
+                      </h2>
+                    </div>
+
+                    <div className="mt-auto grid gap-3 pb-1 pt-5 xl:grid-cols-2">
+                      {(Object.entries(room.currentQuestion.choices ?? {}) as Array<[string, string]>).map(([key, value]) => (
+                        <div
+                          className={`rounded-[1.6rem] border px-5 py-4 ${
+                            room.phase === "question"
+                              ? "border-white/12 bg-white/7"
+                              : "border-white/8 bg-white/4 opacity-45"
+                          }`}
+                          key={key}
+                        >
+                          <div className="flex items-start gap-3">
+                            <p className="font-display min-w-[2.5rem] text-4xl font-black uppercase text-[color:var(--accent-cool)]">{key}</p>
+                            <p className="text-2xl font-semibold leading-8">{value}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+
+                <aside className="glass-panel battle-card h-full rounded-[1.8rem] p-4">
+                  <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Estado jugadores</p>
+                  <div className="mt-4 grid h-[calc(100%-1.8rem)] gap-3">
+                    <div className="rounded-[1.2rem] border border-white/12 bg-white/7 p-3">
+                      <p className="text-[10px] uppercase tracking-[0.35em] text-[color:var(--muted)]">P1</p>
+                      <p className="mt-2 truncate font-display text-xl font-black uppercase">{p1Name}</p>
+                      <p className="mt-1 truncate text-xs uppercase tracking-[0.08em] text-[color:var(--muted)]">{p1University}</p>
+                      <p className="mt-3 font-display text-4xl font-black text-[color:var(--accent)]">{room.scores.player1}</p>
+                    </div>
+                    <div className="rounded-[1.2rem] border border-white/12 bg-white/7 p-3">
+                      <p className="text-[10px] uppercase tracking-[0.35em] text-[color:var(--muted)]">P2</p>
+                      <p className="mt-2 truncate font-display text-xl font-black uppercase">{p2Name}</p>
+                      <p className="mt-1 truncate text-xs uppercase tracking-[0.08em] text-[color:var(--muted)]">{p2University}</p>
+                      <p className="mt-3 font-display text-4xl font-black text-[color:var(--accent)]">{room.scores.player2}</p>
+                    </div>
+                  </div>
+                </aside>
+              </div>
+            </div>
+
+            <footer className="absolute inset-x-0 bottom-0 flex h-[8%] items-center justify-center text-center">
+              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-[color:var(--muted)]">
+                © 2026 Luminar Apps · Desarrollado para Municipio Autónomo de Mayagüez
+              </p>
+            </footer>
           </div>
         </div>
       </section>

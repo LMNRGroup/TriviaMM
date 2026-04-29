@@ -56,6 +56,20 @@ function isUnexpectedMatchReset(current: PublicRoomState, incoming: PublicRoomSt
     return false;
   }
 
+  const soloAfkResetExpected = current.mode === "solo" && current.unansweredStreaks.player1 >= 3;
+  const battleAfkResetExpected =
+    current.mode === "battle" &&
+    current.unansweredStreaks.player1 >= 3 &&
+    current.unansweredStreaks.player2 >= 3;
+
+  if (current.reset.pending || soloAfkResetExpected || battleAfkResetExpected) {
+    return false;
+  }
+
+  if (incoming.lobby.previewMessage === "system_recover") {
+    return false;
+  }
+
   return true;
 }
 

@@ -122,7 +122,14 @@ export async function forceResetPublicRoomNow() {
     }
 
     const reset = resetRoom(latest, new Date().toISOString());
-    const [persisted] = await Promise.all([saveRoomState(reset), clearQuestionBank(PUBLIC_ROOM_CODE)]);
+    const taggedReset: RoomState = {
+      ...reset,
+      lobby: {
+        ...reset.lobby,
+        previewMessage: "system_recover",
+      },
+    };
+    const [persisted] = await Promise.all([saveRoomState(taggedReset), clearQuestionBank(PUBLIC_ROOM_CODE)]);
     return persisted;
   });
 }

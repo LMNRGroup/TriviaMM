@@ -365,7 +365,7 @@ export async function finalizeQuestion({
       phaseStartedAt: toMs(nowIso),
       currentQuestion: {
         ...nextRoom.currentQuestion,
-        answerLockEndsAt: plusMs(nowIso, ANSWER_LOCK_DURATION_MS),
+        answerLockEndsAt: shouldReset ? nowIso : plusMs(nowIso, ANSWER_LOCK_DURATION_MS),
       },
       randomization: {
         ...nextRoom.randomization,
