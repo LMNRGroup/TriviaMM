@@ -39,6 +39,14 @@ function formatAverageSeconds(milliseconds: number | null | undefined) {
   return `${(milliseconds / 1000).toFixed(1)}s`;
 }
 
+function formatResponseSeconds(milliseconds: number | null | undefined) {
+  if (typeof milliseconds !== "number") {
+    return "--";
+  }
+
+  return `${(milliseconds / 1000).toFixed(2)}s`;
+}
+
 function getFeedbackGlow(feedback: AnswerFeedback, side: "left" | "right") {
   if (feedback === "correct") {
     return `${side}-0 top-0 h-full w-1/2 bg-[radial-gradient(circle_at_center,rgba(61,224,163,0.32),transparent_72%)]`;
@@ -49,6 +57,34 @@ function getFeedbackGlow(feedback: AnswerFeedback, side: "left" | "right") {
   }
 
   return "";
+}
+
+function getFeedbackLabel(feedback: AnswerFeedback) {
+  if (feedback === "correct") {
+    return "Correcta";
+  }
+
+  if (feedback === "incorrect") {
+    return "Incorrecta";
+  }
+
+  if (feedback === "timeout") {
+    return "Sin respuesta";
+  }
+
+  return "Esperando validación";
+}
+
+function getFeedbackCardTone(feedback: AnswerFeedback) {
+  if (feedback === "correct") {
+    return "border-[color:var(--success)]/45 bg-[color:var(--success)]/12";
+  }
+
+  if (feedback === "incorrect" || feedback === "timeout") {
+    return "border-[color:var(--danger)]/45 bg-[color:var(--danger)]/12";
+  }
+
+  return "border-white/10 bg-white/6";
 }
 
 function SeatCard({
@@ -394,11 +430,21 @@ export function HostRoomClient() {
 
         <div className="relative flex h-full flex-col gap-5">
           <header className="flex items-start justify-between gap-6">
-            <div>
-              <p className="font-display text-sm uppercase tracking-[0.45em] text-[color:var(--accent)]">Trivia Battle</p>
+            <div className="max-w-5xl">
+              <p className="font-display text-sm uppercase tracking-[0.45em] text-[color:var(--accent)]">Pantalla principal</p>
               <h1 className="font-display mt-3 text-5xl font-black uppercase tracking-[0.12em] xl:text-7xl">
-                Pantalla principal
+                RETO JUSTAS
               </h1>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <p className="rounded-full border border-white/12 bg-white/7 px-4 py-2 font-display text-xs font-black uppercase tracking-[0.22em] text-[color:var(--accent-cool)]">
+                  P1 {room?.players.player1?.name ?? "Esperando"} · {room?.scores.player1 ?? 0} pts
+                </p>
+                {room?.players.player2 ? (
+                  <p className="rounded-full border border-white/12 bg-white/7 px-4 py-2 font-display text-xs font-black uppercase tracking-[0.22em] text-[color:var(--accent-cool)]">
+                    P2 {room.players.player2.name} · {room.scores.player2} pts
+                  </p>
+                ) : null}
+              </div>
               <p className="status-dot mt-4 text-base leading-7 text-[color:var(--muted)]">{phaseCopy}</p>
               {hostAfkMessage ? (
                 <div className="mt-4 max-w-3xl rounded-[1.2rem] border border-[color:var(--danger)]/40 bg-[color:var(--danger)]/10 px-4 py-3 text-sm font-semibold leading-6 text-red-100">
@@ -412,22 +458,10 @@ export function HostRoomClient() {
               <p className="font-display mt-3 text-2xl font-black uppercase text-[color:var(--accent-cool)]">
                 {room?.phase.replace("-", " ") ?? "cargando"}
               </p>
-              {(room?.phase === "countdown" || room?.phase === "question-read" || room?.phase === "question") && (
-                <>
-                  <p className="mt-4 text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">
-                    {room?.phase === "question-read" ? "respuestas en" : "tiempo"}
-                  </p>
-                  <p
-                    className={`font-display mt-2 text-6xl font-black ${room?.phase === "question" && Number(timerLabel) <= 5 ? "timer-critical" : ""}`}
-                  >
-                    {timerLabel}
-                  </p>
-                </>
-              )}
             </div>
           </header>
 
-          <div className="grid flex-1 gap-5 xl:grid-cols-[1.5fr_0.7fr]">
+          <div className="grid flex-1 gap-5 xl:grid-cols-[1.6fr_0.7fr]">
             <section className="rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(5,10,20,0.78),rgba(7,12,24,0.96))] p-6">
               {showLobby ? (
                 <div className="grid h-full gap-6 xl:grid-cols-[1.15fr_0.85fr]">
@@ -485,8 +519,8 @@ export function HostRoomClient() {
               ) : null}
 
               {showQuestion ? (
-                <div className="flex h-full flex-col justify-between gap-6">
-                  <div className="flex items-center justify-between gap-4">
+                <div className="flex h-full flex-col gap-4">
+                  <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="font-display text-sm uppercase tracking-[0.35em] text-[color:var(--accent)]">
                         Pregunta {room.currentQuestion.questionIndex} / {room.currentQuestion.totalQuestions}
@@ -496,16 +530,26 @@ export function HostRoomClient() {
                           {room.currentQuestion.category}
                         </p>
                       ) : null}
-                      <h2 className="font-display mt-4 text-5xl font-black uppercase leading-[1.02] xl:text-7xl">
+                      <h2 className="font-display mt-3 text-5xl font-black uppercase leading-[0.98] xl:text-8xl">
                         {room.currentQuestion.prompt}
                       </h2>
                     </div>
+                    <div className="rounded-[1.4rem] border border-white/10 bg-white/7 px-4 py-3 text-right">
+                      <p className="text-[11px] uppercase tracking-[0.35em] text-[color:var(--muted)]">
+                        {room.phase === "question-read" ? "lectura" : "respuesta"}
+                      </p>
+                      <p
+                        className={`font-display mt-2 text-5xl font-black ${room.phase === "question" && Number(timerLabel) <= 5 ? "timer-critical" : ""}`}
+                      >
+                        {timerLabel}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="grid gap-4 xl:grid-cols-2">
+                  <div className="grid gap-3 xl:grid-cols-2">
                     {(Object.entries(room.currentQuestion.choices ?? {}) as Array<[string, string]>).map(([key, value]) => (
                       <div
-                        className={`rounded-[1.6rem] border px-5 py-5 text-lg leading-7 ${
+                        className={`rounded-[1.6rem] border px-5 py-4 text-lg leading-7 ${
                           room.phase === "question"
                             ? "border-white/12 bg-white/7"
                             : "border-white/8 bg-white/4 opacity-45"
@@ -536,12 +580,40 @@ export function HostRoomClient() {
                   <p className="font-display text-sm uppercase tracking-[0.45em] text-[color:var(--accent-cool)]">
                     Respuestas cerradas
                   </p>
-                  <h2 className="font-display mt-5 text-5xl font-black uppercase xl:text-7xl">
-                    Siguiente pregunta
-                  </h2>
-                  <p className="mt-5 text-lg text-[color:var(--muted)]">
-                    Preparando la siguiente ronda.
-                  </p>
+                  {room.mode === "solo" ? (
+                    <div className={`mt-5 w-full max-w-3xl rounded-[1.8rem] border px-6 py-8 ${getFeedbackCardTone(room.answerFeedback.player1)}`}>
+                      <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">
+                        {room.players.player1?.name ?? "Jugador"}
+                      </p>
+                      <h2 className="font-display mt-4 text-6xl font-black uppercase xl:text-7xl">
+                        {getFeedbackLabel(room.answerFeedback.player1)}
+                      </h2>
+                      <p className="mt-4 text-sm text-[color:var(--muted)]">
+                        Tiempo: {formatResponseSeconds(room.answers.player1?.responseTimeMs)} · Puntos: +{room.answers.player1?.awardedPoints ?? 0}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-6 grid w-full max-w-5xl gap-4 xl:grid-cols-2">
+                      <div className={`rounded-[1.8rem] border px-6 py-7 text-left ${getFeedbackCardTone(room.answerFeedback.player1)}`}>
+                        <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">
+                          {room.players.player1?.name ?? "Jugador 1"}
+                        </p>
+                        <h3 className="font-display mt-3 text-5xl font-black uppercase">{getFeedbackLabel(room.answerFeedback.player1)}</h3>
+                        <p className="mt-3 text-sm text-[color:var(--muted)]">
+                          Tiempo: {formatResponseSeconds(room.answers.player1?.responseTimeMs)} · Puntos: +{room.answers.player1?.awardedPoints ?? 0}
+                        </p>
+                      </div>
+                      <div className={`rounded-[1.8rem] border px-6 py-7 text-left ${getFeedbackCardTone(room.answerFeedback.player2)}`}>
+                        <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">
+                          {room.players.player2?.name ?? "Jugador 2"}
+                        </p>
+                        <h3 className="font-display mt-3 text-5xl font-black uppercase">{getFeedbackLabel(room.answerFeedback.player2)}</h3>
+                        <p className="mt-3 text-sm text-[color:var(--muted)]">
+                          Tiempo: {formatResponseSeconds(room.answers.player2?.responseTimeMs)} · Puntos: +{room.answers.player2?.awardedPoints ?? 0}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : null}
 
@@ -631,15 +703,17 @@ export function HostRoomClient() {
                 score={room?.scores.player2 ?? 0}
                 compact
               />
-              <div className="glass-panel rounded-[1.8rem] p-5">
-                <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Instrucciones visibles</p>
-                <ul className="mt-4 space-y-3 text-sm leading-6 text-[color:var(--muted)]">
-                  <li>1. Escanea el QR y completa el registro.</li>
-                  <li>2. Lee la pregunta durante 5 segundos.</li>
-                  <li>3. Cuando aparezcan las respuestas, tendrás 10 segundos para contestar.</li>
-                  <li>4. Gana quien acierte más rápido.</li>
-                </ul>
-              </div>
+              {showLobby ? (
+                <div className="glass-panel rounded-[1.8rem] p-5">
+                  <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Instrucciones visibles</p>
+                  <ul className="mt-4 space-y-3 text-sm leading-6 text-[color:var(--muted)]">
+                    <li>1. Escanea el QR y completa el registro.</li>
+                    <li>2. Lee la pregunta durante 5 segundos.</li>
+                    <li>3. Cuando aparezcan las respuestas, tendrás 10 segundos para contestar.</li>
+                    <li>4. Gana quien acierte más rápido.</li>
+                  </ul>
+                </div>
+              ) : null}
               {error ? (
                 <div className="rounded-[1.5rem] border border-[color:var(--danger)]/35 bg-[color:var(--danger)]/10 px-4 py-4 text-sm text-red-100">
                   {error}

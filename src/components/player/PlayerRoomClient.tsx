@@ -57,6 +57,7 @@ interface AnswerFeedbackSnapshot {
 }
 
 const STORAGE_KEY = "trivia:player:public";
+const TUTORIAL_STORAGE_PREFIX = "trivia:tutorial:done:";
 const BATTLE_MODE_ENABLED =
   (process.env.NEXT_PUBLIC_ENABLE_BATTLE_MODE ?? "").trim().toLowerCase() === "1" ||
   (process.env.NEXT_PUBLIC_ENABLE_BATTLE_MODE ?? "").trim().toLowerCase() === "true" ||
@@ -190,6 +191,10 @@ function emitPlayerDebug(detail: Record<string, unknown>) {
   );
 }
 
+function getTutorialStorageKey(playerId: string) {
+  return `${TUTORIAL_STORAGE_PREFIX}${playerId}`;
+}
+
 export function PlayerRoomClient() {
   const [room, setRoom] = useState<PublicRoomState | null>(null);
   const [rememberedPlayer, setRememberedPlayer] = useState<RememberedPlayer | null>(null);
@@ -198,6 +203,7 @@ export function PlayerRoomClient() {
   const [sessionHydrated, setSessionHydrated] = useState(false);
   const [selectedChoiceState, setSelectedChoiceState] = useState<{ questionIndex: number; choice: string } | null>(null);
   const [answerFeedbackSnapshot, setAnswerFeedbackSnapshot] = useState<AnswerFeedbackSnapshot | null>(null);
+  const [tutorialProgressByPlayer, setTutorialProgressByPlayer] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
   const [joinInFlightPlayerId, setJoinInFlightPlayerId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
@@ -326,6 +332,23 @@ export function PlayerRoomClient() {
         ? room.players.player2
         : null
     : null;
+  const tutorialStep = useMemo(() => {
+    if (!playerSeat?.playerId) {
+      return null;
+    }
+
+    const storedProgress = tutorialProgressByPlayer[playerSeat.playerId];
+    if (typeof storedProgress === "number") {
+      return storedProgress;
+    }
+
+    if (typeof window === "undefined") {
+      return null;
+    }
+
+    const seen = window.localStorage.getItem(getTutorialStorageKey(playerSeat.playerId)) === "1";
+    return seen ? -1 : 0;
+  }, [playerSeat?.playerId, tutorialProgressByPlayer]);
 
   const selectedChoice =
     selectedChoiceState && selectedChoiceState.questionIndex === room?.currentQuestion.questionIndex
@@ -354,6 +377,37 @@ export function PlayerRoomClient() {
     setSelectedChoiceState(null);
     setAnswerFeedbackSnapshot(null);
     setForm(initialFormState);
+    setError(null);
+  }
+
+  function completeTutorial() {
+    if (!playerSeat?.playerId) {
+      return;
+    }
+
+    window.localStorage.setItem(getTutorialStorageKey(playerSeat.playerId), "1");
+    setTutorialProgressByPlayer((current) => ({
+      ...current,
+      [playerSeat.playerId]: -1,
+    }));
+  }
+
+  function playAgain() {
+    if (session) {
+      setRememberedPlayer({
+        playerId: session.playerId,
+        name: session.name,
+        city: session.city,
+        university: session.university,
+        age: session.age,
+        email: session.email,
+      });
+    }
+
+    persistSession(null);
+    setJoinInFlightPlayerId(null);
+    setSelectedChoiceState(null);
+    setAnswerFeedbackSnapshot(null);
     setError(null);
   }
 
@@ -1166,6 +1220,9 @@ export function PlayerRoomClient() {
   if (room.phase === "idle" || room.phase === "lobby") {
     const isPlayer1 = playerSeat.slot === 1;
     const canStartSolo = isPlayer1 && !room.players.player2;
+    const tutorialActive = isPlayer1 && tutorialStep !== null && tutorialStep >= 0;
+    const tutorialProgress = Math.min(Math.max(tutorialStep ?? 0, 0), 2);
+    const canStartSoloNow = canStartSolo && !tutorialActive;
 
     return (
       <section className="enter-rise flex h-full flex-col justify-between gap-6">
@@ -1214,11 +1271,89 @@ export function PlayerRoomClient() {
             </ul>
           </div>
 
+          {tutorialActive ? (
+            <div className="glass-panel rounded-[1.8rem] border border-[color:var(--accent)]/35 p-5">
+              <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--accent)]">
+                Tutorial rápido ({tutorialProgress + 1}/3)
+              </p>
+
+              {tutorialProgress === 0 ? (
+                <div className="mt-4 space-y-3">
+                  <h3 className="font-display text-2xl font-black uppercase">Cómo funciona</h3>
+                  <p className="text-sm leading-6 text-[color:var(--muted)]">
+                    Las preguntas salen en la pantalla grande. Tú respondes desde este celular. Primero verás la pregunta (5s) y luego tendrás 10s para contestar.
+                  </p>
+                </div>
+              ) : null}
+
+              {tutorialProgress === 1 ? (
+                <div className="mt-4 space-y-3">
+                  <h3 className="font-display text-2xl font-black uppercase">Práctica guiada</h3>
+                  <p className="text-sm leading-6 text-[color:var(--muted)]">
+                    Ejemplo: ¿Cuánto es 2 + 2? Toca la respuesta correcta.
+                  </p>
+                  <div className="grid gap-2">
+                    {(["A) 2", "B) 4", "C) 5", "D) 8"] as const).map((option) => (
+                      <div
+                        className={`rounded-[1rem] border px-3 py-2 text-sm ${
+                          option.startsWith("B")
+                            ? "border-[color:var(--success)]/50 bg-[color:var(--success)]/12 text-green-100"
+                            : "border-white/10 bg-white/5 text-[color:var(--muted)]"
+                        }`}
+                        key={option}
+                      >
+                        {option}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {tutorialProgress === 2 ? (
+                <div className="mt-4 space-y-3">
+                  <h3 className="font-display text-2xl font-black uppercase">Listo</h3>
+                  <p className="text-sm leading-6 text-[color:var(--muted)]">
+                    Ya sabes el flujo. Pulsa <strong>Listo</strong> y luego <strong>Comenzar</strong> para arrancar la trivia real.
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="mt-5 flex gap-3">
+                {tutorialProgress < 2 ? (
+                  <button
+                    className="rounded-[1rem] border border-white/15 bg-white/6 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-white/10"
+                    onClick={() => {
+                      if (!playerSeat?.playerId) {
+                        return;
+                      }
+
+                      setTutorialProgressByPlayer((current) => ({
+                        ...current,
+                        [playerSeat.playerId]: Math.min((current[playerSeat.playerId] ?? 0) + 1, 2),
+                      }));
+                    }}
+                    type="button"
+                  >
+                    Siguiente
+                  </button>
+                ) : (
+                  <button
+                    className="rounded-[1rem] border border-[color:var(--success)]/45 bg-[color:var(--success)]/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-green-100 transition hover:bg-[color:var(--success)]/25"
+                    onClick={completeTutorial}
+                    type="button"
+                  >
+                    Listo
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : null}
+
           {isPlayer1 ? (
             <div className="grid gap-3">
               <button
                 className="font-display rounded-[1.45rem] bg-[linear-gradient(135deg,var(--accent),#ffd77a)] px-5 py-4 text-base font-black uppercase tracking-[0.14em] text-slate-950 transition hover:-translate-y-0.5 hover:brightness-105 disabled:opacity-40"
-                disabled={!canStartSolo || isPending || isStarting}
+                disabled={!canStartSoloNow || isPending || isStarting}
                 onClick={() => startMatch("solo")}
                 type="button"
               >
@@ -1431,6 +1566,13 @@ export function PlayerRoomClient() {
           entries={room.leaderboard.visibleTop}
           highlightRanks={typeof playerRank === "number" ? [playerRank] : []}
         />
+        <button
+          className="font-display mt-auto rounded-[1.3rem] border border-white/15 bg-white/7 px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12"
+          onClick={playAgain}
+          type="button"
+        >
+          Jugar otra vez
+        </button>
       </section>
     );
   }
