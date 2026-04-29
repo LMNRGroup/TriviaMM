@@ -65,23 +65,47 @@ function toLabelValue(value: unknown) {
 
 export function BugFinderPanel({ events, runtimeStats, onClear }: BugFinderPanelProps) {
   const [open, setOpen] = useState(false);
-  const errorCount = useMemo(() => events.filter((event) => event.level === "error").length, [events]);
-  const warningCount = useMemo(() => events.filter((event) => event.level === "warning").length, [events]);
+  const issueCount = useMemo(
+    () => events.filter((event) => event.level === "error" || event.level === "warning").length,
+    [events],
+  );
+  const hasIssues = issueCount > 0;
+  const showPanel = hasIssues && open;
 
   return (
     <div className="fixed bottom-4 right-4 z-[120] w-[min(92vw,25rem)]">
       <button
-        className="ml-auto flex items-center gap-2 rounded-full border border-white/20 bg-[color:var(--panel)]/95 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur"
-        onClick={() => setOpen((value) => !value)}
+        aria-label={hasIssues ? "Open diagnostics" : "No active diagnostics"}
+        className={`ml-auto flex h-11 w-11 items-center justify-center rounded-full border bg-[color:var(--panel)]/95 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur transition ${
+          hasIssues
+            ? "cursor-pointer border-red-300/60 text-red-300 hover:scale-105 hover:text-red-200"
+            : "cursor-default border-white/30 text-white/95"
+        }`}
+        disabled={!hasIssues}
+        onClick={() => {
+          if (!hasIssues) {
+            return;
+          }
+          setOpen((value) => !value);
+        }}
         type="button"
       >
-        <span aria-hidden="true" className="text-sm">🐞</span>
-        <span>Bug Finder</span>
-        <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-red-100">{errorCount}</span>
-        <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-amber-100">{warningCount}</span>
+        <svg
+          aria-hidden="true"
+          className="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="1.9"
+          viewBox="0 0 24 24"
+        >
+          <path d="M8.2 7.2 6 5M15.8 7.2 18 5M12 7V3M8.5 12h-5M20.5 12h-5M8.7 16.7 6.5 19M15.3 16.7l2.2 2.3" />
+          <path d="M7 12.6c0-3.2 2.3-5.6 5-5.6s5 2.4 5 5.6c0 3.9-2.6 7.4-5 7.4s-5-3.5-5-7.4Z" />
+        </svg>
       </button>
 
-      {open ? (
+      {showPanel ? (
         <div className="mt-3 max-h-[60vh] overflow-hidden rounded-[1rem] border border-white/15 bg-[color:var(--panel)]/96 p-3 shadow-[0_18px_45px_rgba(0,0,0,0.55)] backdrop-blur">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
@@ -89,7 +113,10 @@ export function BugFinderPanel({ events, runtimeStats, onClear }: BugFinderPanel
             </p>
             <button
               className="rounded-md border border-white/15 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[color:var(--muted)] hover:text-white"
-              onClick={onClear}
+              onClick={() => {
+                onClear();
+                setOpen(false);
+              }}
               type="button"
             >
               Clear

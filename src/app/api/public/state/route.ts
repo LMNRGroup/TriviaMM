@@ -1,5 +1,7 @@
 import { ok, fail } from "@/lib/api/http";
 import { toPublicRoomState } from "@/lib/api/room-state";
+import { PUBLIC_ROOM_CODE } from "@/lib/game/constants";
+import { runAuthoritativeRoomTick } from "@/lib/game/room-tick-runner";
 import { ensurePublicRoom, getRoomState } from "@/lib/kv/room-store";
 import { getBaseUrl } from "@/lib/utils/env";
 
@@ -18,6 +20,13 @@ export async function GET() {
         503,
         "El estado de la sala publica no esta disponible temporalmente en este nodo.",
       );
+    }
+
+    if (room.phase === "finished" || room.phase === "reset") {
+      const outcome = await runAuthoritativeRoomTick(PUBLIC_ROOM_CODE);
+      if (outcome.ok) {
+        room = outcome.room;
+      }
     }
 
     return ok({

@@ -321,6 +321,7 @@ export function HostRoomClient() {
   }, [room]);
 
   const isShowcasePhase = room?.phase === "battle-result" || room?.phase === "leaderboard";
+  const showFullResetScreen = room?.phase === "finished" || room?.phase === "reset";
 
   if (room && isShowcasePhase) {
     return (
@@ -415,6 +416,24 @@ export function HostRoomClient() {
                 </div>
               </div>
             ) : null}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (room && showFullResetScreen) {
+    return (
+      <section className="mx-auto flex w-full max-w-[1920px] items-center justify-center">
+        <div className="app-shell aspect-[16/9] w-full overflow-hidden rounded-[2.6rem] border border-white/10 bg-black p-8 xl:p-10">
+          <div className="flex h-full flex-col items-center justify-center text-center">
+            <p className="font-display text-sm uppercase tracking-[0.5em] text-[color:var(--accent)]">Siguiente partida</p>
+            <h2 className="font-display mt-6 text-6xl font-black uppercase leading-[0.95] xl:text-[8rem]">
+              Reiniciando la arena
+            </h2>
+            <p className="mt-6 max-w-3xl text-lg text-[color:var(--muted)]">
+              Estamos preparando una ronda limpia para los próximos jugadores.
+            </p>
           </div>
         </div>
       </section>
@@ -676,14 +695,6 @@ export function HostRoomClient() {
                 </div>
               ) : null}
 
-              {room?.phase === "finished" || room?.phase === "reset" ? (
-                <div className="flex h-full flex-col items-center justify-center text-center">
-                  <p className="font-display text-sm uppercase tracking-[0.45em] text-[color:var(--accent)]">Siguiente partida</p>
-                  <h2 className="font-display mt-5 text-5xl font-black uppercase xl:text-7xl">
-                    Reiniciando la arena
-                  </h2>
-                </div>
-              ) : null}
             </section>
 
             <aside className="grid gap-5">
