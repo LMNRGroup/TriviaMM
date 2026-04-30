@@ -473,10 +473,22 @@ button {
   background: radial-gradient(circle, rgba(77, 225, 255, 0.2), transparent 70%);
 }
 
+.host-gameplay-topbar {
+  top: 0;
+  height: 16%;
+}
+
+.host-gameplay-main {
+  top: 20%;
+  height: 68%;
+}
+
+.host-gameplay-footer {
+  height: 10%;
+}
+
 @media (max-aspect-ratio: 1 / 1) {
   .display-viewport {
-    --display-stage-width: 1080;
-    --display-stage-height: 1080;
     padding: 10px;
   }
 
@@ -589,6 +601,60 @@ button {
     bottom: 160px;
     width: 260px;
     height: 260px;
+  }
+
+  .host-gameplay-topbar {
+    height: 17%;
+  }
+
+  .host-gameplay-main {
+    top: 22%;
+    height: 64%;
+  }
+
+  .host-gameplay-footer {
+    height: 10%;
+  }
+
+  .host-top-player-panel {
+    padding: 0.95rem 1rem;
+  }
+
+  .host-top-player-name {
+    font-size: 1.05rem;
+  }
+
+  .host-top-player-points {
+    font-size: 2.6rem;
+    line-height: 1;
+  }
+}
+
+@media (max-aspect-ratio: 9 / 16) {
+  .host-gameplay-topbar {
+    height: 20%;
+  }
+
+  .host-gameplay-main {
+    top: 25%;
+    height: 60%;
+  }
+
+  .host-gameplay-footer {
+    height: 10%;
+  }
+
+  .host-top-player-panel {
+    padding: 1.05rem 1.05rem;
+  }
+
+  .host-top-player-name {
+    font-size: 1.2rem;
+  }
+
+  .host-top-player-points {
+    font-size: 3rem;
+    line-height: 1;
   }
 }
 

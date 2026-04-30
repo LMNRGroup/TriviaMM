@@ -1514,17 +1514,28 @@ export function PlayerRoomClient() {
             : null}
         </div>
 
-        <p className="text-sm text-[color:var(--muted)]">
-          {!alreadyAnswered
-            ? "Toca una opción antes de que termine el tiempo."
-            : localAnswerForCurrentQuestion?.status === "submitting"
-              ? "Respuesta enviada. Validando..."
-              : localAnswerForCurrentQuestion?.feedback === "correct"
-                ? `¡Correcta! +${localAnswerForCurrentQuestion.awardedPoints ?? 0} pts • ${formatResponseSeconds(localAnswerForCurrentQuestion.responseTimeMs)}`
-                : localAnswerForCurrentQuestion?.feedback === "incorrect"
-                  ? `Incorrecta • +${localAnswerForCurrentQuestion.awardedPoints ?? 0} pts • ${formatResponseSeconds(localAnswerForCurrentQuestion.responseTimeMs)}`
-                  : "Respuesta enviada."}
-        </p>
+        {!alreadyAnswered ? (
+          <p className="text-sm text-[color:var(--muted)]">Toca una opción antes de que termine el tiempo.</p>
+        ) : localAnswerForCurrentQuestion?.status === "submitting" ? (
+          <p className="text-sm text-[color:var(--muted)]">Respuesta enviada. Validando...</p>
+        ) : localAnswerForCurrentQuestion?.status === "confirmed" ? (
+          <div
+            className={`rounded-[1.4rem] border px-4 py-4 text-center ${
+              localAnswerForCurrentQuestion.feedback === "correct"
+                ? "border-[color:var(--success)]/45 bg-[color:var(--success)]/12"
+                : "border-[color:var(--danger)]/45 bg-[color:var(--danger)]/12"
+            }`}
+          >
+            <h3 className="font-display text-4xl font-black uppercase tracking-[0.05em]">
+              {localAnswerForCurrentQuestion.feedback === "correct" ? "¡Correcta!" : "Incorrecta"}
+            </h3>
+            <p className="mt-3 text-xl font-semibold">
+              {formatResponseSeconds(localAnswerForCurrentQuestion.responseTimeMs)} · +{localAnswerForCurrentQuestion.awardedPoints ?? 0} pts
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-[color:var(--muted)]">Respuesta enviada.</p>
+        )}
       </section>
     );
   }
@@ -1544,7 +1555,7 @@ export function PlayerRoomClient() {
       <section className="enter-scale flex h-full flex-col justify-center gap-6 text-center">
         <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Respuesta bloqueada</p>
         <div className={`rounded-[1.8rem] border px-5 py-8 ${glowClass}`}>
-          <h2 className="font-display text-4xl font-black uppercase tracking-[0.08em]">
+          <h2 className="font-display text-5xl font-black uppercase tracking-[0.08em] sm:text-6xl">
             {resolvedFeedback === "correct"
               ? "¡Correcta!"
               : resolvedFeedback === "incorrect"
@@ -1554,7 +1565,7 @@ export function PlayerRoomClient() {
                   : "Preparando siguiente pregunta"}
           </h2>
           {localAnswerForCurrentQuestion?.status === "confirmed" ? (
-            <p className="mt-4 text-sm text-[color:var(--muted)]">
+            <p className="mt-4 text-2xl font-semibold text-[color:var(--muted)]">
               Tiempo: {formatResponseSeconds(localAnswerForCurrentQuestion.responseTimeMs)} · Puntos: +{localAnswerForCurrentQuestion.awardedPoints ?? 0}
             </p>
           ) : null}
@@ -1569,21 +1580,32 @@ export function PlayerRoomClient() {
   }
 
   if (room.phase === "battle-result") {
+    const battleWinnerLabel =
+      room.battleResult.winner === "player1"
+        ? room.players.player1?.name ?? "Jugador 1"
+        : room.battleResult.winner === "player2"
+          ? room.players.player2?.name ?? "Jugador 2"
+          : "Empate";
+
     return (
       <section className="enter-scale flex h-full flex-col justify-center gap-6 text-center">
         <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent-strong)]">Resultado</p>
         <h2 className="font-display text-4xl font-black uppercase tracking-[0.08em]">
           {room.mode === "solo"
             ? `${room.players.player1?.name ?? "Jugador"} termina la ronda`
-            : room.battleResult.winner === "player1"
-              ? `${room.players.player1?.name ?? "Jugador 1"} gana`
-              : room.battleResult.winner === "player2"
-                ? `${room.players.player2?.name ?? "Jugador 2"} gana`
-                : "Empate"}
+            : `${battleWinnerLabel} gana`}
         </h2>
-        <p className="text-sm text-[color:var(--muted)]">
-          Puntos: {playerSeat.totalScore}/10 · Promedio: {formatAverageSeconds(playerSeat.matchAverageResponseMs)}
-        </p>
+        {room.mode === "battle" ? (
+          <div className="rounded-[1.6rem] border border-white/10 bg-white/6 px-5 py-5">
+            <p className="font-display text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Marcador final</p>
+            <p className="font-display mt-3 text-3xl font-black uppercase">
+              {room.players.player1?.name ?? "Jugador 1"} {room.scores.player1} · {room.scores.player2}{" "}
+              {room.players.player2?.name ?? "Jugador 2"}
+            </p>
+            <p className="mt-3 text-base text-[color:var(--muted)]">Ganador: {battleWinnerLabel}</p>
+          </div>
+        ) : null}
+        <p className="text-sm text-[color:var(--muted)]">Puntos: {playerSeat.totalScore}/10 · Promedio: {formatAverageSeconds(playerSeat.matchAverageResponseMs)}</p>
       </section>
     );
   }

@@ -11,7 +11,7 @@ import {
 } from "@/lib/game/constants";
 import { playerDisplayCity } from "@/lib/api/room-state";
 import { shouldResetForAfk, shouldShowAfkWarning } from "@/lib/game/afk";
-import { calculatePoints, determineBattleWinner, matchAverageResponseMs } from "@/lib/game/scoring";
+import { determineBattleWinner, matchAverageResponseMs } from "@/lib/game/scoring";
 import { appendMatch, appendMatchAnswers } from "@/lib/sheets/match-repo";
 import { getPlayerLeaderboardRank, listLeaderboard, upsertLeaderboardEntry } from "@/lib/sheets/leaderboard-repo";
 import type {
@@ -208,6 +208,8 @@ export function createAnswerSubmission({
     : null;
   const isCorrect = selectedChoice === question.correctChoice;
 
+  const awardedPoints = isCorrect ? 1 : 0;
+
   return {
     submissionId: randomUUID(),
     roomCode: room.roomCode,
@@ -223,7 +225,7 @@ export function createAnswerSubmission({
     submittedAt,
     deadlineAt: room.currentQuestion.endsAt ?? submittedAt,
     status: "submitted",
-    awardedPoints: calculatePoints(responseTimeMs, isCorrect),
+    awardedPoints,
     unansweredStreakAfter: 0,
   };
 }
@@ -270,9 +272,11 @@ function updateRoomForSubmission(room: RoomState, player: Player, submission: An
   const effectiveResponseTimeMs =
     submission.responseTimeMs === null ? QUESTION_ANSWER_DURATION_MS : submission.responseTimeMs;
 
+  const normalizedAwardedPoints = submission.isCorrect ? 1 : 0;
+
   const updatedPlayer = {
     ...currentPlayer,
-    totalScore: currentPlayer.totalScore + submission.awardedPoints,
+    totalScore: currentPlayer.totalScore + normalizedAwardedPoints,
     correctCount: currentPlayer.correctCount + (submission.isCorrect ? 1 : 0),
     wrongCount:
       currentPlayer.wrongCount + (!submission.isCorrect && submission.status === "submitted" ? 1 : 0),

@@ -157,18 +157,18 @@ function BroadcastTopPlayerPanel({
   );
 
   return (
-    <div className="glass-panel battle-card h-full rounded-[1.4rem] px-4 py-3">
+    <div className="host-top-player-panel glass-panel battle-card h-full rounded-[1.4rem] px-4 py-3">
       <div className="flex h-full items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[color:var(--muted)]">{slot}</p>
           <div className="mt-2 flex items-center gap-2">
             {side === "left" ? icon : null}
-            <p className="truncate font-display text-xl font-black uppercase">{name}</p>
+            <p className="host-top-player-name truncate font-display text-xl font-black uppercase">{name}</p>
             {side === "right" ? icon : null}
           </div>
         </div>
         <div className="text-right">
-          <p className="font-display text-5xl font-black text-[color:var(--accent)]">{points}</p>
+          <p className="host-top-player-points font-display text-5xl font-black text-[color:var(--accent)]">{points}</p>
           <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[color:var(--muted)]">pts</p>
         </div>
       </div>
@@ -507,7 +507,7 @@ export function HostRoomClient() {
         <div className="glass-panel battle-card app-shell aspect-[16/9] w-full overflow-hidden rounded-[2.6rem] p-6 xl:p-8">
           <div className="hero-mesh" />
           <div className="relative h-full">
-            <div className="absolute inset-x-0 top-0 h-[12%]">
+            <div className="host-gameplay-topbar absolute inset-x-0 top-0 h-[12%]">
               <div
                 className="grid h-full items-center gap-4"
                 style={{ gridTemplateColumns: "minmax(18rem,22rem) minmax(0,1fr) minmax(18rem,22rem)" }}
@@ -532,7 +532,7 @@ export function HostRoomClient() {
               </div>
             </div>
 
-            <div className="absolute inset-x-0 top-[14%] h-[78%]">
+            <div className="host-gameplay-main absolute inset-x-0 top-[14%] h-[78%]">
               <div className="mx-auto h-full w-full max-w-[1700px] px-2 xl:px-4">
                 <section className="relative h-full overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(5,10,20,0.78),rgba(7,12,24,0.96))] p-6">
                   <div className="absolute right-5 top-5 rounded-[1.3rem] border border-white/10 bg-white/7 px-4 py-3 text-right">
@@ -583,7 +583,7 @@ export function HostRoomClient() {
               </div>
             </div>
 
-            <footer className="absolute inset-x-0 bottom-0 flex h-[8%] items-center justify-center text-center">
+            <footer className="host-gameplay-footer absolute inset-x-0 bottom-0 flex h-[8%] items-center justify-center text-center">
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-[color:var(--muted)]">
                 © 2026 Luminar Apps · Desarrollado para Municipio Autónomo de Mayagüez
               </p>
