@@ -533,8 +533,8 @@ export function HostRoomClient() {
             </div>
 
             <div className="absolute inset-x-0 top-[12%] h-[68%]">
-              <div className="grid h-full gap-4" style={{ gridTemplateColumns: "78% 22%" }}>
-                <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(5,10,20,0.78),rgba(7,12,24,0.96))] p-6">
+              <div className="mx-auto h-full w-full max-w-[1700px] px-2 xl:px-4">
+                <section className="relative h-full overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(5,10,20,0.78),rgba(7,12,24,0.96))] p-6">
                   <div className="absolute right-5 top-5 rounded-[1.3rem] border border-white/10 bg-white/7 px-4 py-3 text-right">
                     <p className="text-[11px] uppercase tracking-[0.35em] text-[color:var(--muted)]">
                       {room.phase === "question-read" ? "lectura" : "respuesta"}
@@ -547,7 +547,7 @@ export function HostRoomClient() {
                   </div>
 
                   <div className="flex h-full flex-col">
-                    <div className="max-w-[92%]">
+                    <div className="max-w-[94%]">
                       <p className="font-display text-3xl font-black uppercase tracking-[0.08em] text-[color:var(--accent)]">
                         Pregunta {room.currentQuestion.questionIndex}/{room.currentQuestion.totalQuestions}
                       </p>
@@ -580,24 +580,6 @@ export function HostRoomClient() {
                     </div>
                   </div>
                 </section>
-
-                <aside className="glass-panel battle-card h-full rounded-[1.8rem] p-4">
-                  <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Estado jugadores</p>
-                  <div className="mt-4 grid h-[calc(100%-1.8rem)] gap-3">
-                    <div className="rounded-[1.2rem] border border-white/12 bg-white/7 p-3">
-                      <p className="text-[10px] uppercase tracking-[0.35em] text-[color:var(--muted)]">P1</p>
-                      <p className="mt-2 truncate font-display text-xl font-black uppercase">{p1Name}</p>
-                      <p className="mt-1 truncate text-xs uppercase tracking-[0.08em] text-[color:var(--muted)]">{p1University}</p>
-                      <p className="mt-3 font-display text-4xl font-black text-[color:var(--accent)]">{room.scores.player1}</p>
-                    </div>
-                    <div className="rounded-[1.2rem] border border-white/12 bg-white/7 p-3">
-                      <p className="text-[10px] uppercase tracking-[0.35em] text-[color:var(--muted)]">P2</p>
-                      <p className="mt-2 truncate font-display text-xl font-black uppercase">{p2Name}</p>
-                      <p className="mt-1 truncate text-xs uppercase tracking-[0.08em] text-[color:var(--muted)]">{p2University}</p>
-                      <p className="mt-3 font-display text-4xl font-black text-[color:var(--accent)]">{room.scores.player2}</p>
-                    </div>
-                  </div>
-                </aside>
               </div>
             </div>
 

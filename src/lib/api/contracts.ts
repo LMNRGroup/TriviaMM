@@ -28,4 +28,5 @@ export interface RoomStateResponse {
 
 export interface RegistrationResponse {
   player: Pick<Player, "playerId" | "name" | "city" | "university">;
+  isNew: boolean;
 }

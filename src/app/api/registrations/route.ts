@@ -19,6 +19,7 @@ export async function POST(request: Request) {
 
   try {
     const existing = await findRegisteredPlayerByEmail(parsed.data.email);
+    const isNew = !existing;
     const player = existing
       ? {
           playerId: existing.playerId,
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
         }
       : await createRegisteredPlayer(parsed.data);
 
-    return ok({ player });
+    return ok({ player, isNew });
   } catch (error) {
     console.error("registration error", error);
     if (error instanceof Error && error.message.includes("[kv]")) {

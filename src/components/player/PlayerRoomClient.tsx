@@ -37,6 +37,8 @@ interface RememberedPlayer {
   age: number;
   /** Same-device hint from server; never part of `PublicRoomState`. */
   email?: string;
+  /** Controls pre-join tutorial for brand-new registrations only. */
+  requiresTutorial?: boolean;
 }
 
 interface FormState {
@@ -203,7 +205,9 @@ export function PlayerRoomClient() {
   const [sessionHydrated, setSessionHydrated] = useState(false);
   const [selectedChoiceState, setSelectedChoiceState] = useState<{ questionIndex: number; choice: string } | null>(null);
   const [answerFeedbackSnapshot, setAnswerFeedbackSnapshot] = useState<AnswerFeedbackSnapshot | null>(null);
-  const [tutorialProgressByPlayer, setTutorialProgressByPlayer] = useState<Record<string, number>>({});
+  const [preJoinTutorialProgressByPlayer, setPreJoinTutorialProgressByPlayer] = useState<Record<string, number>>({});
+  const [multiplayerEnabled, setMultiplayerEnabled] = useState<boolean | null>(null);
+  const [battleModeEnabled, setBattleModeEnabled] = useState<boolean>(BATTLE_MODE_ENABLED);
   const [error, setError] = useState<string | null>(null);
   const [joinInFlightPlayerId, setJoinInFlightPlayerId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
@@ -314,6 +318,33 @@ export function PlayerRoomClient() {
     return () => window.clearTimeout(timeoutId);
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadHealth() {
+      try {
+        const response = await fetch("/api/health", { cache: "no-store" });
+        const payload = await response.json();
+        if (!response.ok || !payload.ok || cancelled) {
+          return;
+        }
+
+        const ready = payload.data?.ready as { multiplayerEnabled?: boolean; battleModeEnabled?: boolean } | undefined;
+        setMultiplayerEnabled(Boolean(ready?.multiplayerEnabled));
+        setBattleModeEnabled(Boolean(ready?.battleModeEnabled));
+      } catch {
+        if (!cancelled) {
+          setMultiplayerEnabled(null);
+        }
+      }
+    }
+
+    void loadHealth();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const birthYearOptions = useMemo(() => {
     const maxBirthYear = new Date().getFullYear() - 16;
     const years: number[] = [];
@@ -332,24 +363,6 @@ export function PlayerRoomClient() {
         ? room.players.player2
         : null
     : null;
-  const tutorialStep = useMemo(() => {
-    if (!playerSeat?.playerId) {
-      return null;
-    }
-
-    const storedProgress = tutorialProgressByPlayer[playerSeat.playerId];
-    if (typeof storedProgress === "number") {
-      return storedProgress;
-    }
-
-    if (typeof window === "undefined") {
-      return null;
-    }
-
-    const seen = window.localStorage.getItem(getTutorialStorageKey(playerSeat.playerId)) === "1";
-    return seen ? -1 : 0;
-  }, [playerSeat?.playerId, tutorialProgressByPlayer]);
-
   const selectedChoice =
     selectedChoiceState && selectedChoiceState.questionIndex === room?.currentQuestion.questionIndex
       ? selectedChoiceState.choice
@@ -380,18 +393,6 @@ export function PlayerRoomClient() {
     setError(null);
   }
 
-  function completeTutorial() {
-    if (!playerSeat?.playerId) {
-      return;
-    }
-
-    window.localStorage.setItem(getTutorialStorageKey(playerSeat.playerId), "1");
-    setTutorialProgressByPlayer((current) => ({
-      ...current,
-      [playerSeat.playerId]: -1,
-    }));
-  }
-
   function playAgain() {
     if (session) {
       setRememberedPlayer({
@@ -401,6 +402,7 @@ export function PlayerRoomClient() {
         university: session.university,
         age: session.age,
         email: session.email,
+        requiresTutorial: false,
       });
     }
 
@@ -685,6 +687,14 @@ export function PlayerRoomClient() {
   const playerFeedback =
     playerSeat?.slot === 1 ? room?.answerFeedback.player1 : playerSeat?.slot === 2 ? room?.answerFeedback.player2 : null;
   const roomHasOpenSeat = !room?.players.player1 || !room?.players.player2;
+  const multiplayerLiveEnabled =
+    multiplayerEnabled === null ? BATTLE_MODE_ENABLED : Boolean(multiplayerEnabled && battleModeEnabled);
+  const multiplayerStatusLabel =
+    multiplayerEnabled === null
+      ? "Verificando disponibilidad de multiplayer..."
+      : multiplayerLiveEnabled
+        ? "Multiplayer habilitado (hasta 2 jugadores por sesión)."
+        : "Multiplayer desactivado temporalmente.";
 
   function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({
@@ -716,7 +726,12 @@ export function PlayerRoomClient() {
           throw new Error(registrationPayload.message ?? "No se pudo guardar el registro.");
         }
 
-        const player = registrationPayload.data.player as RememberedPlayer;
+        const registrationData = registrationPayload.data as {
+          player: RememberedPlayer;
+          isNew?: boolean;
+        };
+        const player = registrationData.player as RememberedPlayer;
+        const isNew = Boolean(registrationData.isNew);
         setRememberedPlayer({
           playerId: player.playerId,
           name: player.name,
@@ -724,6 +739,7 @@ export function PlayerRoomClient() {
           university: player.university ?? form.university,
           age: birthYearToAge(form.age),
           email: form.email,
+          requiresTutorial: isNew,
         });
         setError(null);
       } catch (registrationError) {
@@ -737,7 +753,7 @@ export function PlayerRoomClient() {
       return;
     }
 
-    if (mode === "battle" && !BATTLE_MODE_ENABLED) {
+    if (mode === "battle" && !multiplayerLiveEnabled) {
       setError("Battle mode esta temporalmente desactivado.");
       return;
     }
@@ -856,9 +872,66 @@ export function PlayerRoomClient() {
           university: session.university,
           age: session.age,
           email: session.email,
+          requiresTutorial: false,
         }
       : rememberedPlayer
     : null;
+  const pendingJoinTutorialStep = useMemo(() => {
+    if (!pendingJoinPlayer?.playerId || !pendingJoinPlayer.requiresTutorial) {
+      return -1;
+    }
+
+    const trackedStep = preJoinTutorialProgressByPlayer[pendingJoinPlayer.playerId];
+    return typeof trackedStep === "number" ? trackedStep : 0;
+  }, [pendingJoinPlayer?.playerId, pendingJoinPlayer?.requiresTutorial, preJoinTutorialProgressByPlayer]);
+  const pendingJoinTutorialActive = pendingJoinTutorialStep >= 0;
+  const pendingJoinTutorialProgress = Math.min(Math.max(pendingJoinTutorialStep, 0), 2);
+
+  useEffect(() => {
+    if (!pendingJoinPlayer?.playerId || !pendingJoinPlayer.requiresTutorial) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      const storageKey = getTutorialStorageKey(pendingJoinPlayer.playerId);
+      const seen = window.localStorage.getItem(storageKey) === "1";
+      setPreJoinTutorialProgressByPlayer((current) => {
+        if (typeof current[pendingJoinPlayer.playerId] === "number") {
+          return current;
+        }
+
+        return {
+          ...current,
+          [pendingJoinPlayer.playerId]: seen ? -1 : 0,
+        };
+      });
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [pendingJoinPlayer?.playerId, pendingJoinPlayer?.requiresTutorial]);
+
+  function advancePendingJoinTutorial(playerId: string) {
+    setPreJoinTutorialProgressByPlayer((current) => ({
+      ...current,
+      [playerId]: Math.min((current[playerId] ?? 0) + 1, 2),
+    }));
+  }
+
+  function completePendingJoinTutorial(playerId: string) {
+    window.localStorage.setItem(getTutorialStorageKey(playerId), "1");
+    setPreJoinTutorialProgressByPlayer((current) => ({
+      ...current,
+      [playerId]: -1,
+    }));
+    setRememberedPlayer((current) =>
+      current && current.playerId === playerId
+        ? {
+            ...current,
+            requiresTutorial: false,
+          }
+        : current,
+    );
+  }
 
   function joinLobby(profile: RememberedPlayer) {
     startTransition(async () => {
@@ -998,6 +1071,9 @@ export function PlayerRoomClient() {
           <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Jugador</p>
           <p className="font-display mt-4 text-2xl font-black uppercase">{pendingJoinPlayer.name}</p>
           <p className="mt-3 text-sm text-[color:var(--muted)]">{pendingJoinPlayer.university ?? pendingJoinPlayer.city}</p>
+          <p className="mt-3 rounded-full border border-white/10 px-3 py-2 text-xs uppercase tracking-[0.18em] text-[color:var(--muted)]">
+            {multiplayerStatusLabel}
+          </p>
           <button
             className="mt-5 rounded-[1.1rem] border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)] transition hover:bg-white/10 hover:text-white"
             onClick={switchPlayer}
@@ -1007,6 +1083,61 @@ export function PlayerRoomClient() {
           </button>
         </div>
 
+        {pendingJoinTutorialActive ? (
+          <div className="glass-panel rounded-[1.8rem] border border-[color:var(--accent)]/35 p-5">
+            <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--accent)]">
+              Tutorial rápido ({pendingJoinTutorialProgress + 1}/3)
+            </p>
+
+            {pendingJoinTutorialProgress === 0 ? (
+              <div className="mt-4 space-y-3">
+                <h3 className="font-display text-2xl font-black uppercase">Paso 1 · Mira la pantalla grande</h3>
+                <p className="text-sm leading-6 text-[color:var(--muted)]">
+                  Las preguntas y el tiempo salen en la pantalla principal. Tu celular funciona como control para responder.
+                </p>
+              </div>
+            ) : null}
+
+            {pendingJoinTutorialProgress === 1 ? (
+              <div className="mt-4 space-y-3">
+                <h3 className="font-display text-2xl font-black uppercase">Paso 2 · Responde en tu celular</h3>
+                <p className="text-sm leading-6 text-[color:var(--muted)]">
+                  Cuando aparezcan opciones, toca una respuesta. Verás inmediatamente si fue correcta o incorrecta en tu teléfono.
+                </p>
+              </div>
+            ) : null}
+
+            {pendingJoinTutorialProgress === 2 ? (
+              <div className="mt-4 space-y-3">
+                <h3 className="font-display text-2xl font-black uppercase">Paso 3 · Listo para entrar</h3>
+                <p className="text-sm leading-6 text-[color:var(--muted)]">
+                  Ahora sí toca <strong>Unirme a la sala</strong>. Si eres jugador 1, podrás iniciar la partida cuando estés listo.
+                </p>
+              </div>
+            ) : null}
+
+            <div className="mt-5 flex gap-3">
+              {pendingJoinTutorialProgress < 2 ? (
+                <button
+                  className="rounded-[1rem] border border-white/15 bg-white/6 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-white/10"
+                  onClick={() => advancePendingJoinTutorial(pendingJoinPlayer.playerId)}
+                  type="button"
+                >
+                  Siguiente
+                </button>
+              ) : (
+                <button
+                  className="rounded-[1rem] border border-[color:var(--success)]/45 bg-[color:var(--success)]/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-green-100 transition hover:bg-[color:var(--success)]/25"
+                  onClick={() => completePendingJoinTutorial(pendingJoinPlayer.playerId)}
+                  type="button"
+                >
+                  Listo
+                </button>
+              )}
+            </div>
+          </div>
+        ) : null}
+
         {error ? (
           <div className="rounded-[1.35rem] border border-[color:var(--danger)]/40 bg-[color:var(--danger)]/10 px-4 py-3 text-sm text-red-100">
             {error}
@@ -1015,11 +1146,11 @@ export function PlayerRoomClient() {
 
         <button
           className="font-display mt-auto rounded-[1.45rem] bg-[linear-gradient(135deg,var(--accent),#ffd77a)] px-5 py-4 text-base font-black uppercase tracking-[0.14em] text-slate-950 transition hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
-          disabled={isPending}
+          disabled={isPending || pendingJoinTutorialActive}
           onClick={() => joinLobby(pendingJoinPlayer)}
           type="button"
         >
-          {isPending ? "Uniendo..." : "Unirme a la sala"}
+          {isPending ? "Uniendo..." : pendingJoinTutorialActive ? "Completa el tutorial para continuar" : "Unirme a la sala"}
         </button>
       </section>
     );
@@ -1219,9 +1350,7 @@ export function PlayerRoomClient() {
   if (room.phase === "idle" || room.phase === "lobby") {
     const isPlayer1 = playerSeat.slot === 1;
     const canStartSolo = isPlayer1 && !room.players.player2;
-    const tutorialActive = isPlayer1 && tutorialStep !== null && tutorialStep >= 0;
-    const tutorialProgress = Math.min(Math.max(tutorialStep ?? 0, 0), 2);
-    const canStartSoloNow = canStartSolo && !tutorialActive;
+    const canStartSoloNow = canStartSolo;
 
     return (
       <section className="enter-rise flex h-full flex-col justify-between gap-6">
@@ -1237,7 +1366,7 @@ export function PlayerRoomClient() {
               : "Esperando al jugador 1"}
           </h2>
           <p className="mt-4 text-base leading-7 text-[color:var(--muted)]">
-            {!BATTLE_MODE_ENABLED
+            {!multiplayerLiveEnabled
               ? "El modo battle está temporalmente desactivado. Esta sala funciona en modo solo para asegurar estabilidad."
               : room.players.player2
               ? "Jugador 2 ya entró. La cuenta regresiva del duelo arrancará automáticamente."
@@ -1259,6 +1388,7 @@ export function PlayerRoomClient() {
                 Cuenta atrás de la sala: {waitingCountdown}s
               </p>
             ) : null}
+            <p className="mt-3 text-xs uppercase tracking-[0.2em] text-[color:var(--muted)]">{multiplayerStatusLabel}</p>
           </div>
 
           <div className="glass-panel rounded-[1.8rem] p-5">
@@ -1269,84 +1399,6 @@ export function PlayerRoomClient() {
               <li>Entre más rápido aciertes, más puntos sumas y mejor será tu promedio de velocidad.</li>
             </ul>
           </div>
-
-          {tutorialActive ? (
-            <div className="glass-panel rounded-[1.8rem] border border-[color:var(--accent)]/35 p-5">
-              <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--accent)]">
-                Tutorial rápido ({tutorialProgress + 1}/3)
-              </p>
-
-              {tutorialProgress === 0 ? (
-                <div className="mt-4 space-y-3">
-                  <h3 className="font-display text-2xl font-black uppercase">Cómo funciona</h3>
-                  <p className="text-sm leading-6 text-[color:var(--muted)]">
-                    Las preguntas salen en la pantalla grande. Tú respondes desde este celular. Primero verás la pregunta (5s) y luego tendrás 10s para contestar.
-                  </p>
-                </div>
-              ) : null}
-
-              {tutorialProgress === 1 ? (
-                <div className="mt-4 space-y-3">
-                  <h3 className="font-display text-2xl font-black uppercase">Práctica guiada</h3>
-                  <p className="text-sm leading-6 text-[color:var(--muted)]">
-                    Ejemplo: ¿Cuánto es 2 + 2? Toca la respuesta correcta.
-                  </p>
-                  <div className="grid gap-2">
-                    {(["A) 2", "B) 4", "C) 5", "D) 8"] as const).map((option) => (
-                      <div
-                        className={`rounded-[1rem] border px-3 py-2 text-sm ${
-                          option.startsWith("B")
-                            ? "border-[color:var(--success)]/50 bg-[color:var(--success)]/12 text-green-100"
-                            : "border-white/10 bg-white/5 text-[color:var(--muted)]"
-                        }`}
-                        key={option}
-                      >
-                        {option}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {tutorialProgress === 2 ? (
-                <div className="mt-4 space-y-3">
-                  <h3 className="font-display text-2xl font-black uppercase">Listo</h3>
-                  <p className="text-sm leading-6 text-[color:var(--muted)]">
-                    Ya sabes el flujo. Pulsa <strong>Listo</strong> y luego <strong>Comenzar</strong> para arrancar la trivia real.
-                  </p>
-                </div>
-              ) : null}
-
-              <div className="mt-5 flex gap-3">
-                {tutorialProgress < 2 ? (
-                  <button
-                    className="rounded-[1rem] border border-white/15 bg-white/6 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-white/10"
-                    onClick={() => {
-                      if (!playerSeat?.playerId) {
-                        return;
-                      }
-
-                      setTutorialProgressByPlayer((current) => ({
-                        ...current,
-                        [playerSeat.playerId]: Math.min((current[playerSeat.playerId] ?? 0) + 1, 2),
-                      }));
-                    }}
-                    type="button"
-                  >
-                    Siguiente
-                  </button>
-                ) : (
-                  <button
-                    className="rounded-[1rem] border border-[color:var(--success)]/45 bg-[color:var(--success)]/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-green-100 transition hover:bg-[color:var(--success)]/25"
-                    onClick={completeTutorial}
-                    type="button"
-                  >
-                    Listo
-                  </button>
-                )}
-              </div>
-            </div>
-          ) : null}
 
           {isPlayer1 ? (
             <div className="grid gap-3">
