@@ -176,6 +176,38 @@ function BroadcastTopPlayerPanel({
   );
 }
 
+function getQuestionPromptSizeClass(prompt: string | null | undefined) {
+  const promptLength = (prompt ?? "").trim().length;
+
+  if (promptLength >= 210) {
+    return "text-3xl xl:text-4xl leading-[1.1]";
+  }
+
+  if (promptLength >= 160) {
+    return "text-4xl xl:text-5xl leading-[1.08]";
+  }
+
+  if (promptLength >= 120) {
+    return "text-5xl xl:text-6xl leading-[1.05]";
+  }
+
+  return "text-6xl xl:text-7xl leading-[1.02]";
+}
+
+function getWinnerNameSizeClass(name: string | null | undefined) {
+  const nameLength = (name ?? "").trim().length;
+
+  if (nameLength >= 34) {
+    return "text-4xl xl:text-6xl";
+  }
+
+  if (nameLength >= 24) {
+    return "text-5xl xl:text-7xl";
+  }
+
+  return "text-6xl xl:text-[8.4rem]";
+}
+
 export function HostRoomClient() {
   const [room, setRoom] = useState<PublicRoomState | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -379,6 +411,25 @@ export function HostRoomClient() {
 
   const isShowcasePhase = room?.phase === "battle-result" || room?.phase === "leaderboard";
   const showFullResetScreen = room?.phase === "finished" || room?.phase === "reset";
+  const winnerDisplayName = useMemo(() => {
+    if (!room) {
+      return null;
+    }
+
+    if (room.mode !== "battle") {
+      return room.players.player1?.name ?? "Jugador";
+    }
+
+    if (room.battleResult.winner === "player1") {
+      return room.players.player1?.name ?? "Jugador 1";
+    }
+
+    if (room.battleResult.winner === "player2") {
+      return room.players.player2?.name ?? "Jugador 2";
+    }
+
+    return "Empate";
+  }, [room]);
 
   if (room && isShowcasePhase) {
     return (
@@ -391,14 +442,12 @@ export function HostRoomClient() {
                 <p className="font-display text-base uppercase tracking-[0.5em] text-[color:var(--accent-strong)]">
                   Resultado oficial
                 </p>
-                <h2 className="font-display mt-6 text-7xl font-black uppercase leading-[0.92] xl:text-[8.8rem]">
-                  {room.mode === "battle"
-                    ? room.battleResult.winner === "player1"
-                      ? room.players.player1?.name ?? "Jugador 1"
-                      : room.battleResult.winner === "player2"
-                        ? room.players.player2?.name ?? "Jugador 2"
-                        : "Empate"
-                    : room.players.player1?.name ?? "Jugador"}
+                <h2
+                  className={`host-winner-name font-display mt-6 max-w-[92%] break-words font-black uppercase leading-[0.92] [text-wrap:balance] ${getWinnerNameSizeClass(
+                    winnerDisplayName,
+                  )}`}
+                >
+                  {winnerDisplayName}
                 </h2>
                 <div className="mt-8 grid w-full max-w-6xl gap-4 xl:grid-cols-2">
                   <div className="rounded-[1.9rem] border border-white/15 bg-white/6 px-7 py-7 text-left">
@@ -607,8 +656,8 @@ export function HostRoomClient() {
                     </p>
                   </div>
 
-                  <div className="flex h-full flex-col">
-                    <div className="max-w-[94%]">
+                  <div className="host-question-layout">
+                    <div className="host-question-copy max-w-[94%]">
                       <p className="font-display text-3xl font-black uppercase tracking-[0.08em] text-[color:var(--accent)]">
                         Pregunta {room.currentQuestion.questionIndex}/{room.currentQuestion.totalQuestions}
                       </p>
@@ -617,15 +666,19 @@ export function HostRoomClient() {
                           {room.currentQuestion.category}
                         </p>
                       ) : null}
-                      <h2 className="font-display mt-6 text-left text-6xl font-black uppercase leading-[1.02] tracking-[0.02em] xl:text-7xl">
+                      <h2
+                        className={`host-question-prompt font-display mt-6 text-left font-black uppercase tracking-[0.02em] ${getQuestionPromptSizeClass(
+                          room.currentQuestion.prompt,
+                        )}`}
+                      >
                         {room.currentQuestion.prompt}
                       </h2>
                     </div>
 
-                    <div className="mt-auto grid gap-3 pb-1 pt-5 xl:grid-cols-2">
+                    <div className="host-answer-grid pb-1 pt-2">
                       {(Object.entries(room.currentQuestion.choices ?? {}) as Array<[string, string]>).map(([key, value]) => (
                         <div
-                          className={`rounded-[1.6rem] border px-5 py-4 ${
+                          className={`min-h-0 rounded-[1.6rem] border px-5 py-4 ${
                             room.phase === "question"
                               ? "border-white/12 bg-white/7"
                               : "border-white/8 bg-white/4 opacity-45"
@@ -755,7 +808,7 @@ export function HostRoomClient() {
               {showQuestion ? (
                 <div className="flex h-full flex-col gap-4">
                   <div className="flex items-start justify-between gap-4">
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="font-display text-sm uppercase tracking-[0.35em] text-[color:var(--accent)]">
                         Pregunta {room.currentQuestion.questionIndex} / {room.currentQuestion.totalQuestions}
                       </p>
@@ -764,7 +817,11 @@ export function HostRoomClient() {
                           {room.currentQuestion.category}
                         </p>
                       ) : null}
-                      <h2 className="font-display mt-3 text-5xl font-black uppercase leading-[0.98] xl:text-8xl">
+                      <h2
+                        className={`host-question-prompt font-display mt-3 font-black uppercase tracking-[0.02em] ${getQuestionPromptSizeClass(
+                          room.currentQuestion.prompt,
+                        )}`}
+                      >
                         {room.currentQuestion.prompt}
                       </h2>
                     </div>
@@ -843,12 +900,10 @@ export function HostRoomClient() {
               {room?.phase === "battle-result" ? (
                 <div className="flex h-full flex-col items-center justify-center text-center">
                   <p className="font-display text-sm uppercase tracking-[0.45em] text-[color:var(--accent-strong)]">Ganador</p>
-                  <h2 className="font-display mt-6 text-6xl font-black uppercase xl:text-8xl">
-                    {room.battleResult.winner === "player1"
-                      ? room.players.player1?.name
-                      : room.battleResult.winner === "player2"
-                        ? room.players.player2?.name
-                        : "Empate"}
+                  <h2
+                    className={`host-winner-name font-display mt-6 max-w-[92%] break-words font-black uppercase leading-[0.94] [text-wrap:balance] ${getWinnerNameSizeClass(winnerDisplayName)}`}
+                  >
+                    {winnerDisplayName}
                   </h2>
                 </div>
               ) : null}

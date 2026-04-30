@@ -492,6 +492,35 @@ button {
   height: 10%;
 }
 
+.host-question-layout {
+  display: grid;
+  height: 100%;
+  grid-template-rows: minmax(0, 58%) minmax(0, 42%);
+  gap: 0.8rem;
+}
+
+.host-question-copy {
+  min-height: 0;
+  overflow: hidden;
+  padding-right: 15rem;
+}
+
+.host-question-prompt {
+  min-height: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+}
+
+.host-answer-grid {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-content: start;
+}
+
 @media (max-aspect-ratio: 1 / 1) {
   .display-viewport {
     --display-stage-width: 1080;
@@ -635,6 +664,28 @@ button {
     font-size: 2.6rem;
     line-height: 1;
   }
+
+  .host-question-layout {
+    grid-template-rows: minmax(0, 55%) minmax(0, 45%);
+    gap: 0.65rem;
+  }
+
+  .host-question-copy {
+    padding-right: 11.5rem;
+  }
+
+  .host-question-prompt {
+    -webkit-line-clamp: 6;
+  }
+
+  .host-answer-grid {
+    gap: 0.6rem;
+  }
+
+  .host-winner-name {
+    font-size: clamp(2.4rem, 6vw, 5.6rem);
+    line-height: 0.95;
+  }
 }
 
 @media (max-aspect-ratio: 9 / 16) {
@@ -662,6 +713,23 @@ button {
   .host-top-player-points {
     font-size: 3rem;
     line-height: 1;
+  }
+
+  .host-question-layout {
+    grid-template-rows: minmax(0, 54%) minmax(0, 46%);
+  }
+
+  .host-question-copy {
+    padding-right: 10.8rem;
+  }
+
+  .host-answer-grid {
+    gap: 0.55rem;
+  }
+
+  .host-winner-name {
+    font-size: clamp(2.1rem, 5.8vw, 5rem);
+    line-height: 0.95;
   }
 }
 
