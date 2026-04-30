@@ -532,7 +532,7 @@ export function HostRoomClient() {
               </div>
             </div>
 
-            <div className="absolute inset-x-0 top-[12%] h-[68%]">
+            <div className="absolute inset-x-0 top-[14%] h-[78%]">
               <div className="mx-auto h-full w-full max-w-[1700px] px-2 xl:px-4">
                 <section className="relative h-full overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(5,10,20,0.78),rgba(7,12,24,0.96))] p-6">
                   <div className="absolute right-5 top-5 rounded-[1.3rem] border border-white/10 bg-white/7 px-4 py-3 text-right">

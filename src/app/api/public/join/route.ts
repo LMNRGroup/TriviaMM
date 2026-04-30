@@ -124,18 +124,6 @@ export async function POST(request: Request) {
         responseRoom = persistedRoom;
       }
 
-      if (!multiplayerEnabled && player.slot === 1 && updatedRoom.phase === "lobby") {
-        const questions = await getRandomQuestions(MATCH_QUESTION_COUNT);
-
-        if (questions.length === 0) {
-          throw new Error("question_bank_empty");
-        }
-
-        const { room: startedRoom } = startMatch(updatedRoom, "solo", questions, new Date().toISOString());
-        const [, persistedRoom] = await Promise.all([saveQuestionBank(startedRoom.roomCode, questions), saveRoomState(startedRoom)]);
-        responseRoom = persistedRoom;
-      }
-
       return {
         player,
         room: responseRoom,

@@ -134,8 +134,12 @@ export default function HomePage() {
 
   if (room && room.phase !== "idle" && room.phase !== "lobby") {
     return (
-      <main className="min-h-screen px-4 py-4 sm:px-6 sm:py-6">
-        <HostRoomClient />
+      <main className="display-viewport">
+        <section className="display-stage">
+          <div className="display-canvas">
+            <HostRoomClient />
+          </div>
+        </section>
       </main>
     );
   }
