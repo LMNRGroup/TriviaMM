@@ -443,7 +443,7 @@ export function HostRoomClient() {
               <div className="flex h-full flex-col">
                 <div className="text-center">
                   <p className="font-display text-base uppercase tracking-[0.55em] text-[color:var(--accent)]">Leaderboard</p>
-                  <h2 className="font-display mt-4 text-7xl font-black uppercase xl:text-[9rem]">Top jugadores</h2>
+                  <h2 className="font-display mt-4 text-7xl font-black uppercase xl:text-[9rem]">Top 10 jugadores</h2>
                 </div>
                 <div className="mt-8 grid flex-1 gap-8 xl:grid-cols-[0.8fr_1.2fr]">
                   <div className="space-y-4">
@@ -467,7 +467,9 @@ export function HostRoomClient() {
                     <LeaderboardList
                       entries={room.leaderboard.visibleTop}
                       highlightRanks={leaderboardHighlightRanks}
-                      variant="dramatic"
+                      showExtraRanks={false}
+                      topLimit={10}
+                      variant="broadcast"
                     />
                   </div>
                 </div>
@@ -855,7 +857,7 @@ export function HostRoomClient() {
                 <div className="space-y-5">
                   <div>
                     <p className="font-display text-sm uppercase tracking-[0.4em] text-[color:var(--accent)]">Leaderboard</p>
-                    <h2 className="font-display mt-4 text-5xl font-black uppercase">Top jugadores</h2>
+                    <h2 className="font-display mt-4 text-5xl font-black uppercase">Top 10 jugadores</h2>
                   </div>
                   <div className="grid gap-4 xl:grid-cols-2">
                     <div className="glass-panel rounded-[1.7rem] p-5">
@@ -893,7 +895,13 @@ export function HostRoomClient() {
                       </div>
                     ) : null}
                   </div>
-                  <LeaderboardList entries={room.leaderboard.visibleTop} highlightRanks={leaderboardHighlightRanks} />
+                  <LeaderboardList
+                    entries={room.leaderboard.visibleTop}
+                    highlightRanks={leaderboardHighlightRanks}
+                    showExtraRanks={false}
+                    topLimit={10}
+                    variant="broadcast"
+                  />
                 </div>
               ) : null}
 

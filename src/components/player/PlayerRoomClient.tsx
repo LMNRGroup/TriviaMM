@@ -1334,12 +1334,12 @@ export function PlayerRoomClient() {
 
         <div className="glass-panel rounded-[1.8rem] p-5">
           <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Cómo jugar</p>
-          <ul className="mt-5 space-y-3 text-base leading-7 text-[color:var(--muted)]">
-            <li>Tienes 10 segundos para responder cada pregunta cuando aparezcan las opciones.</li>
-            <li>Entre más rápido aciertes, más puntos sumas.</li>
-            <li>Si la sala está libre, te dejaremos continuar sin registrarte otra vez en este dispositivo.</li>
-            <li>La sala pública admite un máximo de dos jugadores conectados a la vez.</li>
-          </ul>
+            <ul className="mt-5 space-y-3 text-base leading-7 text-[color:var(--muted)]">
+              <li>Tienes 10 segundos para responder cada pregunta cuando aparezcan las opciones.</li>
+              <li>Cada respuesta correcta suma 1 punto.</li>
+              <li>Si la sala está libre, te dejaremos continuar sin registrarte otra vez en este dispositivo.</li>
+              <li>La sala pública admite un máximo de dos jugadores conectados a la vez.</li>
+            </ul>
         </div>
 
         {error ? <p className="text-sm text-red-200">{error}</p> : null}
@@ -1396,7 +1396,7 @@ export function PlayerRoomClient() {
             <ul className="mt-4 space-y-2 text-sm leading-6 text-[color:var(--muted)]">
               <li>Primero verás cada pregunta durante unos segundos para leerla con calma.</li>
               <li>Después aparecen las respuestas y empieza el temporizador para contestar.</li>
-              <li>Entre más rápido aciertes, más puntos sumas y mejor será tu promedio de velocidad.</li>
+              <li>Cada respuesta correcta suma 1 punto y el tiempo promedio se usa como referencia de velocidad.</li>
             </ul>
           </div>
 
@@ -1611,6 +1611,9 @@ export function PlayerRoomClient() {
   }
 
   if (room.phase === "leaderboard") {
+    const globalRankLabel =
+      typeof playerRank === "number" && playerRank > 0 ? `#${playerRank}` : "Calculando posición...";
+
     return (
       <section className="enter-rise flex h-full flex-col gap-5">
         <div>
@@ -1634,10 +1637,15 @@ export function PlayerRoomClient() {
               </p>
             </div>
           </div>
+          <p className="mt-4 text-sm text-[color:var(--muted)]">
+            Posición global: <span className="font-display text-lg font-black text-[color:var(--accent)]">{globalRankLabel}</span>
+          </p>
         </div>
+        <p className="text-xs uppercase tracking-[0.3em] text-[color:var(--muted)]">Top 10 global</p>
         <LeaderboardList
           entries={room.leaderboard.visibleTop}
           highlightRanks={typeof playerRank === "number" ? [playerRank] : []}
+          topLimit={10}
         />
         <button
           className="font-display mt-auto rounded-[1.3rem] border border-white/15 bg-white/7 px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12"
