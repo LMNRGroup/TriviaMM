@@ -337,6 +337,7 @@ export function HostRoomClient() {
   }, [room]);
 
   const showLobby = !room || room.phase === "idle" || room.phase === "lobby";
+  const showCountdown = room?.phase === "countdown";
   const showQuestion = room && (room.phase === "question-read" || room.phase === "question");
   const leftGlow = room?.phase === "answer-lock" && room.mode === "battle" ? getFeedbackGlow(room.answerFeedback.player1, "left") : "";
   const rightGlow = room?.phase === "answer-lock" && room.mode === "battle" ? getFeedbackGlow(room.answerFeedback.player2, "right") : "";
@@ -381,8 +382,8 @@ export function HostRoomClient() {
 
   if (room && isShowcasePhase) {
     return (
-      <section className="mx-auto flex w-full max-w-[1920px] items-center justify-center">
-        <div className="glass-panel battle-card app-shell aspect-[16/9] w-full overflow-hidden rounded-[2.6rem] p-8 xl:p-10">
+      <section className="mx-auto flex h-full w-full max-w-[1920px] items-center justify-center">
+        <div className="host-arena-shell glass-panel battle-card app-shell w-full overflow-hidden rounded-[2.6rem] p-8 xl:p-10">
           <div className="hero-mesh" />
           <div className="relative flex h-full flex-col">
             {room.phase === "battle-result" ? (
@@ -480,8 +481,8 @@ export function HostRoomClient() {
 
   if (room && showFullResetScreen) {
     return (
-      <section className="mx-auto flex w-full max-w-[1920px] items-center justify-center">
-        <div className="app-shell aspect-[16/9] w-full overflow-hidden rounded-[2.6rem] border border-white/10 bg-black p-8 xl:p-10">
+      <section className="mx-auto flex h-full w-full max-w-[1920px] items-center justify-center">
+        <div className="host-arena-shell app-shell w-full overflow-hidden rounded-[2.6rem] border border-white/10 bg-black p-8 xl:p-10">
           <div className="flex h-full flex-col items-center justify-center text-center">
             <p className="font-display text-sm uppercase tracking-[0.5em] text-[color:var(--accent)]">Siguiente partida</p>
             <h2 className="font-display mt-6 text-6xl font-black uppercase leading-[0.95] xl:text-[8rem]">
@@ -496,18 +497,18 @@ export function HostRoomClient() {
     );
   }
 
-  if (room && showQuestion) {
+  if (room && showCountdown) {
     const p1Name = room.players.player1?.name ?? "Jugador 1";
     const p1University = room.players.player1?.university ?? room.players.player1?.city ?? "Universidad";
     const p2Name = room.players.player2?.name ?? "Jugador 2";
     const p2University = room.players.player2?.university ?? room.players.player2?.city ?? "Universidad";
 
     return (
-      <section className="mx-auto flex w-full max-w-[1920px] items-center justify-center">
-        <div className="glass-panel battle-card app-shell aspect-[16/9] w-full overflow-hidden rounded-[2.6rem] p-6 xl:p-8">
+      <section className="mx-auto flex h-full w-full max-w-[1920px] items-center justify-center">
+        <div className="host-arena-shell glass-panel battle-card app-shell w-full overflow-hidden rounded-[2.6rem] p-6 xl:p-8">
           <div className="hero-mesh" />
           <div className="relative h-full">
-            <div className="host-gameplay-topbar absolute inset-x-0 top-0 h-[12%]">
+            <div className="host-gameplay-topbar absolute inset-x-0">
               <div
                 className="grid h-full items-center gap-4"
                 style={{ gridTemplateColumns: "minmax(18rem,22rem) minmax(0,1fr) minmax(18rem,22rem)" }}
@@ -532,7 +533,65 @@ export function HostRoomClient() {
               </div>
             </div>
 
-            <div className="host-gameplay-main absolute inset-x-0 top-[14%] h-[78%]">
+            <div className="host-gameplay-main absolute inset-x-0">
+              <section className="h-full rounded-[2rem] border border-white/12 bg-[linear-gradient(180deg,rgba(2,4,8,0.96),rgba(3,6,12,0.99))] px-6 py-8">
+                <div className="flex h-full flex-col items-center justify-center text-center">
+                  <p className="font-display text-base uppercase tracking-[0.45em] text-[color:var(--accent)]">
+                    {room.mode === "battle" ? "Duelo por comenzar" : "El reto está por comenzar"}
+                  </p>
+                  <h2 className="countdown-pop font-display mt-8 text-8xl font-black uppercase xl:text-[13rem]">{timerLabel}</h2>
+                </div>
+              </section>
+            </div>
+
+            <footer className="host-gameplay-footer absolute inset-x-0 bottom-0 flex items-center justify-center text-center">
+              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-[color:var(--muted)]">
+                © 2026 Luminar Apps · Desarrollado para Municipio Autónomo de Mayagüez
+              </p>
+            </footer>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (room && showQuestion) {
+    const p1Name = room.players.player1?.name ?? "Jugador 1";
+    const p1University = room.players.player1?.university ?? room.players.player1?.city ?? "Universidad";
+    const p2Name = room.players.player2?.name ?? "Jugador 2";
+    const p2University = room.players.player2?.university ?? room.players.player2?.city ?? "Universidad";
+
+    return (
+      <section className="mx-auto flex h-full w-full max-w-[1920px] items-center justify-center">
+        <div className="host-arena-shell glass-panel battle-card app-shell w-full overflow-hidden rounded-[2.6rem] p-6 xl:p-8">
+          <div className="hero-mesh" />
+          <div className="relative h-full">
+            <div className="host-gameplay-topbar absolute inset-x-0">
+              <div
+                className="grid h-full items-center gap-4"
+                style={{ gridTemplateColumns: "minmax(18rem,22rem) minmax(0,1fr) minmax(18rem,22rem)" }}
+              >
+                <BroadcastTopPlayerPanel
+                  side="left"
+                  slot="P1"
+                  name={p1Name}
+                  university={p1University}
+                  points={room.scores.player1}
+                />
+                <div className="px-2 text-center">
+                  <h1 className="font-display text-5xl font-black uppercase tracking-[0.12em] xl:text-6xl">RETO JUSTAS</h1>
+                </div>
+                <BroadcastTopPlayerPanel
+                  side="right"
+                  slot="P2"
+                  name={p2Name}
+                  university={p2University}
+                  points={room.scores.player2}
+                />
+              </div>
+            </div>
+
+            <div className="host-gameplay-main absolute inset-x-0">
               <div className="mx-auto h-full w-full max-w-[1700px] px-2 xl:px-4">
                 <section className="relative h-full overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(5,10,20,0.78),rgba(7,12,24,0.96))] p-6">
                   <div className="absolute right-5 top-5 rounded-[1.3rem] border border-white/10 bg-white/7 px-4 py-3 text-right">
@@ -583,7 +642,7 @@ export function HostRoomClient() {
               </div>
             </div>
 
-            <footer className="host-gameplay-footer absolute inset-x-0 bottom-0 flex h-[8%] items-center justify-center text-center">
+            <footer className="host-gameplay-footer absolute inset-x-0 bottom-0 flex items-center justify-center text-center">
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-[color:var(--muted)]">
                 © 2026 Luminar Apps · Desarrollado para Municipio Autónomo de Mayagüez
               </p>
@@ -595,8 +654,8 @@ export function HostRoomClient() {
   }
 
   return (
-    <section className="mx-auto flex w-full max-w-[1920px] items-center justify-center">
-      <div className="glass-panel battle-card app-shell aspect-[16/9] w-full overflow-hidden rounded-[2.6rem] p-6 xl:p-8">
+    <section className="mx-auto flex h-full w-full max-w-[1920px] items-center justify-center">
+      <div className="host-arena-shell glass-panel battle-card app-shell w-full overflow-hidden rounded-[2.6rem] p-6 xl:p-8">
         <div className="hero-mesh" />
         {leftGlow ? <div className={`pointer-events-none absolute ${leftGlow}`} /> : null}
         {rightGlow ? <div className={`pointer-events-none absolute ${rightGlow}`} /> : null}
@@ -634,7 +693,7 @@ export function HostRoomClient() {
             </div>
           </header>
 
-          <div className="grid flex-1 gap-5 xl:grid-cols-[1.6fr_0.7fr]">
+          <div className="flex flex-1 flex-col gap-5">
             <section className="rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(5,10,20,0.78),rgba(7,12,24,0.96))] p-6">
               {showLobby ? (
                 <div className="grid h-full gap-6 xl:grid-cols-[1.15fr_0.85fr]">
@@ -734,17 +793,6 @@ export function HostRoomClient() {
                       </div>
                     ))}
                   </div>
-                </div>
-              ) : null}
-
-              {room?.phase === "countdown" ? (
-                <div className="flex h-full flex-col items-center justify-center text-center">
-                  <p className="font-display text-sm uppercase tracking-[0.45em] text-[color:var(--accent)]">
-                    {room.mode === "battle" ? "Duelo por comenzar" : "El reto está por comenzar"}
-                  </p>
-                  <h2 className="countdown-pop font-display mt-6 text-8xl font-black uppercase xl:text-[13rem]">
-                    {timerLabel}
-                  </h2>
                 </div>
               ) : null}
 
@@ -850,42 +898,12 @@ export function HostRoomClient() {
               ) : null}
 
             </section>
-
-            <aside className="grid gap-5">
-              <SeatCard
-                title="Lado izquierdo"
-                slot="P1"
-                playerName={room?.players.player1?.name ?? "Disponible"}
-                cityLabel={room?.players.player1?.city ?? "Espera a que alguien escanee"}
-                score={room?.scores.player1 ?? 0}
-                compact
-              />
-              <SeatCard
-                title="Lado derecho"
-                slot="P2"
-                playerName={room?.players.player2?.name ?? "Disponible"}
-                cityLabel={room?.players.player2?.city ?? "Modo duelo opcional"}
-                score={room?.scores.player2 ?? 0}
-                compact
-              />
-              {showLobby ? (
-                <div className="glass-panel rounded-[1.8rem] p-5">
-                  <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Instrucciones visibles</p>
-                  <ul className="mt-4 space-y-3 text-sm leading-6 text-[color:var(--muted)]">
-                    <li>1. Escanea el QR y completa el registro.</li>
-                    <li>2. Lee la pregunta durante 5 segundos.</li>
-                    <li>3. Cuando aparezcan las respuestas, tendrás 10 segundos para contestar.</li>
-                    <li>4. Gana quien acierte más rápido.</li>
-                  </ul>
-                </div>
-              ) : null}
-              {error ? (
-                <div className="rounded-[1.5rem] border border-[color:var(--danger)]/35 bg-[color:var(--danger)]/10 px-4 py-4 text-sm text-red-100">
-                  {error}
-                </div>
-              ) : null}
-            </aside>
           </div>
+          {error ? (
+            <div className="rounded-[1.5rem] border border-[color:var(--danger)]/35 bg-[color:var(--danger)]/10 px-4 py-4 text-sm text-red-100">
+              {error}
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

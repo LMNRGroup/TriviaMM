@@ -343,9 +343,14 @@ export async function finalizeQuestion({
   for (const player of activePlayers(room)) {
     const slotKey = player.slot === 1 ? "player1" : "player2";
     const existing = nextRoom.answers[slotKey];
-    const finalized = existing ?? buildTimeoutSubmission({ room: nextRoom, player, question });
-    submissions.push(finalized);
-    nextRoom = updateRoomForSubmission(nextRoom, player, finalized);
+    if (existing) {
+      submissions.push(existing);
+      continue;
+    }
+
+    const timeoutSubmission = buildTimeoutSubmission({ room: nextRoom, player, question });
+    submissions.push(timeoutSubmission);
+    nextRoom = updateRoomForSubmission(nextRoom, player, timeoutSubmission);
   }
 
   await appendMatchAnswers(submissions);
