@@ -227,8 +227,15 @@ button {
   --display-stage-height: 1080;
   --display-viewport-padding: 12px;
   --display-viewport-height: 100svh;
+  --display-stage-fit-width: min(
+    calc(100vw - (var(--display-viewport-padding) * 2)),
+    calc((var(--display-viewport-height) - (var(--display-viewport-padding) * 2)) * 16 / 9)
+  );
+  --display-stage-fit-height: calc(var(--display-stage-fit-width) * 9 / 16);
+  --display-stage-scale: calc(var(--display-stage-fit-width) / (var(--display-stage-width) * 1px));
   min-height: var(--display-viewport-height);
   width: 100vw;
+  height: var(--display-viewport-height);
   overflow: hidden;
   display: grid;
   place-items: center;
@@ -242,31 +249,24 @@ button {
 }
 
 .display-stage {
-  /* Keep the host on a TV-safe 16:9 stage that scales down to fit the viewport. */
-  --stage-scale: min(
-    calc((100vw - (var(--display-viewport-padding) * 2)) / var(--display-stage-width)),
-    calc((var(--display-viewport-height) - (var(--display-viewport-padding) * 2)) / var(--display-stage-height))
-  );
+  /* Keep the host on a TV-safe 16:9 stage that shrinks to fit like object-fit: contain. */
   position: relative;
-  width: calc(var(--display-stage-width) * 1px * var(--stage-scale));
-  height: calc(var(--display-stage-height) * 1px * var(--stage-scale));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: visible;
+  width: var(--display-stage-fit-width);
+  max-width: calc(100vw - (var(--display-viewport-padding) * 2));
+  height: var(--display-stage-fit-height);
+  max-height: calc(var(--display-viewport-height) - (var(--display-viewport-padding) * 2));
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
 }
 
 .display-canvas {
+  position: absolute;
+  inset: 0 auto auto 0;
   width: calc(var(--display-stage-width) * 1px);
   height: calc(var(--display-stage-height) * 1px);
-  zoom: var(--stage-scale);
+  transform: scale(var(--display-stage-scale));
   transform-origin: top left;
-}
-
-@supports not (zoom: 1) {
-  .display-canvas {
-    transform: scale(var(--stage-scale));
-  }
+  will-change: transform;
 }
 
 .display-frame {
