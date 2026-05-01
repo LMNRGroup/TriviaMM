@@ -950,7 +950,7 @@ export function PlayerRoomClient() {
 
   if (!sessionHydrated) {
     return (
-      <section className="enter-rise flex h-full flex-col justify-between gap-6">
+      <section className="enter-rise flex min-h-full flex-col justify-between gap-6">
         <div>
           <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Preparando</p>
           <h2 className="font-display mt-4 text-3xl font-black uppercase">Cargando sesión</h2>
@@ -964,7 +964,7 @@ export function PlayerRoomClient() {
 
   if (joinInFlightPlayerId) {
     return (
-      <section className="enter-rise flex h-full flex-col justify-between gap-6">
+      <section className="enter-rise flex min-h-full flex-col justify-between gap-6">
         <div>
           <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Preparando</p>
           <h2 className="font-display mt-4 text-3xl font-black uppercase">Entrando a la sala</h2>
@@ -980,7 +980,7 @@ export function PlayerRoomClient() {
 
   if (room && pendingJoinPlayer && room.phase !== "idle" && room.phase !== "lobby") {
     return (
-      <section className="enter-rise flex h-full flex-col justify-between gap-6">
+      <section className="enter-rise flex min-h-full flex-col justify-between gap-6">
         <div>
           <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent-strong)]">
             Partida en curso
@@ -1019,7 +1019,7 @@ export function PlayerRoomClient() {
 
   if (room && pendingJoinPlayer && (room.phase === "idle" || room.phase === "lobby") && !roomHasOpenSeat) {
     return (
-      <section className="enter-rise flex h-full flex-col justify-between gap-6">
+      <section className="enter-rise flex min-h-full flex-col justify-between gap-6">
         <div>
           <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent-strong)]">
             Sala ocupada
@@ -1058,7 +1058,7 @@ export function PlayerRoomClient() {
 
   if (room && pendingJoinPlayer && (room.phase === "idle" || room.phase === "lobby") && roomHasOpenSeat) {
     return (
-      <section className="enter-rise flex h-full flex-col justify-between gap-6">
+      <section className="enter-rise flex min-h-full flex-col justify-between gap-6">
         <div>
           <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">
             Listo para jugar
@@ -1162,7 +1162,7 @@ export function PlayerRoomClient() {
 
   if (!session && room && room.phase !== "idle" && room.phase !== "lobby") {
     return (
-      <section className="enter-rise flex h-full flex-col justify-between gap-6">
+      <section className="enter-rise flex min-h-full flex-col justify-between gap-6">
         <div>
           <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent-strong)]">
             Partida en curso
@@ -1186,7 +1186,7 @@ export function PlayerRoomClient() {
 
   if (!session && room && (room.phase === "idle" || room.phase === "lobby") && !roomHasOpenSeat) {
     return (
-      <section className="enter-rise flex h-full flex-col justify-between gap-6">
+      <section className="enter-rise flex min-h-full flex-col justify-between gap-6">
         <div>
           <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent-strong)]">
             Sala ocupada
@@ -1210,7 +1210,7 @@ export function PlayerRoomClient() {
 
   if (!session) {
     return (
-      <form className="enter-rise flex h-full flex-col gap-5" onSubmit={submitRegistration}>
+      <form className="enter-rise flex min-h-full flex-col gap-4 sm:gap-5" onSubmit={submitRegistration}>
         <div>
           <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">
             Únete a la batalla
@@ -1329,7 +1329,7 @@ export function PlayerRoomClient() {
 
   if (!room || !playerSeat) {
     return (
-      <section className="enter-rise flex h-full flex-col justify-between gap-6">
+      <section className="enter-rise flex min-h-full flex-col justify-between gap-6">
         <div>
           <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Preparando</p>
           <h2 className="font-display mt-4 text-3xl font-black uppercase">Conectando tu control</h2>
@@ -1357,7 +1357,7 @@ export function PlayerRoomClient() {
     const canStartSoloNow = canStartSolo;
 
     return (
-      <section className="enter-rise flex h-full flex-col justify-between gap-6">
+      <section className="enter-rise flex min-h-full flex-col justify-between gap-6">
         <div>
           <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent-strong)]">
             Sala
@@ -1433,7 +1433,7 @@ export function PlayerRoomClient() {
 
   if (room.phase === "countdown") {
     return (
-      <section className="flex h-full items-center justify-center">
+      <section className="flex min-h-[40vh] items-center justify-center">
         <div className="enter-scale text-center">
           <p className="font-display text-sm uppercase tracking-[0.45em] text-[color:var(--accent)]">
             {room.mode === "battle" ? "Duelo por comenzar" : "El reto está por comenzar"}
@@ -1446,7 +1446,7 @@ export function PlayerRoomClient() {
 
   if (room.phase === "question-read") {
     return (
-      <section className="enter-rise flex h-full flex-col justify-between gap-5">
+      <section className="enter-rise flex min-h-full flex-col justify-between gap-5">
         <div>
           <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">
             Pregunta {room.currentQuestion.questionIndex}
@@ -1472,9 +1472,9 @@ export function PlayerRoomClient() {
       Boolean(room.answers[playerSeat.slot === 1 ? "player1" : "player2"]) || Boolean(localAnswerForCurrentQuestion);
 
     return (
-      <section className="enter-rise flex h-full flex-col gap-5">
+      <section className="enter-rise flex min-h-full flex-col gap-4 sm:gap-5">
         <div>
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">
               Pregunta {room.currentQuestion.questionIndex}
             </p>
@@ -1509,9 +1509,9 @@ export function PlayerRoomClient() {
                   }}
                   type="button"
                 >
-                  <div className="flex items-center gap-4">
-                    <p className="font-display min-w-[3.2rem] text-6xl font-black uppercase sm:text-7xl">{choice}</p>
-                    <p className="text-lg font-semibold leading-7 sm:text-xl">{label}</p>
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <p className="font-display w-10 shrink-0 text-5xl font-black uppercase sm:w-12 sm:text-6xl">{choice}</p>
+                    <p className="min-w-0 break-words text-base font-semibold leading-6 sm:text-xl sm:leading-7">{label}</p>
                   </div>
                 </button>
               ))
@@ -1556,7 +1556,7 @@ export function PlayerRoomClient() {
           : "border-white/10 bg-white/5";
 
     return (
-      <section className="enter-scale flex h-full flex-col justify-center gap-6 text-center">
+      <section className="enter-scale flex min-h-full flex-col justify-center gap-6 text-center">
         <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Respuesta bloqueada</p>
         <div className={`rounded-[1.8rem] border px-5 py-8 ${glowClass}`}>
           <h2 className="font-display text-5xl font-black uppercase tracking-[0.08em] sm:text-6xl">
@@ -1592,7 +1592,7 @@ export function PlayerRoomClient() {
           : "Empate";
 
     return (
-      <section className="enter-scale flex h-full flex-col justify-center gap-6 text-center">
+      <section className="enter-scale flex min-h-full flex-col justify-center gap-6 text-center">
         <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent-strong)]">Resultado</p>
         <h2 className="font-display text-4xl font-black uppercase tracking-[0.08em]">
           {room.mode === "solo"
@@ -1619,7 +1619,7 @@ export function PlayerRoomClient() {
       typeof playerRank === "number" && playerRank > 0 ? `#${playerRank}` : "Calculando posición...";
 
     return (
-      <section className="enter-rise flex h-full flex-col gap-5">
+      <section className="enter-rise flex min-h-full flex-col gap-5">
         <div>
           <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Leaderboard</p>
           <h2 className="font-display mt-4 text-3xl font-black uppercase tracking-[0.08em]">Clasificación</h2>
@@ -1627,7 +1627,7 @@ export function PlayerRoomClient() {
         <div className="rounded-[1.8rem] border border-white/10 bg-white/5 px-5 py-5">
           <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Tu resultado</p>
           <p className="font-display mt-3 text-3xl font-black uppercase">{playerSeat?.name ?? "Jugador"}</p>
-          <div className="mt-4 flex items-center justify-between gap-4">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-[0.35em] text-[color:var(--muted)]">Puntuación</p>
               <p className="font-display mt-2 text-5xl font-black text-[color:var(--accent)]">
@@ -1664,7 +1664,7 @@ export function PlayerRoomClient() {
 
   if (room.phase === "finished" || room.phase === "reset") {
     return (
-      <section className="enter-scale flex h-full flex-col justify-center gap-6 text-center">
+      <section className="enter-scale flex min-h-full flex-col justify-center gap-6 text-center">
         <p className="font-display text-sm uppercase tracking-[0.42em] text-[color:var(--accent)]">Siguiente ronda</p>
         <h2 className="font-display text-4xl font-black uppercase tracking-[0.08em]">
           La arena se está reiniciando

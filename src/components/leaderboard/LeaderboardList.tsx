@@ -99,20 +99,20 @@ export function LeaderboardList({
             className={`${rowClass} ${rowTone} ${isBroadcast && isRankOne ? "px-5 py-3.5" : ""}`}
             key={entry.playerId}
           >
-            <div>
+            <div className="min-w-0 pr-3">
               <p className={`${titleClass} ${isBroadcast && isRankOne ? "text-lg" : ""}`}>
                 <span className="inline-flex items-center gap-2">
                   {isBroadcast && isRankOne ? (
                     <CrownIcon className="size-4 text-[color:var(--accent)]" />
                   ) : null}
-                  <span>
+                  <span className="break-words">
                     #{entry.rank} {entry.playerName}
                   </span>
                 </span>
               </p>
-              <p className={cityClass}>{entry.city}</p>
+              <p className={`${cityClass} break-words`}>{entry.city}</p>
             </div>
-            <div className="text-right">
+            <div className="shrink-0 text-right">
               <p className={`${pointsClass} ${isBroadcast && isRankOne ? "text-3xl" : ""}`}>{entry.lifetimePoints}</p>
               <p className={pointsLabelClass}>puntos</p>
             </div>

@@ -225,24 +225,34 @@ button {
 .display-viewport {
   --display-stage-width: 1920;
   --display-stage-height: 1080;
-  min-height: 100vh;
+  --display-viewport-padding: 12px;
+  --display-viewport-height: 100svh;
+  min-height: var(--display-viewport-height);
+  width: 100vw;
   overflow: hidden;
   display: grid;
   place-items: center;
-  padding: 12px;
+  padding: var(--display-viewport-padding);
+}
+
+@supports (height: 100dvh) {
+  .display-viewport {
+    --display-viewport-height: 100dvh;
+  }
 }
 
 .display-stage {
+  /* Keep the host on a TV-safe 16:9 stage that scales down to fit the viewport. */
   --stage-scale: min(
-    calc((100vw - 24px) / var(--display-stage-width)),
-    calc((100vh - 24px) / var(--display-stage-height))
+    calc((100vw - (var(--display-viewport-padding) * 2)) / var(--display-stage-width)),
+    calc((var(--display-viewport-height) - (var(--display-viewport-padding) * 2)) / var(--display-stage-height))
   );
   position: relative;
   width: calc(var(--display-stage-width) * 1px * var(--stage-scale));
   height: calc(var(--display-stage-height) * 1px * var(--stage-scale));
   display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: center;
   overflow: visible;
 }
 
@@ -521,215 +531,60 @@ button {
   align-content: start;
 }
 
-@media (max-aspect-ratio: 1 / 1) {
-  .display-viewport {
-    --display-stage-width: 1080;
-    --display-stage-height: 1080;
-    padding: 10px;
-  }
+.player-viewport {
+  --player-viewport-height: 100svh;
+  min-height: var(--player-viewport-height);
+  padding: max(0.75rem, env(safe-area-inset-top)) 0.75rem max(1rem, env(safe-area-inset-bottom)) 0.75rem;
+}
 
-  .display-content {
-    padding: 68px 66px 22px;
-  }
-
-  .display-header {
-    justify-content: center;
-  }
-
-  .display-kicker {
-    padding: 16px 24px;
-    font-size: 1rem;
-    letter-spacing: 0.34em;
-  }
-
-  .display-body {
-    grid-template-columns: 1fr;
-    justify-items: center;
-    gap: 52px;
-  }
-
-  .display-copy {
-    align-items: center;
-    gap: 20px;
-    text-align: center;
-  }
-
-  .display-copy > p:first-child {
-    font-size: 1.45rem;
-    letter-spacing: 0.38em;
-  }
-
-  .display-title {
-    align-items: center;
-    text-align: center;
-  }
-
-  .display-title.font-display {
-    font-size: 6.15rem;
-    letter-spacing: 0.06em;
-  }
-
-  .display-copy > p:last-child {
-    max-width: 760px;
-    font-size: 1.7rem;
-    line-height: 1.45;
-  }
-
-  .display-qr-shell {
-    justify-self: center;
-    width: 420px;
-    border-radius: 34px;
-    padding: 26px 26px 30px;
-  }
-
-  .display-qr-frame {
-    width: 368px;
-    height: 368px;
-    border-radius: 24px;
-    padding: 14px;
-  }
-
-  .display-qr-art {
-    width: 340px;
-    height: 340px;
-    flex-basis: 340px;
-  }
-
-  .display-qr-art svg {
-    width: 340px;
-    height: 340px;
-  }
-
-  .display-qr-shell > p {
-    margin-top: 28px;
-    font-size: 1.45rem;
-    letter-spacing: 0.16em;
-  }
-
-  .display-footer {
-    min-height: 112px;
-  }
-
-  .display-waiting.font-display {
-    font-size: 2.5rem;
-    letter-spacing: 0.12em;
-    text-align: center;
-  }
-
-  .display-legal-bar {
-    min-height: 24px;
-  }
-
-  .display-legal {
-    font-size: 0.72rem;
-    letter-spacing: 0.06em;
-  }
-
-  .display-orb-left {
-    top: 88px;
-    left: -120px;
-    width: 300px;
-    height: 300px;
-  }
-
-  .display-orb-right {
-    right: -96px;
-    bottom: 160px;
-    width: 260px;
-    height: 260px;
-  }
-
-  .host-gameplay-topbar {
-    height: 17%;
-  }
-
-  .host-gameplay-main {
-    top: 22%;
-    height: 64%;
-  }
-
-  .host-gameplay-footer {
-    height: 10%;
-  }
-
-  .host-top-player-panel {
-    padding: 0.95rem 1rem;
-  }
-
-  .host-top-player-name {
-    font-size: 1.05rem;
-  }
-
-  .host-top-player-points {
-    font-size: 2.6rem;
-    line-height: 1;
-  }
-
-  .host-question-layout {
-    grid-template-rows: minmax(0, 55%) minmax(0, 45%);
-    gap: 0.65rem;
-  }
-
-  .host-question-copy {
-    padding-right: 11.5rem;
-  }
-
-  .host-question-prompt {
-    -webkit-line-clamp: 6;
-  }
-
-  .host-answer-grid {
-    gap: 0.6rem;
-  }
-
-  .host-winner-name {
-    font-size: clamp(2.4rem, 6vw, 5.6rem);
-    line-height: 0.95;
+@supports (height: 100dvh) {
+  .player-viewport {
+    --player-viewport-height: 100dvh;
   }
 }
 
-@media (max-aspect-ratio: 9 / 16) {
-  .host-gameplay-topbar {
-    height: 20%;
+.player-shell {
+  width: min(100%, 42rem);
+  min-height: calc(var(--player-viewport-height) - max(0.75rem, env(safe-area-inset-top)) - max(1rem, env(safe-area-inset-bottom)) - 1.5rem);
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  border-radius: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--panel);
+  padding: 1rem;
+}
+
+.player-content {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.player-legal {
+  margin-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 0.75rem;
+  text-align: center;
+  font-size: 0.48rem;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+@media (min-width: 640px) {
+  .player-viewport {
+    padding-inline: 1.5rem;
   }
 
-  .host-gameplay-main {
-    top: 25%;
-    height: 60%;
+  .player-shell {
+    padding: 1.5rem;
   }
 
-  .host-gameplay-footer {
-    height: 10%;
-  }
-
-  .host-top-player-panel {
-    padding: 1.05rem 1.05rem;
-  }
-
-  .host-top-player-name {
-    font-size: 1.2rem;
-  }
-
-  .host-top-player-points {
-    font-size: 3rem;
-    line-height: 1;
-  }
-
-  .host-question-layout {
-    grid-template-rows: minmax(0, 54%) minmax(0, 46%);
-  }
-
-  .host-question-copy {
-    padding-right: 10.8rem;
-  }
-
-  .host-answer-grid {
-    gap: 0.55rem;
-  }
-
-  .host-winner-name {
-    font-size: clamp(2.1rem, 5.8vw, 5rem);
-    line-height: 0.95;
+  .player-legal {
+    font-size: 0.54rem;
   }
 }
 
