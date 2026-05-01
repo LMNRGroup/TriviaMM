@@ -28,19 +28,23 @@ function normalizePublicUrl(value: string) {
   return `https://${trimmed}`;
 }
 
+function publicId(id: string, includePlayerIds: boolean) {
+  return includePlayerIds ? id : "";
+}
+
 /** Display city from a live or legacy `Player` (KV may still have `country` only). */
 export function playerDisplayCity(player: Pick<Player, "city" | "country">): string {
   const value = (player.city || player.country || "").trim();
   return value.length > 0 ? value : "—";
 }
 
-function toPublicPlayer(player: Player | null): PublicPlayer | null {
+function toPublicPlayer(player: Player | null, includePlayerIds: boolean): PublicPlayer | null {
   if (!player) {
     return null;
   }
 
   return {
-    playerId: player.playerId,
+    playerId: publicId(player.playerId, includePlayerIds),
     roomCode: player.roomCode,
     slot: player.slot,
     name: player.name,
@@ -59,7 +63,7 @@ function toPublicPlayer(player: Player | null): PublicPlayer | null {
   };
 }
 
-function toPublicAnswer(submission: AnswerSubmission | null): PublicAnswerSummary | null {
+function toPublicAnswer(submission: AnswerSubmission | null, includePlayerIds: boolean): PublicAnswerSummary | null {
   if (!submission) {
     return null;
   }
@@ -67,7 +71,7 @@ function toPublicAnswer(submission: AnswerSubmission | null): PublicAnswerSummar
   return {
     questionId: submission.questionId,
     questionIndex: submission.questionIndex,
-    playerId: submission.playerId,
+    playerId: publicId(submission.playerId, includePlayerIds),
     playerSlot: submission.playerSlot,
     selectedChoice: submission.selectedChoice,
     isCorrect: submission.isCorrect,
@@ -79,10 +83,10 @@ function toPublicAnswer(submission: AnswerSubmission | null): PublicAnswerSummar
   };
 }
 
-function toPublicLeaderboardEntry(entry: LeaderboardEntry): PublicLeaderboardEntry {
+function toPublicLeaderboardEntry(entry: LeaderboardEntry, includePlayerIds: boolean): PublicLeaderboardEntry {
   return {
     leaderboardEntryId: entry.leaderboardEntryId,
-    playerId: entry.playerId,
+    playerId: publicId(entry.playerId, includePlayerIds),
     playerName: entry.playerName,
     city: entry.country,
     matchesPlayed: entry.matchesPlayed,
@@ -97,7 +101,9 @@ function toPublicLeaderboardEntry(entry: LeaderboardEntry): PublicLeaderboardEnt
 }
 
 /** Strip secrets and correct answers for any browser-facing API. */
-export function toPublicRoomState(room: RoomState): PublicRoomState {
+export function toPublicRoomState(room: RoomState, options?: { includePlayerIds?: boolean }): PublicRoomState {
+  const includePlayerIds = options?.includePlayerIds === true;
+
   return {
     roomCode: room.roomCode,
     version: room.version,
@@ -111,15 +117,15 @@ export function toPublicRoomState(room: RoomState): PublicRoomState {
     matchStartedAt: room.matchStartedAt,
     qrUrl: normalizePublicUrl(room.qrUrl),
     players: {
-      player1: toPublicPlayer(room.players.player1),
-      player2: toPublicPlayer(room.players.player2),
+      player1: toPublicPlayer(room.players.player1, includePlayerIds),
+      player2: toPublicPlayer(room.players.player2, includePlayerIds),
     },
     lobby: room.lobby,
     countdown: room.countdown,
     currentQuestion: room.currentQuestion,
     answers: {
-      player1: toPublicAnswer(room.answers.player1),
-      player2: toPublicAnswer(room.answers.player2),
+      player1: toPublicAnswer(room.answers.player1, includePlayerIds),
+      player2: toPublicAnswer(room.answers.player2, includePlayerIds),
     },
     answerFeedback: room.answerFeedback,
     scores: room.scores,
@@ -127,7 +133,7 @@ export function toPublicRoomState(room: RoomState): PublicRoomState {
     warnings: room.warnings,
     battleResult: room.battleResult,
     leaderboard: {
-      visibleTop: room.leaderboard.visibleTop.map(toPublicLeaderboardEntry),
+      visibleTop: room.leaderboard.visibleTop.map((entry) => toPublicLeaderboardEntry(entry, includePlayerIds)),
       player1Rank: room.leaderboard.player1Rank,
       player2Rank: room.leaderboard.player2Rank,
       shownAt: room.leaderboard.shownAt,
@@ -153,8 +159,8 @@ export function toPublicRoomJoinSlice(room: Pick<RoomState, "version" | "phaseSt
     mode: room.mode,
     lobby: room.lobby,
     players: {
-      player1: toPublicPlayer(room.players.player1),
-      player2: toPublicPlayer(room.players.player2),
+      player1: toPublicPlayer(room.players.player1, true),
+      player2: toPublicPlayer(room.players.player2, true),
     },
   };
 }

@@ -80,7 +80,7 @@ export async function POST(request: Request) {
       return persistedRoom;
     });
 
-    return ok({ room: toPublicRoomState(startedRoom) });
+    return ok({ room: toPublicRoomState(startedRoom, { includePlayerIds: true }) });
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === "room_not_found") {

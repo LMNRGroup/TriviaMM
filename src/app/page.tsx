@@ -19,8 +19,13 @@ export default function HomePage() {
   const [room, setRoom] = useState<PublicRoomState | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [currentMatchId, setCurrentMatchId] = useState<string | null>(null);
+  const isGameplayActive = Boolean(room && room.phase !== "idle" && room.phase !== "lobby");
 
   useEffect(() => {
+    if (isGameplayActive) {
+      return;
+    }
+
     let cancelled = false;
 
     async function syncRoom() {
@@ -62,17 +67,19 @@ export default function HomePage() {
     }
 
     void syncRoom();
+    const pollMs = 900;
+    const timerMs = 100;
     const poll = window.setInterval(() => {
       void syncRoom();
-    }, 900);
-    const timer = window.setInterval(() => setNow(Date.now()), 100);
+    }, pollMs);
+    const timer = window.setInterval(() => setNow(Date.now()), timerMs);
 
     return () => {
       cancelled = true;
       window.clearInterval(poll);
       window.clearInterval(timer);
     };
-  }, [currentMatchId]);
+  }, [currentMatchId, isGameplayActive]);
 
   const countdown = useMemo(() => {
     if (!room || room.phase !== "countdown") {

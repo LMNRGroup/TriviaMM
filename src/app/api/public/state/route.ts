@@ -4,7 +4,33 @@ import { recoverPublicRoomState } from "@/lib/game/room-recovery";
 import { ensurePublicRoom, getRoomState } from "@/lib/kv/room-store";
 import { getBaseUrl } from "@/lib/utils/env";
 
-export async function GET() {
+function shouldIncludePlayerIds(room: Awaited<ReturnType<typeof getRoomState>>, request: Request) {
+  if (!room) {
+    return false;
+  }
+
+  const playerId = request.headers.get("x-trivia-player-id")?.trim();
+  const controllerToken = request.headers.get("x-trivia-controller-token")?.trim();
+
+  if (!playerId || !controllerToken) {
+    return false;
+  }
+
+  const player =
+    room.players.player1?.playerId === playerId
+      ? room.players.player1
+      : room.players.player2?.playerId === playerId
+        ? room.players.player2
+        : null;
+
+  if (!player) {
+    return false;
+  }
+
+  return player.controllerToken === controllerToken;
+}
+
+export async function GET(request: Request) {
   try {
     let room = await getRoomState();
 
@@ -25,9 +51,10 @@ export async function GET() {
       allowHardReset: true,
       maxTransitions: 8,
     });
+    const includePlayerIds = shouldIncludePlayerIds(room, request);
 
     return ok({
-      room: toPublicRoomState(room),
+      room: toPublicRoomState(room, { includePlayerIds }),
       rememberedPlayer: null,
       serverTime: new Date().toISOString(),
     });

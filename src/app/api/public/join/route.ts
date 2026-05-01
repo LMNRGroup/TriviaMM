@@ -60,6 +60,10 @@ export async function POST(request: Request) {
             : null;
 
       if (existingPlayer) {
+        if (existingPlayer.sessionId !== parsedBody.data.sessionId) {
+          throw new Error("player_active_elsewhere");
+        }
+
         return {
           player: existingPlayer,
           room,
@@ -132,7 +136,7 @@ export async function POST(request: Request) {
 
     return ok({
       player: toJoinPlayerPayload(joinResult.player),
-      room: toPublicRoomState(joinResult.room),
+      room: toPublicRoomState(joinResult.room, { includePlayerIds: true }),
     });
   } catch (error) {
     if (error instanceof Error) {
@@ -166,6 +170,14 @@ export async function POST(request: Request) {
 
       if (error.message === "active_session") {
         return fail("active_session", 409, "Ya hay una partida activa. Espera a que termine para entrar.");
+      }
+
+      if (error.message === "player_active_elsewhere") {
+        return fail(
+          "player_active_elsewhere",
+          409,
+          "Este jugador ya esta activo en otro dispositivo o sesion.",
+        );
       }
 
       if (error.message === "question_bank_empty") {

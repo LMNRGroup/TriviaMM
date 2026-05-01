@@ -1,10 +1,15 @@
 import { fail, ok } from "@/lib/api/http";
+import { hasAdminAccess } from "@/lib/api/admin-auth";
 import { toPublicRoomState } from "@/lib/api/room-state";
 import { forceResetPublicRoomNow, recoverPublicRoomState } from "@/lib/game/room-recovery";
 import { ensurePublicRoom, getRoomState } from "@/lib/kv/room-store";
 import { getBaseUrl } from "@/lib/utils/env";
 
 export async function POST(request: Request) {
+  if (!hasAdminAccess(request)) {
+    return fail("forbidden", 403, "No autorizado para recuperar o reiniciar la sala.");
+  }
+
   let force = false;
 
   try {

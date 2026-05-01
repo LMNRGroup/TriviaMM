@@ -1,4 +1,5 @@
 import { getKv } from "@/lib/kv/client";
+import { isProductionRuntime } from "@/lib/utils/env";
 
 const WINDOW_SECONDS = 10;
 const MAX_TICKS_PER_WINDOW = 120;
@@ -25,6 +26,6 @@ export async function assertPublicTickAllowed(clientKey: string): Promise<{ ok: 
 
     return { ok: true };
   } catch {
-    return { ok: true };
+    return isProductionRuntime() ? { ok: false } : { ok: true };
   }
 }

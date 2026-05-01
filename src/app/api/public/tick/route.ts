@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     }
 
     return ok({
-      room: toPublicRoomState(outcome.room),
+      room: toPublicRoomState(outcome.room, { includePlayerIds: true }),
       transitionApplied: outcome.transitionApplied,
     });
   } catch (error) {

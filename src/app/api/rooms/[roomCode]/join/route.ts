@@ -48,6 +48,21 @@ export async function POST(request: Request, context: RouteContext) {
         throw new Error("room_not_found");
       }
 
+      const existingPlayer =
+        existingRoom.players.player1?.playerId === registration.playerId
+          ? existingRoom.players.player1
+          : existingRoom.players.player2?.playerId === registration.playerId
+            ? existingRoom.players.player2
+            : null;
+
+      if (existingPlayer) {
+        if (existingPlayer.sessionId !== parsedBody.data.sessionId) {
+          throw new Error("player_active_elsewhere");
+        }
+
+        return { player: existingPlayer, room: existingRoom };
+      }
+
       if (
         !multiplayerEnabled &&
         existingRoom.players.player1 &&
@@ -112,6 +127,10 @@ export async function POST(request: Request, context: RouteContext) {
 
       if (error.message === "match_in_progress") {
         return fail("match_in_progress", 409, "This room already has an active match");
+      }
+
+      if (error.message === "player_active_elsewhere") {
+        return fail("player_active_elsewhere", 409, "Player is active in another session");
       }
 
       if (error.message === "multiplayer_disabled") {

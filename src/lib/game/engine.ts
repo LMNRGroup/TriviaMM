@@ -13,7 +13,7 @@ import { playerDisplayCity } from "@/lib/api/room-state";
 import { shouldResetForAfk, shouldShowAfkWarning } from "@/lib/game/afk";
 import { determineBattleWinner, matchAverageResponseMs } from "@/lib/game/scoring";
 import { appendMatch, appendMatchAnswers } from "@/lib/sheets/match-repo";
-import { getPlayerLeaderboardRank, listLeaderboard, upsertLeaderboardEntry } from "@/lib/sheets/leaderboard-repo";
+import { getLeaderboardSnapshot, upsertLeaderboardEntries } from "@/lib/sheets/leaderboard-repo";
 import type {
   AnswerFeedback,
   AnswerSubmission,
@@ -24,6 +24,15 @@ import type {
   RoomState,
   WinnerType,
 } from "@/lib/types/game";
+
+async function withSoftFailure<T>(label: string, action: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await action();
+  } catch (error) {
+    console.error(`[game] ${label} failed`, error);
+    return fallback;
+  }
+}
 
 function plusMs(baseIso: string, milliseconds: number) {
   return new Date(new Date(baseIso).getTime() + milliseconds).toISOString();
@@ -353,7 +362,7 @@ export async function finalizeQuestion({
     nextRoom = updateRoomForSubmission(nextRoom, player, timeoutSubmission);
   }
 
-  await appendMatchAnswers(submissions);
+  await withSoftFailure("append_match_answers", () => appendMatchAnswers(submissions), undefined);
 
   const askedQuestionIds = [...nextRoom.randomization.askedQuestionIds, question.questionId];
   const remainingQuestionIds = nextRoom.randomization.remainingQuestionIds.filter(
@@ -396,6 +405,7 @@ export async function finalizeMatch(room: RoomState, nowIso: string) {
   const player2 = room.players.player2;
   const mode = room.mode ?? "solo";
   const skipLeaderboard = Boolean(room.reset.pending && room.reset.reason === "afk");
+  const playerIdsForRanking = [player1?.playerId, player2?.playerId].filter((value): value is string => Boolean(value));
 
   const winner: WinnerType =
     mode === "solo"
@@ -409,33 +419,57 @@ export async function finalizeMatch(room: RoomState, nowIso: string) {
           player2AverageMs: matchAverageResponseMs(player2),
         });
 
-  if (player1 && !skipLeaderboard) {
-    await upsertLeaderboardEntry({
-      playerId: player1.playerId,
-      playerName: player1.name,
-      country: playerDisplayCity(player1),
-      matchScore: room.scores.player1,
-      mode,
-      won: winner === "solo" || winner === "player1",
-      averageResponseMs: matchAverageResponseMs(player1),
-    });
+  if (!skipLeaderboard) {
+    const leaderboardUpserts = [
+      player1
+        ? {
+            playerId: player1.playerId,
+            playerName: player1.name,
+            country: playerDisplayCity(player1),
+            matchScore: room.scores.player1,
+            mode,
+            won: winner === "solo" || winner === "player1",
+            averageResponseMs: matchAverageResponseMs(player1),
+          }
+        : null,
+      player2 && mode === "battle"
+        ? {
+            playerId: player2.playerId,
+            playerName: player2.name,
+            country: playerDisplayCity(player2),
+            matchScore: room.scores.player2,
+            mode,
+            won: winner === "player2",
+            averageResponseMs: matchAverageResponseMs(player2),
+          }
+        : null,
+    ].filter(
+      (
+        value,
+      ): value is {
+        playerId: string;
+        playerName: string;
+        country: string;
+        matchScore: number;
+        mode: "solo" | "battle";
+        won: boolean;
+        averageResponseMs: number | null;
+      } => value !== null,
+    );
+
+    await withSoftFailure("upsert_leaderboard_entries", () => upsertLeaderboardEntries(leaderboardUpserts), undefined);
   }
 
-  if (player2 && mode === "battle" && !skipLeaderboard) {
-    await upsertLeaderboardEntry({
-      playerId: player2.playerId,
-      playerName: player2.name,
-      country: playerDisplayCity(player2),
-      matchScore: room.scores.player2,
-      mode,
-      won: winner === "player2",
-      averageResponseMs: matchAverageResponseMs(player2),
-    });
-  }
-
-  const leaderboardTop = await listLeaderboard(10);
-  const player1Rank = player1 ? await getPlayerLeaderboardRank(player1.playerId) : null;
-  const player2Rank = player2 ? await getPlayerLeaderboardRank(player2.playerId) : null;
+  const leaderboardSnapshot = await withSoftFailure(
+    "read_leaderboard_snapshot",
+    () => getLeaderboardSnapshot({ limit: 10, playerIds: playerIdsForRanking }),
+    {
+      top: [],
+      ranksByPlayerId: new Map<string, number>(),
+    },
+  );
+  const player1Rank = player1 ? leaderboardSnapshot.ranksByPlayerId.get(player1.playerId) ?? null : null;
+  const player2Rank = player2 ? leaderboardSnapshot.ranksByPlayerId.get(player2.playerId) ?? null : null;
   const match: Match = {
     matchId: room.currentMatchId ?? randomUUID(),
     roomCode: room.roomCode,
@@ -456,7 +490,7 @@ export async function finalizeMatch(room: RoomState, nowIso: string) {
     },
   };
 
-  await appendMatch(match);
+  await withSoftFailure("append_match", () => appendMatch(match), undefined);
 
   return {
     room: {
@@ -467,9 +501,9 @@ export async function finalizeMatch(room: RoomState, nowIso: string) {
         displayUntil: plusMs(nowIso, BATTLE_RESULT_DURATION_MS),
       },
       leaderboard: {
-        visibleTop: leaderboardTop,
-        player1Rank: player1Rank?.rank,
-        player2Rank: player2Rank?.rank,
+        visibleTop: leaderboardSnapshot.top,
+        player1Rank: player1Rank ?? undefined,
+        player2Rank: player2Rank ?? undefined,
         shownAt: mode === "battle" ? null : nowIso,
       },
     },

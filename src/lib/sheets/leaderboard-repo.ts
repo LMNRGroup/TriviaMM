@@ -18,6 +18,16 @@ type LeaderboardSheetRow = [
   updatedAt: string,
 ];
 
+export interface LeaderboardUpsertInput {
+  playerId: string;
+  playerName: string;
+  country: string;
+  matchScore: number;
+  mode: "solo" | "battle";
+  won: boolean;
+  averageResponseMs: number | null;
+}
+
 function rankEntries(entries: LeaderboardEntry[]) {
   return [...entries]
     .sort((left, right) => {
@@ -114,46 +124,12 @@ async function readLeaderboardRows() {
   return dataRows.map(parseLeaderboardRow).filter((entry): entry is LeaderboardEntry => entry !== null);
 }
 
-export async function listLeaderboard(limit = 10) {
-  const entries = await readLeaderboardRows();
-  return rankEntries(entries).slice(0, limit);
-}
-
-export async function getPlayerLeaderboardRank(playerId: string) {
-  const entries = await readLeaderboardRows();
-  const ranked = rankEntries(entries);
-  return ranked.find((entry) => entry.playerId === playerId) ?? null;
-}
-
-export async function upsertLeaderboardEntry(input: {
-  playerId: string;
-  playerName: string;
-  country: string;
-  matchScore: number;
-  mode: "solo" | "battle";
-  won: boolean;
-  averageResponseMs: number | null;
-}) {
-  if (!hasSheetsConfig()) {
-    return;
-  }
-
-  const sheets = getSheetsClient();
-  await ensureSheetHeaders("leaderboard");
-  const range = await getSheetRange("leaderboard", "A:L");
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: getSpreadsheetId("leaderboard"),
-    range,
-  });
-
-  const rows = response.data.values ?? [];
-  const header = rows[0] ?? [];
-  const dataRows = rows.slice(1);
-  const rowIndex = dataRows.findIndex((row) => row[1] === input.playerId);
-  const timestamp = new Date().toISOString();
-  const existing = rowIndex >= 0 ? parseLeaderboardRow(dataRows[rowIndex]) : null;
-
-  const updated: LeaderboardEntry = {
+function buildUpdatedEntry(
+  existing: LeaderboardEntry | null,
+  input: LeaderboardUpsertInput,
+  timestamp: string,
+): LeaderboardEntry {
+  return {
     leaderboardEntryId: existing?.leaderboardEntryId ?? input.playerId,
     playerId: input.playerId,
     playerName: input.playerName,
@@ -181,29 +157,111 @@ export async function upsertLeaderboardEntry(input: {
     rank: existing?.rank ?? 0,
     updatedAt: timestamp,
   };
+}
 
-  const targetRow = toLeaderboardRow(updated);
+function dedupeUpsertInputs(inputs: LeaderboardUpsertInput[]) {
+  const byPlayerId = new Map<string, LeaderboardUpsertInput>();
+  for (const input of inputs) {
+    byPlayerId.set(input.playerId, input);
+  }
+  return [...byPlayerId.values()];
+}
 
-  if (rowIndex >= 0) {
-    const absoluteRow = rowIndex + 2;
-    const updateRange = await getSheetRange("leaderboard", `A${absoluteRow}:L${absoluteRow}`);
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: getSpreadsheetId("leaderboard"),
-      range: updateRange,
-      valueInputOption: "USER_ENTERED",
-      requestBody: {
-        values: [targetRow],
-      },
+export async function listLeaderboard(limit = 10) {
+  const entries = await readLeaderboardRows();
+  return rankEntries(entries).slice(0, limit);
+}
+
+export async function getPlayerLeaderboardRank(playerId: string) {
+  const entries = await readLeaderboardRows();
+  const ranked = rankEntries(entries);
+  return ranked.find((entry) => entry.playerId === playerId) ?? null;
+}
+
+export async function getLeaderboardSnapshot(input: { limit?: number; playerIds?: string[] } = {}) {
+  const limit = input.limit ?? 10;
+  const playerIds = input.playerIds ?? [];
+  const ranked = rankEntries(await readLeaderboardRows());
+
+  const ranksByPlayerId = new Map<string, number>();
+  for (const playerId of playerIds) {
+    const row = ranked.find((entry) => entry.playerId === playerId);
+    if (row) {
+      ranksByPlayerId.set(playerId, row.rank);
+    }
+  }
+
+  return {
+    top: ranked.slice(0, limit),
+    ranksByPlayerId,
+  };
+}
+
+export async function upsertLeaderboardEntries(inputs: LeaderboardUpsertInput[]) {
+  if (!hasSheetsConfig()) {
+    return;
+  }
+
+  const dedupedInputs = dedupeUpsertInputs(inputs);
+  if (dedupedInputs.length === 0) {
+    return;
+  }
+
+  const sheets = getSheetsClient();
+  await ensureSheetHeaders("leaderboard");
+  const range = await getSheetRange("leaderboard", "A:L");
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: getSpreadsheetId("leaderboard"),
+    range,
+  });
+
+  const rows = response.data.values ?? [];
+  const dataRows = rows.slice(1);
+  const byPlayerId = new Map<string, { entry: LeaderboardEntry; rowIndex: number }>();
+
+  for (let index = 0; index < dataRows.length; index += 1) {
+    const parsed = parseLeaderboardRow(dataRows[index]);
+    if (!parsed) {
+      continue;
+    }
+    byPlayerId.set(parsed.playerId, {
+      entry: parsed,
+      rowIndex: index,
     });
-  } else {
+  }
+
+  const timestamp = new Date().toISOString();
+  for (const input of dedupedInputs) {
+    const existing = byPlayerId.get(input.playerId) ?? null;
+    const updated = buildUpdatedEntry(existing?.entry ?? null, input, timestamp);
+    const targetRow = toLeaderboardRow(updated);
+
+    if (existing) {
+      const absoluteRow = existing.rowIndex + 2;
+      const updateRange = await getSheetRange("leaderboard", `A${absoluteRow}:L${absoluteRow}`);
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: getSpreadsheetId("leaderboard"),
+        range: updateRange,
+        valueInputOption: "USER_ENTERED",
+        requestBody: {
+          values: [targetRow],
+        },
+      });
+      continue;
+    }
+
     const appendRange = await getSheetRange("leaderboard", "A:L");
     await sheets.spreadsheets.values.append({
       spreadsheetId: getSpreadsheetId("leaderboard"),
       range: appendRange,
       valueInputOption: "USER_ENTERED",
       requestBody: {
-        values: [header.length === 0 ? targetRow : targetRow],
+        values: [targetRow],
       },
     });
   }
+}
+
+export async function upsertLeaderboardEntry(input: LeaderboardUpsertInput) {
+  await upsertLeaderboardEntries([input]);
 }

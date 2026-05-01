@@ -194,6 +194,21 @@ export async function joinRoom(player: Player) {
     throw new Error("match_in_progress");
   }
 
+  const existingPlayer =
+    room.players.player1?.playerId === player.playerId
+      ? room.players.player1
+      : room.players.player2?.playerId === player.playerId
+        ? room.players.player2
+        : null;
+
+  if (existingPlayer) {
+    if (existingPlayer.sessionId !== player.sessionId) {
+      throw new Error("player_active_elsewhere");
+    }
+
+    return room;
+  }
+
   const slotKey = player.slot === 1 ? "player1" : "player2";
   const otherSlotKey = player.slot === 1 ? "player2" : "player1";
 

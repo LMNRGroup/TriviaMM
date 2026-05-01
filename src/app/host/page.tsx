@@ -1,4 +1,3 @@
-import { BugFinderOverlay } from "@/components/debug/BugFinderOverlay";
 import { HostRoomClient } from "@/components/host/HostRoomClient";
 
 export default function HostPage() {
@@ -9,7 +8,6 @@ export default function HostPage() {
           <HostRoomClient />
         </div>
       </section>
-      <BugFinderOverlay />
     </main>
   );
 }

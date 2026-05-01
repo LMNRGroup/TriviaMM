@@ -26,7 +26,7 @@ async function registerPlayer() {
     name: `Soak Tester${suffix % 100}`,
     university: "Universidad de Puerto Rico Recinto Universitario de Mayagüez",
     age: 28,
-    email: `soak-${suffix}@example.com`,
+    email: `soak-${suffix}@luminarapps.dev`,
     acceptedTerms: true,
     newsletterOptIn: false,
   };
@@ -88,11 +88,13 @@ async function run() {
   let answered = new Set();
   let sawActiveMatch = false;
   let sawLeaderboardOrFinished = false;
+  let startedSolo = false;
 
   for (let step = 0; step < MAX_STEPS; step += 1) {
     const stateResult = await callJson("/api/public/state", {
       headers: {
         ...(joined.playerId ? { "x-trivia-player-id": joined.playerId } : {}),
+        ...(joined.controllerToken ? { "x-trivia-controller-token": joined.controllerToken } : {}),
         ...(lastRoom?.currentMatchId ? { "x-trivia-current-match-id": lastRoom.currentMatchId } : {}),
       },
     });
@@ -123,6 +125,30 @@ async function run() {
 
     if (room.currentMatchId) {
       sawActiveMatch = true;
+    }
+
+    if (
+      !startedSolo &&
+      room.phase === "lobby" &&
+      room.players.player1?.playerId === joined.playerId &&
+      !room.players.player2 &&
+      room.lobby.allowSoloStart
+    ) {
+      const startResult = await callJson("/api/public/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerId: joined.playerId,
+          controllerToken: joined.controllerToken,
+          mode: "solo",
+        }),
+      });
+
+      if (startResult.response.ok && startResult.payload?.ok) {
+        startedSolo = true;
+      } else if (!["room_unavailable", "room_not_found"].includes(startResult.payload?.error)) {
+        assertOk(startResult, "start");
+      }
     }
 
     if (room.phase === "leaderboard" || room.phase === "finished" || room.phase === "reset") {

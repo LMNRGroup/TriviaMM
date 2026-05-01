@@ -420,6 +420,7 @@ export function PlayerRoomClient() {
         session?.playerId || currentMatchIdRef.current
           ? {
               ...(session?.playerId ? { "x-trivia-player-id": session.playerId } : {}),
+              ...(session?.controllerToken ? { "x-trivia-controller-token": session.controllerToken } : {}),
               ...(currentMatchIdRef.current ? { "x-trivia-current-match-id": currentMatchIdRef.current } : {}),
             }
           : undefined,
@@ -439,7 +440,10 @@ export function PlayerRoomClient() {
   }, [acceptRoomCandidate, session]);
 
   const joinWithPlayer = useCallback(async (playerId: string, profile?: RememberedPlayer) => {
-    const sessionId = crypto.randomUUID();
+    const sessionId =
+      session?.playerId === playerId && typeof session.sessionId === "string" && session.sessionId.length > 0
+        ? session.sessionId
+        : crypto.randomUUID();
     let response: Response | null = null;
     let payload: unknown = null;
 
