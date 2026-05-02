@@ -223,44 +223,55 @@ button {
 }
 
 .host-viewport {
-  min-height: 100vh;
+  --host-viewport-padding: 12px;
+  --host-viewport-height: 100vh;
+  --host-stage-width: min(
+    calc(100vw - (var(--host-viewport-padding) * 2)),
+    calc((var(--host-viewport-height) - (var(--host-viewport-padding) * 2)) * 16 / 9),
+    1920px
+  );
+  --host-stage-height: calc(var(--host-stage-width) * 9 / 16);
+  --host-stage-scale: calc(var(--host-stage-width) / 1920px);
   width: 100vw;
-  height: 100svh;
+  height: var(--host-viewport-height);
   overflow: hidden;
   display: grid;
   place-items: center;
-  padding: 12px;
+  padding: var(--host-viewport-padding);
+  background: #000;
+}
+
+@supports (height: 100svh) {
+  .host-viewport {
+    --host-viewport-height: 100svh;
+  }
 }
 
 @supports (height: 100dvh) {
   .host-viewport {
-    height: 100dvh;
+    --host-viewport-height: 100dvh;
   }
 }
 
 .host-stage {
   position: relative;
-  width: min(calc(100vw - 24px), calc((100svh - 24px) * 16 / 9));
-  max-width: calc(100vw - 24px);
-  height: auto;
-  max-height: calc(100svh - 24px);
+  width: var(--host-stage-width);
+  height: var(--host-stage-height);
   aspect-ratio: 16 / 9;
-  overflow: hidden;
-}
-
-@supports (height: 100dvh) {
-  .host-stage {
-    width: min(calc(100vw - 24px), calc((100dvh - 24px) * 16 / 9));
-    max-height: calc(100dvh - 24px);
-  }
+  overflow: visible;
 }
 
 .host-stage-canvas {
-  position: absolute;
-  inset: 0 auto auto 0;
   width: 1920px;
   height: 1080px;
   transform-origin: top left;
+  zoom: var(--host-stage-scale);
+}
+
+@supports not (zoom: 1) {
+  .host-stage-canvas {
+    transform: scale(var(--host-stage-scale));
+  }
 }
 
 .display-frame {
