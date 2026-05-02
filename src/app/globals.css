@@ -222,51 +222,45 @@ button {
   pointer-events: none;
 }
 
-.display-viewport {
-  --display-stage-width: 1920;
-  --display-stage-height: 1080;
-  --display-viewport-padding: 12px;
-  --display-viewport-height: 100svh;
-  --display-stage-fit-width: min(
-    calc(100vw - (var(--display-viewport-padding) * 2)),
-    calc((var(--display-viewport-height) - (var(--display-viewport-padding) * 2)) * 16 / 9)
-  );
-  --display-stage-fit-height: calc(var(--display-stage-fit-width) * 9 / 16);
-  --display-stage-scale: calc(var(--display-stage-fit-width) / (var(--display-stage-width) * 1px));
-  min-height: var(--display-viewport-height);
+.host-viewport {
+  min-height: 100vh;
   width: 100vw;
-  height: var(--display-viewport-height);
+  height: 100svh;
   overflow: hidden;
   display: grid;
   place-items: center;
-  padding: var(--display-viewport-padding);
+  padding: 12px;
 }
 
 @supports (height: 100dvh) {
-  .display-viewport {
-    --display-viewport-height: 100dvh;
+  .host-viewport {
+    height: 100dvh;
   }
 }
 
-.display-stage {
-  /* Keep the host on a TV-safe 16:9 stage that shrinks to fit like object-fit: contain. */
+.host-stage {
   position: relative;
-  width: var(--display-stage-fit-width);
-  max-width: calc(100vw - (var(--display-viewport-padding) * 2));
-  height: var(--display-stage-fit-height);
-  max-height: calc(var(--display-viewport-height) - (var(--display-viewport-padding) * 2));
+  width: min(calc(100vw - 24px), calc((100svh - 24px) * 16 / 9));
+  max-width: calc(100vw - 24px);
+  height: auto;
+  max-height: calc(100svh - 24px);
   aspect-ratio: 16 / 9;
   overflow: hidden;
 }
 
-.display-canvas {
+@supports (height: 100dvh) {
+  .host-stage {
+    width: min(calc(100vw - 24px), calc((100dvh - 24px) * 16 / 9));
+    max-height: calc(100dvh - 24px);
+  }
+}
+
+.host-stage-canvas {
   position: absolute;
   inset: 0 auto auto 0;
-  width: calc(var(--display-stage-width) * 1px);
-  height: calc(var(--display-stage-height) * 1px);
-  transform: scale(var(--display-stage-scale));
+  width: 1920px;
+  height: 1080px;
   transform-origin: top left;
-  will-change: transform;
 }
 
 .display-frame {

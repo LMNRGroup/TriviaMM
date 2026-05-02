@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { HostStage } from "@/components/host/HostStage";
 import { HostRoomClient } from "@/components/host/HostRoomClient";
 import { decideRoomAcceptance } from "@/lib/game/public-room-guard";
 import type { PublicRoomState } from "@/lib/types/game";
@@ -141,20 +142,14 @@ export default function HomePage() {
 
   if (room && room.phase !== "idle" && room.phase !== "lobby") {
     return (
-      <main className="display-viewport">
-        <section className="display-stage">
-          <div className="display-canvas">
-            <HostRoomClient />
-          </div>
-        </section>
-      </main>
+      <HostStage>
+        <HostRoomClient />
+      </HostStage>
     );
   }
 
   return (
-    <main className="display-viewport">
-      <section className="display-stage">
-        <div className="display-canvas">
+    <HostStage>
           <div className="display-frame battle-card">
             <div className="display-orb display-orb-left" />
             <div className="display-orb display-orb-right" />
@@ -217,8 +212,6 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
-    </main>
+    </HostStage>
   );
 }
